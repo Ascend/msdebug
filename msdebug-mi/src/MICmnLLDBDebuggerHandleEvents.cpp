@@ -1,6 +1,6 @@
 //===-- MICmnLLDBDebuggerHandleEvents.cpp -----------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -18,6 +18,9 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "llvm/Support/Compiler.h"
+#ifdef MS_DEBUGGER
+#include "lldb/lldb-forward.h"
+#endif
 #ifdef _WIN32
 #include <io.h>
 #else
@@ -105,6 +108,22 @@ bool CMICmnLLDBDebuggerHandleEvents::Shutdown() {
 
   return MIstatus::success;
 }
+
+#ifdef MS_DEBUGGER
+
+static inline CMICmnMIValueResult GetMiValueResultIsDevice(lldb::SBProcess sbProcess) {
+  std::string stopInDevice;
+  if (sbProcess && sbProcess.IsSBStopInDevice()) {
+    stopInDevice = "true";
+  } else {
+    stopInDevice = "false";
+  }
+  const CMICmnMIValueConst miValueConst(stopInDevice);
+  const CMICmnMIValueResult miValueResult("is-device", miValueConst);
+  return miValueResult;
+}
+
+#endif
 
 //++
 // Details: Interpret the event object to ascertain the action to take or
@@ -1108,6 +1127,12 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStateSuspended(
     bOk = TextToStdout(streamOut.GetData());
   }
 
+#ifdef MS_DEBUGGER
+
+  bOk = bOk && sbProcess.HandleDeviceSBProcessStateChanged();
+
+#endif
+
   return bOk;
 }
 
@@ -1143,6 +1168,9 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStateStopped(
     bOk = HandleProcessEventStopReasonTrace();
     break;
   case lldb::eStopReasonBreakpoint:
+#ifdef MS_DEBUGGER
+  case lldb::eStopReasonDeviceBreakpoint:
+#endif
     pEventType = "eStopReasonBreakpoint";
     bOk = HandleProcessEventStopReasonBreakpoint();
     break;
@@ -1184,6 +1212,12 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStateStopped(
     pEventType = "eStopReasonVForkDone";
     break;
   }
+
+#ifdef MS_DEBUGGER
+
+  bOk = bOk && sbProcess.HandleDeviceSBProcessStateChanged();
+
+#endif
 
   // ToDo: Remove when finished coding application
   m_pLog->WriteLog(CMIUtilString::Format(
@@ -1532,6 +1566,9 @@ bool CMICmnLLDBDebuggerHandleEvents::MiStoppedAtBreakPoint(
     const CMICmnMIValueConst miValueConst6("all");
     const CMICmnMIValueResult miValueResult6("stopped-threads", miValueConst6);
     miOutOfBandRecord.Add(miValueResult6);
+#ifdef MS_DEBUGGER
+    miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+#endif
     bOk = bOk && MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
     return bOk;
@@ -1580,6 +1617,9 @@ bool CMICmnLLDBDebuggerHandleEvents::MiStoppedAtBreakPoint(
     const CMICmnMIValueConst miValueConst9("all");
     const CMICmnMIValueResult miValueResult9("stopped-threads", miValueConst9);
     miOutOfBandRecord.Add(miValueResult9);
+#ifdef MS_DEBUGGER
+    miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+#endif
     bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
   }
@@ -1685,6 +1725,9 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStopReasonTrace() {
     const CMICmnMIValueConst miValueConst2("all");
     const CMICmnMIValueResult miValueResult2("stopped-threads", miValueConst2);
     miOutOfBandRecord.Add(miValueResult2);
+#ifdef MS_DEBUGGER
+    miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+#endif
     bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
     return bOk;
@@ -1721,6 +1764,11 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStopReasonTrace() {
   const CMICmnMIValueConst miValueConst9("all");
   const CMICmnMIValueResult miValueResult9("stopped-threads", miValueConst9);
   miOutOfBandRecord.Add(miValueResult9);
+
+#ifdef MS_DEBUGGER
+  miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+#endif
+
   bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
   bOk = bOk && CMICmnStreamStdout::WritePrompt();
 
@@ -1763,6 +1811,9 @@ bool CMICmnLLDBDebuggerHandleEvents::UpdateSelectedThread() {
       switch (eThreadStopReason) {
       case lldb::eStopReasonTrace:
       case lldb::eStopReasonBreakpoint:
+#ifdef MS_DEBUGGER
+      case lldb::eStopReasonDeviceBreakpoint:
+#endif
       case lldb::eStopReasonWatchpoint:
       case lldb::eStopReasonSignal:
       case lldb::eStopReasonException:

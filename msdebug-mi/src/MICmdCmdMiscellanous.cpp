@@ -1,6 +1,6 @@
 //===-- MICmdCmdMiscellanous.cpp --------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -470,7 +470,11 @@ bool CMICmdCmdInterpreterExec::Execute() {
 // Throws:  None.
 //--
 bool CMICmdCmdInterpreterExec::Acknowledge() {
+#ifdef MS_DEBUGGER
+  if (m_lldbResult.GetErrorSize() > 0 && m_lldbResult.GetOutputSize() > 0) {
+#else
   if (m_lldbResult.GetOutputSize() > 0) {
+#endif
     const CMIUtilString line(m_lldbResult.GetOutput());
     const bool bEscapeQuotes(true);
     CMICmnMIValueConst miValueConst(line.Escape(bEscapeQuotes));
@@ -493,9 +497,28 @@ bool CMICmdCmdInterpreterExec::Acknowledge() {
       return MIstatus::failure;
   }
 
+#ifdef MS_DEBUGGER
+  // 在token回显的同条消息中带上cli命令结果，而不是分两条显示，保持和mi命令格式一致
+  // 以供解决异步IO时无法区分输入和回显的对应关系问题
+  if (m_lldbResult.GetOutputSize() > 0) {
+    const CMIUtilString line(m_lldbResult.GetOutput());
+    const bool bEscapeQuotes(true);
+    CMICmnMIValueConst miValueConst(line.Escape(bEscapeQuotes));
+    const CMICmnMIValueResult miValueResult("result", miValueConst);
+    const CMICmnMIResultRecord miRecordResult(
+        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Done,
+        miValueResult);
+    m_miResultRecord = miRecordResult;
+  } else {
+    const CMICmnMIResultRecord miRecordResult(
+        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Done);
+    m_miResultRecord = miRecordResult;
+  }
+#else
   const CMICmnMIResultRecord miRecordResult(
       m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Done);
   m_miResultRecord = miRecordResult;
+#endif
 
   return MIstatus::success;
 }

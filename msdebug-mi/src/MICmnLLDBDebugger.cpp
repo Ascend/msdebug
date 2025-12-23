@@ -1,6 +1,6 @@
 //===-- MICmnLLDBDebugger.cpp -----------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -337,7 +337,11 @@ void CMICmnLLDBDebugger::RebroadcastStopEvent() {
 // Throws:  None.
 //--
 bool CMICmnLLDBDebugger::InitSBDebugger() {
+#ifdef MS_DEBUGGER
+  m_lldbDebugger = lldb::SBDebugger::Create(true);
+#else
   m_lldbDebugger = lldb::SBDebugger::Create(false);
+#endif
   if (!m_lldbDebugger.IsValid()) {
     SetErrorDescription(MIRSRC(IDS_LLDBDEBUGGER_ERR_INVALIDDEBUGGER));
     return MIstatus::failure;
