@@ -20,10 +20,31 @@ endif()
 
 file(MAKE_DIRECTORY ${NCURSES_INSTALL_DIR})
 
+file(GLOB_RECURSE NCURSES_TAR_FILE_GLOB ${NCURSES_SOURCE_DIR}/ncurses-*.tar.gz)
+list(GET NCURSES_TAR_FILE_GLOB 0 NCURSES_TAR_FILE)
+message(STATUS "Use ncurses tar file: ${NCURSES_TAR_FILE}")
+
+add_custom_command(
+    OUTPUT ${NCURSES_SOURCE_DIR}/configure
+    COMMENT "Extract ncurses component from ${NCURSES_TAR_FILE}"
+    # 跳过最外层目录，直接将内容解压到当前目录
+    COMMAND tar xf ${NCURSES_TAR_FILE} --strip-components=1
+    DEPENDS ${NCURSES_TAR_FILE}
+    WORKING_DIRECTORY ${NCURSES_SOURCE_DIR}
+)
+
+add_custom_target(
+    ncurses_extract_target
+    ALL
+    DEPENDS ${NCURSES_SOURCE_DIR}/configure
+    COMMENT "Custom target for extracting ncurses tar file"
+)
+
 ExternalProject_Add(ncurses_project
     DOWNLOAD_COMMAND ${CMAKE_COMMAND} -E copy_directory ${NCURSES_SOURCE_DIR} ${NCURSES_OUTPUT_DIR}
     SOURCE_DIR "${NCURSES_SOURCE_DIR}"
     BINARY_DIR "${NCURSES_BUILD_DIR}"
+    DEPENDS ncurses_extract_target
     CONFIGURE_COMMAND cd ${NCURSES_OUTPUT_DIR} && ./configure
         --prefix=${NCURSES_INSTALL_DIR}
         CFLAGS=${NCURSES_CFLAGS}

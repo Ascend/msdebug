@@ -6,6 +6,9 @@ import sys
 import logging
 import subprocess
 import argparse
+import tarfile
+import glob
+import shutil
 
 
 def exec_cmd(cmd, env=None, shell=False):
@@ -74,12 +77,19 @@ def execute_compile(args):
         sys.exit(1)
 
 
+def create_arg_parser():
+    parser = argparse.ArgumentParser(description='Build script with optional testing')
+    parser.add_argument('command', nargs='*', default=[],
+                        choices=[[], 'local', 'test'],
+                        help='Command to execute (python build.py [ |local|test])')
+    parser.add_argument('-r', '--revision',
+                        help="Build with specific revision or tag")
+    return parser
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    parser = argparse.ArgumentParser(description='Build script with optional testing')
-    parser.add_argument('command', nargs='*', default='',
-                      choices=['', 'local', 'test'],
-                      help='Command to execute (python build.py [local] [test]):\n')
+    parser = create_arg_parser()
     args = parser.parse_args()
 
     current_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))

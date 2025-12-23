@@ -68,6 +68,6 @@ ExternalProject_Add(llvm_project
     USES_TERMINAL_BUILD TRUE
     BUILD_COMMAND ${LLVM_BUILD_CMD}
     INSTALL_COMMAND ${LLVM_INSTALL_CMD}
-    BUILD_ALWAYS OFF
+    BUILD_ALWAYS TRUE
     DEPENDS libedit_project
 )

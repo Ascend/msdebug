@@ -38,6 +38,26 @@ set(DEPENDS_FILES
      ${PACKAGE_FILES}
 )
 
+file(GLOB_RECURSE MAKESELF_TAR_FILE_GLOB ${ROOT_DIR}/third-party/makeself/makeself-*.tar.gz)
+file(GLOB_RECURSE MAKESELF_PATCH_FILE_GLOB ${ROOT_DIR}/third-party/makeself/makeself-*.patch)
+list(GET MAKESELF_TAR_FILE_GLOB 0 MAKESELF_TAR_FILE)
+list(GET MAKESELF_PATCH_FILE_GLOB 0 MAKESELF_PATCH_FILE)
+message(STATUS "Use makeself tar file: ${MAKESELF_TAR_FILE}")
+message(STATUS "Use makeself patch file: ${MAKESELF_PATCH_FILE}")
+
+add_custom_command(
+    OUTPUT ${MAKESELF_TOOL} ${MAKESELF_HEADER}
+    COMMENT "Extract makeself component from ${MAKESELF_TAR_FILE}"
+    # 跳过最外层目录，直接将内容解压到当前目录
+    COMMAND tar xf ${MAKESELF_TAR_FILE} --strip-components=1
+    COMMAND git apply ${MAKESELF_PATCH_FILE}
+    # git 应用 patch 后不一定会更新akeself.sh 文件的时间戳，此处需要手动更新一下，
+    # 保证 makeself 解压流程完成后重新触发打包
+    COMMAND touch ${MAKESELF_TOOL} ${MAKESELF_HEADER}
+    DEPENDS ${MAKESELF_TAR_FILE} ${MAKESELF_PATCH_FILE}
+    WORKING_DIRECTORY ${ROOT_DIR}/third-party/makeself/
+)
+
 add_custom_command(
     OUTPUT "${CMAKE_INSTALL_PREFIX}/.package_done"
     COMMAND ${CMAKE_COMMAND} -E echo "Packaging Debugger - ${PACKAGE_NAME} v${PACKAGE_VERSION}"
@@ -48,11 +68,9 @@ add_custom_command(
     COMMAND cd "${CMAKE_INSTALL_PREFIX}" && "${MAKESELF_TOOL}" --header "${MAKESELF_HEADER}" --help-header "${HELP_INFO}" --pigz --complevel 4 --nocrc --nomd5 --sha256 --chown --tar-quietly "${PACKAGE_NAME}" "${RUN_PACKAGE_NAME}" "${COMMENTS}" "${INSTALL_SHELL}"
     COMMAND chmod 750 ${CMAKE_INSTALL_PREFIX}/*.run
     COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_INSTALL_PREFIX}/.package_done"
-    DEPENDS ${DEPENDS_FILES}
+    DEPENDS ${DEPENDS_FILES} ${MAKESELF_TOOL} ${MAKESELF_HEADER}
     COMMENT "Creating ${RUN_PACKAGE_NAME}"
 )
-
-
 
 add_custom_target(package_debugger ALL
     DEPENDS "${CMAKE_INSTALL_PREFIX}/.package_done"

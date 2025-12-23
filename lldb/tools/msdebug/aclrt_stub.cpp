@@ -62,6 +62,8 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
                 {"aclrtCreateBinaryImpl", ACLRT_CREATE_BINARY_IMPL_NOT_FOUND_ERR, nullptr}},
             {"aclrtBinaryLoadImpl",
                 {"aclrtBinaryLoadImpl", ACLRT_BINARY_LOAD_IMPL_NOT_FOUND_ERR, nullptr}},
+            {"aclrtBinaryLoadFromDataImpl",
+                {"aclrtBinaryLoadFromDataImpl", ACLRT_BINARY_LOAD_FROM_DATA_IMPL_NOT_FOUND_ERR, nullptr}},
             {"aclrtStreamGetIdImpl",
                 {"aclrtStreamGetIdImpl", ACLRT_STREAM_GET_ID_IMPL_NOT_FOUND_ERR, nullptr}},
             {"aclrtSynchronizeStreamWithTimeoutImpl",
@@ -133,7 +135,13 @@ void OpenAclrtLib()
         runtimeLibPath += "/lib64/libacl_rt_impl.so";
         g_handle = dlopen(runtimeLibPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
         if (g_handle == nullptr) {
-            ThrowErrorCode(LIB_ACL_RUNTIME_IMPL_NOT_FOUND_ERR);
+            std::string oldAclImplPath(toolkitPath);
+            oldAclImplPath += "/lib64/libascendcl_impl.so";
+            RT_STUB_LOG_INFO("dlopen %s failed, change to open %s\n", runtimeLibPath.c_str(), oldAclImplPath.c_str());
+            g_handle = dlopen(oldAclImplPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
+            if (g_handle == nullptr) {
+                ThrowErrorCode(LIB_ACL_RUNTIME_IMPL_NOT_FOUND_ERR);
+            }
         }
         RT_STUB_LOG_INFO("dlopen aclrt impl done\n");
     }
@@ -141,9 +149,14 @@ void OpenAclrtLib()
     for (auto &it : GetAclrtStubFuncInfoMap()) {
         it.second.funcPtr = dlsym(g_handle, it.second.name.c_str());
         if (it.second.funcPtr == nullptr) {
-            ThrowErrorCode(it.second.errorCode);
+            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
+                                it.second.name.c_str());
+            continue;
         }
         GetStubFuncInfoMap()[it.first] = it.second;
+    }
+    if (GetStubFuncInfoMap().empty()) {
+        ThrowErrorCode(DLSYM_ALL_STUBFUNC_ERROR);
     }
 }
 

@@ -49,15 +49,10 @@ Status RemoteAwarePlatform::ResolveExecutable(
       CheckInputValidClass flags =
         static_cast<CheckInputValidClass>(
           CheckInputValidClass::eCheckPathExists |
-          CheckInputValidClass::eCheckOwnerAndWritablePermission |
           CheckInputValidClass::eCheckReadablePermission |
           CheckInputValidClass::eCheckIsDir |
           CheckInputValidClass::eCheckFileSize
         );
-      // In device coredump mode, user will provide kernel object file instead of executable file.
-      if (resolved_module_spec.GetArchitecture().GetMachine() != llvm::Triple::hiipu64) {
-        flags |= CheckInputValidClass::eCheckExecutablePermission;
-      }
       Status error = resolved_module_spec.CheckInputFileValid(flags);
       if (error.Fail()) {
         return error;

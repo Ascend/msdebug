@@ -64,6 +64,7 @@ enum MSDEBUG_ERROR_CODE {
     ACCESS_INVALID_RT_FUNC_NAME_ERR = 0x10202, // 尝试获取无效的rt函数指针
     GET_KERNEL_INFO_ERROR = 0x10203,  // get kernel info failed, handle is not saved when register function is running
     STUBFUNC_VECTOR_EMPTY_ERROR = 0x10204, // stubFunc Vector is empty, can not get pc start
+    DLSYM_ALL_STUBFUNC_ERROR = 0x10205, // dlsym all function failed
 
     /* 运行时错误 */
     // rt接口返回异常

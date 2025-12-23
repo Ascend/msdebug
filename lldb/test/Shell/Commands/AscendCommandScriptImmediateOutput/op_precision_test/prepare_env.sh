@@ -26,7 +26,7 @@ fi
 if [ -d "ops_adv" ]||[ -d "ops_adv-br_hisi_trunk_ai" ]||[ -d "./hisi/asl/ops/ops_adv" ]||[ -d "./hisi/asl/ops/ops_adv-br_hisi_trunk_ai" ]; then
     echo "ops_adv repo is already downloaded"
 else
-    git clone https://szv-cr-y.codehub.huawei.com/Turing_Solution/hisi/asl/ops/ops_adv.git -b br_hisi_trunk_ai --depth 5
+    git clone LS_URL_REPLACE -b br_hisi_trunk_ai --depth 5
     if [ $? -eq 0 ];then
         echo "git clone ops_adv done"
     else
