@@ -1,6 +1,6 @@
 //===-- BreakpointSite.h ----------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -11,8 +11,9 @@
 
 #include <list>
 #include <mutex>
-
-
+#ifdef MS_DEBUGGER
+#include "lldb/Utility/ArchSpec.h"
+#endif
 #include "lldb/Breakpoint/BreakpointLocationCollection.h"
 #include "lldb/Breakpoint/StoppointSite.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -197,7 +198,15 @@ public:
   BreakpointSite::Type GetType() const { return m_type; }
 
   void SetType(BreakpointSite::Type type) { m_type = type; }
+#ifdef MS_DEBUGGER
+  const ArchSpec& GetArchSpec() {
+    return m_arch_spec;
+  }
 
+  void SetArchSpec(const ArchSpec &arch_spec) {
+    m_arch_spec = arch_spec;
+  }
+#endif
 private:
   friend class Process;
   friend class BreakpointLocation;
@@ -238,6 +247,9 @@ private:
 
   BreakpointSite(const BreakpointSite &) = delete;
   const BreakpointSite &operator=(const BreakpointSite &) = delete;
+#ifdef MS_DEBUGGER
+  ArchSpec m_arch_spec;
+#endif
 };
 
 } // namespace lldb_private

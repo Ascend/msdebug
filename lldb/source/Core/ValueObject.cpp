@@ -1,6 +1,6 @@
 //===-- ValueObject.cpp ---------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -729,8 +729,23 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       Process *process = exe_ctx.GetProcessPtr();
       if (process) {
         heap_buf_ptr->SetByteSize(bytes);
+#ifdef MS_DEBUGGER
+        ModuleSP module_sp = GetModule();
+        VariableSP variable_sp = GetVariable();
+        MemoryReaderParamClient param{};
+        param.arch_spec = module_sp ? module_sp->GetArchitecture() : ArchSpec();
+        param.address_class = variable_sp ?
+                variable_sp->LocationExpressionList().GetPointeeAddressClass() : DeviceAddressClass::NONE;
+
+        size_t bytes_read = 0;
+        if (addr <= std::numeric_limits<uint64_t>::max() - offset) {
+          bytes_read = process->ReadMemory(
+            addr + offset, heap_buf_ptr->GetBytes(), bytes, param, error);
+        }
+#else
         size_t bytes_read = process->ReadMemory(
             addr + offset, heap_buf_ptr->GetBytes(), bytes, error);
+#endif
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;
@@ -1339,6 +1354,7 @@ bool ValueObject::DumpPrintableRepresentation(
       {
         Status error;
         lldb::WritableDataBufferSP buffer_sp;
+        // FIXME: 没有了32，看看有没有问题
         std::pair<size_t, bool> read_string =
             ReadPointedString(buffer_sp, error,
                               (custom_format == eFormatVectorOfChar) ||

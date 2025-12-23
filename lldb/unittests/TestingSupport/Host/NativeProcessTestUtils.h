@@ -1,6 +1,6 @@
 //===-- NativeProcessTestUtils.cpp ------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -58,6 +58,15 @@ public:
                Status(const char *ModulePath, FileSpec &Spec));
   MOCK_METHOD2(GetFileLoadAddress,
                Status(const llvm::StringRef &FileName, addr_t &Addr));
+#ifdef MS_DEBUGGER
+  MOCK_METHOD1(SetAicOnFocus, void(const uint32_t &core_id));
+  MOCK_METHOD1(SetAivOnFocus, void(const uint32_t &core_id));
+  MOCK_METHOD1(GetDeviceInfo, Status(DeviceInfo &device_info));
+  MOCK_METHOD1(GetCoresInfo, Status(std::vector<CoreInfo> &info));
+  MOCK_METHOD1(GetStoppedCorePC, Status(lldb::addr_t &pc));
+  MOCK_METHOD1(GetKernelInfo, Status(KernelInfo &info));
+  MOCK_METHOD2(ReadDeviceRegisterValue, Status(uint32_t reg_num, uint64_t &value));
+#endif
 
   const ArchSpec &GetArchitecture() const /*override*/ { return Arch; }
   Status SetBreakpoint(lldb::addr_t Addr, uint32_t Size,

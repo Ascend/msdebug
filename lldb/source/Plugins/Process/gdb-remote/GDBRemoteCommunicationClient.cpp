@@ -1,6 +1,6 @@
 //===-- GDBRemoteCommunicationClient.cpp ----------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -2810,6 +2810,15 @@ bool GDBRemoteCommunicationClient::GetThreadStopInfo(
 uint8_t GDBRemoteCommunicationClient::SendGDBStoppointTypePacket(
     GDBStoppointType type, bool insert, addr_t addr, uint32_t length,
     std::chrono::seconds timeout) {
+#ifdef MS_DEBUGGER
+  return SendGDBStoppointTypePacket(type, insert, addr, length, timeout, ArchSpec());
+}
+
+uint8_t GDBRemoteCommunicationClient::SendGDBStoppointTypePacket(GDBStoppointType type,
+                                                                 bool insert, addr_t addr, uint32_t length,
+                                                                 std::chrono::seconds timeout,
+                                                                 const ArchSpec &arch_spec) {
+#endif
   Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s() %s at addr = 0x%" PRIx64,
             __FUNCTION__, insert ? "add" : "remove", addr);
@@ -2819,9 +2828,22 @@ uint8_t GDBRemoteCommunicationClient::SendGDBStoppointTypePacket(
     return UINT8_MAX;
   // Construct the breakpoint packet
   char packet[64];
+#ifdef MS_DEBUGGER
+  StreamString temp;
+  const size_t packet_len =
+          temp.Printf("%c%i,%" PRIx64 ",%x,%i", insert ? 'Z' : 'z', type, addr, length, arch_spec.GetMachine());
+  if (packet_len >= sizeof(packet)) {
+    return UINT8_MAX;
+  }
+  for (size_t i = 0; i < packet_len; ++i) {
+    packet[i] = *(temp.GetString().data() + i);
+  }
+  packet[packet_len] = '\0';
+#else
   const int packet_len =
       ::snprintf(packet, sizeof(packet), "%c%i,%" PRIx64 ",%x",
                  insert ? 'Z' : 'z', type, addr, length);
+#endif
   // Check we haven't overwritten the end of the packet buffer
   assert(packet_len + 1 < (int)sizeof(packet));
   UNUSED_IF_ASSERT_DISABLED(packet_len);
@@ -4351,3 +4373,251 @@ llvm::Expected<int> GDBRemoteCommunicationClient::KillProcess(lldb::pid_t pid) {
                                  "unexpected response to k packet: %s",
                                  response.GetStringRef().str().c_str());
 }
+
+#ifdef MS_DEBUGGER
+uint8_t GDBRemoteCommunicationClient::SendDeviceRuningMode(bool IsSingleCoreRun, std::chrono::seconds timeout) {
+  StreamString temp;
+  char isSingleCoreRunC = IsSingleCoreRun ? 'Y' : 'N';
+  temp.Printf("vDeviceSingleCoreRun%c;", isSingleCoreRunC);
+  std::string packet = temp.GetString().data();
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsOKResponse()) {
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendDeviceAicOnFocusPacket(int32_t core_id,
+  std::chrono::seconds timeout) {
+  StreamString temp;
+  temp.Printf("qDeviceAic%d;", core_id);
+  std::string packet = temp.GetString().data();
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendDeviceAivOnFocusPacket(int32_t core_id,
+  std::chrono::seconds timeout) {
+  StreamString temp;
+  temp.Printf("qDeviceAiv%d;", core_id);
+  std::string packet = temp.GetString().data();
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+template<typename T>
+bool StringSplit(llvm::StringRef value, std::vector<T> &result)
+{
+  llvm::SmallVector<llvm::StringRef> str_value_list;
+  value.split(str_value_list, ',');
+  result.clear();
+  for (const auto &str_value: str_value_list) {
+    T v;
+    if(str_value.getAsInteger(16, v)) {
+      return false;
+    }
+    result.push_back(v);
+  }
+  return true;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoDevicePacket(
+  DeviceInfo &device_info, std::chrono::seconds timeout) {
+  std::string packet = "qDeviceInfo;";
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    assert(response.GetStringRef().size() >= sizeof(DeviceInfo));
+    llvm::StringRef key;
+    llvm::StringRef value;
+    while (response.GetNameColonValue(key, value)) {
+      if (key.compare("aic_bitmaps") == 0) {
+        if (!StringSplit(value, device_info.aic_bitmaps)) {
+          return UINT8_MAX;
+        }
+      } else if (key.compare("aiv_bitmaps") == 0) {
+        if (!StringSplit(value, device_info.aiv_bitmaps)) {
+          return UINT8_MAX;
+        }
+      } else if (key.compare("device_id") == 0) {
+        if (value.getAsInteger(16, device_info.device_id)) {
+          return UINT8_MAX;
+        }
+      } else if (key.compare("device_ids") == 0) {
+        std::vector<uint32_t> device_ids;
+        if (!StringSplit(value, device_ids)) {
+          return UINT8_MAX;
+        }
+        device_info.device_ids.insert(device_ids.begin(), device_ids.end());
+      }
+    }
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+inline uint8_t ParseKeyValueToCoreInfo(llvm::StringRef key, llvm::StringRef value, CoreInfo &core_info)
+{
+  uint8_t ret{0};
+  if (key.compare("core_id") == 0 && value.getAsInteger(16, core_info.core_id)) {
+    ret = UINT8_MAX;
+  } else if (key.compare("reserve") == 0) {
+    return ret;
+  } else if (key.compare("total_num") == 0 && value.getAsInteger(16, core_info.total_num)) {
+    ret = UINT8_MAX;
+  } else if (key.compare("core_type") == 0) {
+    uint8_t core_type{UINT8_MAX};
+    if (value.getAsInteger(16, core_type)) {
+      ret = UINT8_MAX;
+    }
+    core_info.core_type = static_cast<CoreType>(core_type);
+  } else if ((key.compare("stream_id") == 0 && value.getAsInteger(16, core_info.stream_id)) ||
+             (key.compare("task_id") == 0 && value.getAsInteger(16, core_info.task_id)) ||
+             (key.compare("block_id") == 0 && value.getAsInteger(16, core_info.block_id)) ||
+             (key.compare("status") == 0 && value.getAsInteger(16, core_info.status)) ||
+             (key.compare("pc") == 0 && value.getAsInteger(16, core_info.pc)) ||
+             (key.compare("thread_dim_x") == 0 && value.getAsInteger(16, core_info.thread_dim_x)) ||
+             (key.compare("thread_dim_y") == 0 && value.getAsInteger(16, core_info.thread_dim_y)) ||
+             (key.compare("thread_dim_z") == 0 && value.getAsInteger(16, core_info.thread_dim_z))) {
+    ret = UINT8_MAX;
+  } else if (key.compare("pos_type") == 0) {
+    uint8_t pos_type{UINT8_MAX};
+    if (value.getAsInteger(16, pos_type)) {
+      ret = UINT8_MAX;
+    }
+    core_info.pos_type = static_cast<InterruptPosType>(pos_type);
+  }
+  return ret;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoCoresPacket(
+  CoreInfo &core_info, std::chrono::seconds timeout) {
+  Log *log(GetLog(GDBRLog::Process));
+  StreamString temp;
+  temp.Printf("qDeviceCoresInfo:%d;", core_info.core_id);
+  std::string packet = temp.GetString().data();
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    if (response.GetBytesLeft() < 1 || response.GetChar() != 'c') {
+      LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: qDeviceCoresInfo response did not "
+                "begin with \"c\"", __FUNCTION__);
+      return UINT8_MAX;
+    }
+
+    llvm::StringRef key;
+    llvm::StringRef value;
+    uint8_t ret{0};
+    while (!ret && response.GetNameColonValue(key, value)) {
+      ret = ParseKeyValueToCoreInfo(key, value, core_info);
+      if (ret) {
+        LLDB_LOG(log, "GDBRemoteCommunicationClient::{0}: parse key={1} failed, value={2}",
+                 __FUNCTION__, key, value);
+      }
+    }
+    
+    LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: core_id=%u "
+      "core_type=%d total_num=%u pc=%#lx status=%u", __FUNCTION__,
+      (uint32_t)(core_info.core_id), int(core_info.core_type), core_info.total_num, core_info.pc, core_info.status);
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoKernelPacket(
+  KernelInfo &kernel_info, std::chrono::seconds timeout) {
+  std::string packet = "qDeviceKernelInfo;";
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    const auto kernel_name_ref = response.GetStringRef();
+    size_t name_len = std::min(kernel_name_ref.size(), sizeof(KernelInfo));
+    for (size_t i = 0; i < name_len; ++i) {
+      kernel_info.name[i] = kernel_name_ref[i];
+    }
+    kernel_info.name[name_len] = '\0';
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoRegisterPacket(
+  const llvm::StringRef reg_name, uint64_t &reg_value, std::chrono::seconds timeout) {
+  StreamString temp;
+  temp.Printf("qDeviceRegisterValue:%s;", reg_name.str().c_str());
+  std::string packet = temp.GetString().data();
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    llvm::StringRef key;
+    llvm::StringRef value;
+    if (response.GetNameColonValue(key, value) && key.compare("reg_value") == 0) {
+      if (value.getAsInteger(16, reg_value)) {
+        return UINT8_MAX;
+      }
+      return 0;
+    }
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoRegisterListPacket(
+  std::vector<std::string> &reg_list, std::chrono::seconds timeout) {
+  StreamString temp;
+  temp.Printf("qDeviceRegisterList;");
+  std::string packet = temp.GetString().data();
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    llvm::StringRef key;
+    llvm::StringRef value;
+    if (response.GetNameColonValue(key, value) && key.compare("reg_list") == 0) {
+      llvm::SmallVector<llvm::StringRef> reg_name_list;
+      value.split(reg_name_list, ',');
+      for (const auto &reg_name : reg_name_list) {
+          reg_list.push_back(reg_name.str());
+      }
+      return 0;
+    }
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendKernelHashPacket(const std::string &kernel_hash) {
+  StreamString temp;
+  temp.Printf("vKernelHash:%s", kernel_hash.c_str());
+  std::string const packet = temp.GetString().data();
+  StringExtractorGDBRemote response;
+  PacketResult const packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsOKResponse()) {
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendDeviceIdPacket(const int32_t device_id) {
+  StreamString temp;
+  temp.Printf("vDeviceId:%d", device_id);
+  std::string const packet = temp.GetString().data();
+  StringExtractorGDBRemote response;
+  PacketResult const packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsOKResponse()) {
+    return 0;
+  }
+  return UINT8_MAX;
+}
+#endif

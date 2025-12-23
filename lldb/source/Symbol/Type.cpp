@@ -1,6 +1,6 @@
 //===-- Type.cpp ----------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -742,6 +742,16 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
       encoding_type->ResolveCompilerType(encoding_compiler_type_resolve_state);
     }
   }
+#ifdef MS_DEBUGGER
+  if (m_address_class) {
+    auto compiler_type = m_compiler_type.AddAddressClassModifier(m_address_class);
+    if (!compiler_type.IsValid()) {
+      LLDB_LOG(GetLog(LLDBLog::Symbols), "Unable to add address class {0}", m_address_class);
+    } else {
+      m_compiler_type = compiler_type;
+    }
+  }
+#endif
   return m_compiler_type.IsValid();
 }
 uint32_t Type::GetEncodingMask() {

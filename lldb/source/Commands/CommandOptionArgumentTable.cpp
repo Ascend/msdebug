@@ -1,6 +1,6 @@
 //===-- CommandOptionArgumentTable.cpp ------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -177,6 +177,25 @@ llvm::StringRef LanguageTypeHelpTextCallback() {
 
   return help_text;
 }
+#ifdef MS_DEBUGGER
+llvm::StringRef MemoryTypeHelpTextCallback() {
+  static std::string help_text;
+
+  if (!help_text.empty())
+    return help_text;
+
+  StreamString sstr;
+  sstr << "One of the following memory types:\n";
+
+  MemoryType::PrintAllMemoryTypes(sstr, "  ", "\n");
+
+  sstr.Flush();
+
+  help_text = std::string(sstr.GetString());
+
+  return help_text;
+}
+#endif
 
 llvm::StringRef SummaryStringHelpTextCallback() {
   return "A summary string is a way to extract information from variables in "

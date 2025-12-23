@@ -1,6 +1,6 @@
 //===-- NativeProcessProtocol.cpp -----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -204,6 +204,21 @@ Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,
   }
   return m_watchpoint_list.Add(addr, size, watch_flags, hardware);
 }
+
+#ifdef MS_DEBUGGER
+bool NativeProcessProtocol::IsDeviceBreak() {
+  auto *main_thread = GetThreadByID(GetID());
+  if (main_thread == nullptr) {
+    return false;
+  }
+  ThreadStopInfo stop_info;
+  std::string description;
+  if (main_thread->GetStopReason(stop_info, description)) {
+    return stop_info.still_break_in_device;
+  }
+  return false;
+}
+#endif
 
 Status NativeProcessProtocol::RemoveWatchpoint(lldb::addr_t addr) {
   // Update the thread list

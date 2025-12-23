@@ -1,6 +1,6 @@
 //===-- ABISysV_arm64.cpp -------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -90,6 +90,12 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   for (size_t i = 0; i < args.size(); ++i) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + i);
+#ifdef MS_DEBUGGER
+    if (!reg_info) {
+      LLDB_LOGF(log, "reg info is nullptr, return false");
+      return false;
+    }
+#endif
     LLDB_LOGF(log, "About to write arg%d (0x%" PRIx64 ") into %s",
               static_cast<int>(i + 1), args[i], reg_info->name);
     if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))

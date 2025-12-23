@@ -1,6 +1,6 @@
 //===-- TypeSystemClang.h ---------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -805,6 +805,13 @@ public:
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
+
+#ifdef MS_DEBUGGER
+  CompilerType AddAddressClassModifier(lldb::opaque_compiler_type_t type, uint32_t address_class) override;
+
+  uint32_t GetAddressClass(lldb::opaque_compiler_type_t type) override;
+#endif
+
 
   /// Using the current type, create a new typedef to that type using
   /// "typedef_name" as the name and "decl_ctx" as the decl context.

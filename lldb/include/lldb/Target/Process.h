@@ -1,6 +1,6 @@
 //===-- Process.h -----------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -62,6 +62,11 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
+
+#ifdef MS_DEBUGGER
+#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "Plugins/Process/elf-core/device-core/ElfCoreDeviceUtilities.h"
+#endif
 
 namespace lldb_private {
 
@@ -393,6 +398,94 @@ public:
   llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
+
+#ifdef MS_DEBUGGER
+  virtual Status SetDeviceSingleCoreRunFlag(bool isSingleCoreRunning) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support set core running type.", GetPluginName());
+    return error;
+  }
+  virtual Status GetDeviceRegisterInfo(const llvm::StringRef reg_name, uint64_t &reg_value) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support get core register value.", GetPluginName());
+    return error;
+  }
+  virtual Status GetDeviceRegisterInfo(const llvm::StringRef reg_name, RegisterValue &value) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support get core register value.", GetPluginName());
+    return error;
+  }
+  virtual Status GetDeviceRegisterList(std::vector<std::string> &reg_list) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support get core register list.", GetPluginName());
+    return error;
+  }
+  virtual bool ReadDeviceRegister(uint32_t register_id, uint64_t &value) {
+    return false;
+  }
+  virtual Status SetAicOnFocus(const uint32_t &core_id) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support switch aic on focus.", GetPluginName());
+    return error;
+  }
+  virtual Status SetAivOnFocus(const uint32_t &core_id) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support switch aiv on focus.", GetPluginName());
+    return error;
+  }
+  virtual Status GetDeviceInfo(DeviceInfo &info) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support get ascend device info.", GetPluginName());
+    return error;
+  }
+  virtual Status GetCoresInfo(std::vector<CoreInfo> &info) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support get ascend cores info.", GetPluginName());
+    return error;
+  }
+  virtual Status GetKernelInfo(KernelInfo &info) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support get ascend kernel info.", GetPluginName());
+    return error;
+  }
+  virtual Status SendKernelHash() {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support send kernel hash.", GetPluginName());
+    return error;
+  }
+  virtual Status SendDeviceId(const int32_t device_id) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support send device id.", GetPluginName());
+    return error;
+  }
+  virtual void GetDeviceStopInfoCached(DeviceStopInfo &info) const;
+  virtual void SetDeviceStopInfoCached(const DeviceStopInfo &info);
+  virtual void ShowDeviceStopInfoCached(Stream &stream);
+  virtual bool IsStopInDevice();
+  virtual void RefreshStopReason(lldb::ThreadSP &threadSp);
+  virtual const std::map<std::string, std::string>& GetCoreStopReason();
+  static bool HandleDeviceProcessStateChanged(const lldb::ProcessSP &process_sp);
+  virtual void SetDeviceCoredumpEnable(bool flag);
+  virtual bool DeviceCoredumpEnable() const;
+
+  // We need to update stop info reason after thread created,
+  // then we can read register value to get specific aicore error.
+  virtual void UpdateStopInfo(bool focus_known_error_core = false) {};
+
+  virtual const device_core::SummaryInfo& GetSummaryInfo();
+
+#endif
 
 /// A notification structure that can be used by clients to listen
 /// for changes in a process's lifetime.
@@ -1572,6 +1665,10 @@ public:
   ///     returned in the case of an error.
   virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                             Status &error);
+#ifdef MS_DEBUGGER
+  virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                            const MemoryReaderParamClient &param, Status &error);
+#endif
 
   /// Read of memory from a process.
   ///
@@ -1603,6 +1700,14 @@ public:
   ///     returned in the case of an error.
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
+
+#ifdef MS_DEBUGGER
+  size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
+                                const MemoryReaderParamClient &param, Status &error);
+
+  size_t ReadMemoryWithFixedSize(lldb::addr_t vm_addr, void *buf, size_t size,
+                                 const MemoryReaderParamClient &param, Status &error);
+#endif
 
   /// Read a NULL terminated C string from memory
   ///
@@ -2695,6 +2800,13 @@ void PruneThreadPlans();
   lldb::addr_t FindInMemory(const uint8_t *buf, uint64_t size,
                             const AddressRange &range, size_t alignment,
                             Status &error);
+ 
+#ifdef MS_DEBUGGER
+  DeviceStopInfo m_device_stop_info{CoreType::UNKNOWN_CORE_TYPE, UINT32_MAX, "", 0, SocType::SOC_BEGIN};
+  bool m_single_core_mode {false};
+  std::map<std::string, std::string> m_device_core_stop_reason;
+  bool m_device_coredump {false};
+#endif
 
 protected:
   friend class Trace;
@@ -2815,6 +2927,13 @@ protected:
                               const uint8_t *buf, size_t size,
                               AddressRanges &matches, size_t alignment,
                               size_t max_matches);
+
+#ifdef MS_DEBUGGER
+  virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                              const MemoryReaderParamClient &param, Status &error) {
+    return DoReadMemory(vm_addr, buf, size, error);
+  }
+#endif
 
   /// DoGetMemoryRegionInfo is called by GetMemoryRegionInfo after it has
   /// removed non address bits from load_addr. Override this method in

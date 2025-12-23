@@ -1,6 +1,6 @@
 //===-- NativeProcessLinux.h ---------------------------------- -*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -40,6 +40,9 @@ namespace process_linux {
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessLinux : public NativeProcessELF,
                            private NativeProcessSoftwareSingleStep {
+#ifdef MS_DEBUGGER
+  friend class AscendThreadLinux;
+#endif
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
@@ -164,6 +167,54 @@ public:
   /// Writes a siginfo_t structure corresponding to the given thread ID to the
   /// memory region pointed to by \p siginfo.
   Status GetSignalInfo(lldb::tid_t tid, void *siginfo) const;
+#ifdef MS_DEBUGGER
+  virtual Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) override {
+    return Status();
+  }
+
+  virtual Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) override {
+    return Status();
+  }
+
+  virtual Status ReadDeviceRegisterList(std::vector<std::string> &reg_list) override {
+    return Status();
+  }
+  std::map<lldb::tid_t, lldb::addr_t>& GetThreadsSteppingWithBreakpoint() {
+      return m_threads_stepping_with_breakpoint;
+  }
+
+  virtual void SetAicOnFocus(const uint32_t &core_id) override {
+    return;
+  }
+
+  virtual void SetAivOnFocus(const uint32_t &core_id) override {
+    return;
+  }
+
+  virtual void SetSingleCoreRunFlag(bool isSingleCoreRun) override {
+    return;
+  }
+
+  virtual Status GetDeviceInfo(DeviceInfo &info) override {
+    return Status();
+  }
+
+  virtual Status GetCoresInfo(std::vector<CoreInfo> &cores_info) override {
+    return Status();
+  }
+
+  virtual Status GetKernelInfo(KernelInfo &info) override {
+    return Status();
+  }
+
+  virtual void SetLoadedKernelHash(const std::string &kernel_hash) override {
+    return;
+  }
+
+  virtual void SetClientDeviceId(const int32_t device_id) override {
+    return;
+  }
+#endif
 
 protected:
   llvm::Expected<llvm::ArrayRef<uint8_t>>
@@ -171,7 +222,9 @@ protected:
 
   llvm::Expected<uint64_t> Syscall(llvm::ArrayRef<uint64_t> args);
 
+#ifndef MS_DEBUGGER
 private:
+#endif
   Manager &m_manager;
   ArchSpec m_arch;
 

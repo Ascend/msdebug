@@ -368,7 +368,6 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
       thread_sp->WillStop();
     }
   }
-
   return should_stop;
 }
 

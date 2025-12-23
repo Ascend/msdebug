@@ -1,6 +1,6 @@
 //===-- Value.cpp ---------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -53,7 +53,13 @@ Value::Value(const void *bytes, int len)
 Value::Value(const Value &v)
     : m_value(v.m_value), m_compiler_type(v.m_compiler_type),
       m_context(v.m_context), m_value_type(v.m_value_type),
+#ifdef MS_DEBUGGER
+      m_context_type(v.m_context_type), m_data_buffer(),
+      m_address_class(v.m_address_class), m_pointee_address_class(v.m_pointee_address_class),
+      m_arch_spec(v.m_arch_spec) {
+#else
       m_context_type(v.m_context_type), m_data_buffer() {
+#endif
   const uintptr_t rhs_value =
       (uintptr_t)v.m_value.ULongLong(LLDB_INVALID_ADDRESS);
   if ((rhs_value != 0) &&
@@ -81,6 +87,11 @@ Value &Value::operator=(const Value &rhs) {
 
       m_value = (uintptr_t)m_data_buffer.GetBytes();
     }
+#ifdef MS_DEBUGGER
+    m_arch_spec = rhs.m_arch_spec;
+    m_address_class = rhs.m_address_class;
+    m_pointee_address_class = rhs.m_pointee_address_class;
+#endif
   }
   return *this;
 }
@@ -551,8 +562,14 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         Process *process = exe_ctx->GetProcessPtr();
 
         if (process) {
+#ifdef MS_DEBUGGER
+          MemoryReaderParamClient param{m_arch_spec, m_address_class, 0};
+          const size_t bytes_read =
+              process->ReadMemory(address, dst, byte_size, param, error);
+#else
           const size_t bytes_read =
               process->ReadMemory(address, dst, byte_size, error);
+#endif
           if (bytes_read != byte_size)
             error.SetErrorStringWithFormat(
                 "read memory from 0x%" PRIx64 " failed (%u of %u bytes read)",

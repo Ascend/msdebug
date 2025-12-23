@@ -1,6 +1,6 @@
 //===-- UserExpression.cpp ------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -139,6 +139,49 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
 
   return ret;
 }
+
+#ifdef MS_DEBUGGER
+lldb::ExpressionResults
+UserExpression::DeviceExpressionEvaluate(StackFrame *frame,
+                                         llvm::StringRef expr,
+                                         const EvaluateExpressionOptions &options,
+                                         lldb::ValueObjectSP &result_valobj_sp,
+                                         lldb::LanguageType language, Status &error) {
+  Log *log(GetLog(LLDBLog::Expressions | LLDBLog::Step));
+  bool show_globals = true;
+  lldb::ExpressionResults execution_results = lldb::eExpressionResultUnavailable;
+  VariableList *variable_list =
+      frame->GetVariableList(show_globals, &error);
+  if (!variable_list || error.Fail()) {
+    return execution_results;
+  }
+  lldb::VariableSP var_sp;
+
+  // remove the last ' ' character in expression in case the variable name fails to be parsed
+  std::string new_expr(expr);
+  if ((new_expr.size() > 0) && (new_expr.back() == ' ')) {
+    new_expr.pop_back();
+    LLDB_LOG(log, "' ' char at the end has been removed. new expr={0}", new_expr);
+  }
+  llvm::StringRef new_expr_ref(new_expr);
+  result_valobj_sp = frame->GetValueForVariableExpressionPath(
+          new_expr_ref, lldb::eNoDynamicValues,
+          StackFrame::eExpressionPathOptionCheckPtrVsMember |
+          StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
+          StackFrame::eExpressionPathOptionsInspectAnonymousUnions,
+          var_sp, error);
+  if (error.Success() && result_valobj_sp) {
+    result_valobj_sp->SetPreferredDisplayLanguage(language);
+    LLDB_LOG(log,
+             "== [UserExpression::Evaluate] Execution completed "
+             "normally with result {0} ==",
+             result_valobj_sp->GetValueAsCString());
+    return lldb::eExpressionCompleted;
+  }
+
+  return lldb::eExpressionResultUnavailable;
+}
+#endif
 
 lldb::ExpressionResults
 UserExpression::Evaluate(ExecutionContext &exe_ctx,
@@ -368,6 +411,17 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
       LLDB_LOG(log, "== [UserExpression::Evaluate] Executing expression ==");
 
+#ifdef MS_DEBUGGER
+      StackFrame *frame = exe_ctx.GetFramePtr();
+      if (frame && frame->GetThread() && frame->GetThread()->GetProcess() != nullptr &&
+          frame->GetThread()->GetProcess()->IsStopInDevice() &&
+          (execution_results = UserExpression::DeviceExpressionEvaluate(frame, expr, options, result_valobj_sp,
+                                                                        language.AsLanguageType(), error)) != 
+          lldb::eExpressionCompleted) {
+          result_valobj_sp = ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(), error);
+        return execution_results;
+      }
+#endif
       execution_results =
           user_expression_sp->Execute(diagnostic_manager, exe_ctx, options,
                                       user_expression_sp, expr_result);

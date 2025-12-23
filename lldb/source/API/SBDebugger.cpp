@@ -1,6 +1,6 @@
 //===-- SBDebugger.cpp ----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -735,6 +735,19 @@ SBDebugger::GetScriptInterpreterInfo(lldb::ScriptLanguage language) {
   }
   return data;
 }
+
+#ifdef MS_DEBUGGER
+const char *SBDebugger::GetLogoString() {
+  LLDB_INSTRUMENT();
+  static std::string g_logo_str = "msdebug(MindStudio Debugger) is part of "
+      "MindStudio Operator-dev Tools.\n"
+      "The tool provides developers with a mechanism for debugging "
+      "Ascend kernels running on actual hardware.\n"
+      "This enables developers to debug Ascend kernels without "
+      "being affected by potential changes brought by simulation and emulation environments.";
+  return g_logo_str.c_str();
+}
+#endif
 
 const char *SBDebugger::GetVersionString() {
   LLDB_INSTRUMENT();

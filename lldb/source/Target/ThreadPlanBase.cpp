@@ -1,6 +1,6 @@
 //===-- ThreadPlanBase.cpp ------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -87,6 +87,9 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
       m_report_stop_vote = eVoteNo;
       return false;
 
+#ifdef MS_DEBUGGER
+    case eStopReasonDeviceBreakpoint:
+#endif
     case eStopReasonBreakpoint:
     case eStopReasonWatchpoint:
       if (stop_info_sp->ShouldStopSynchronous(event_ptr)) {

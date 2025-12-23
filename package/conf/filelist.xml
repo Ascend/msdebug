@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config name="mindstudio-debugger" dst_path="mindstudio-debugger" install_path="mindstudio-debugger" install_own="$username:$usergroup" install_mod="550">
+    <!-- install directory -->
+    <dir_info value="common" install_mod="550">
+        <path value="${TARGET_ENV}"/>
+        <path value="${TARGET_ENV}/bin" install_softlink="bin"/>
+        <path value="tools" install_mod="750"/>
+    </dir_info>
+
+    <dir_info value="mindstudio-debugger">
+        <path value="share/info/mindstudio-debugger/script"/>
+        <path value="tools/msdebug"/>
+        <path value="tools/msdebug/bin"/>
+        <path value="tools/msdebug/lib"/>
+    </dir_info>
+
+    <file_info value="install_info" copy_type="delivery" src_path="" dst_path="share/info/mindstudio-debugger" install_path="share/info/mindstudio-debugger" install_mod="440">
+        <file value="version.info"/>
+        <file value="scene.info"/>
+    </file_info>
+ 
+    <file_info value="scripts" copy_type="source" src_path="package/script" dst_path="share/info/mindstudio-debugger/script" install_path="share/info/mindstudio-debugger/script" install_mod="550">
+        <file value="install.sh"/>
+        <file value="uninstall.sh"/>
+        <file value="cann_uninstall.sh"/>
+        <file value="common.sh"/>
+        <file value="parser_install.sh" copy_type="delivery" src_path=""/>
+        <file value="filelist.csv" copy_type="delivery" src_path="" install_mod="440"/>
+        <file value="help.info" src_path="package/conf" install_mod="440"/>
+    </file_info>
+
+    <file_info value="msdebug/bin" copy_type="source" src_path="${OUTPUT}/bin" dst_path="mindstudio-debugger/tools/msdebug/bin" install_path="tools/msdebug/bin" install_mod="550">
+        <file value="msdebug" install_softlink="${TARGET_ENV}/bin/msdebug"/>
+        <file value="msdebug.bin" />
+        <file value="lldb-server" />
+        <file value="msdebug-mi" />
+        <file value="msdebug-mi.bin" />
+    </file_info>
+    <file_info value="msdebug/lib" copy_type="source" src_path="${OUTPUT}/lib" dst_path="mindstudio-debugger/tools/msdebug/lib" install_path="tools/msdebug/lib" install_mod="440">
+        <file value="libtinfo.so.5"/>
+        <file value="libruntime_stub.so"/>
+        <file value="libpanel.so.5"/>
+        <file value="libncurses.so.5"/>
+        <file value="liblldb.so.19.1.7"/>
+        <file value="liblldb.so.19.1"/>
+        <file value="libedit.so.0"/>
+    </file_info>
+</config> 

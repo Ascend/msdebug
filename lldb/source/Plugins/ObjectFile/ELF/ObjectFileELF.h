@@ -1,6 +1,6 @@
 //===-- ObjectFileELF.h --------------------------------------- -*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,6 +13,9 @@
 
 #include <optional>
 #include <vector>
+#ifdef MS_DEBUGGER
+#include "lldb/Core/ModuleSpec.h"
+#endif
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -402,6 +405,9 @@ private:
   /// .gnu_debugdata section or \c nullptr if an error occured or if there's no
   /// section with that name.
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
+#ifdef MS_DEBUGGER
+  std::shared_ptr<lldb_private::ModuleSpec> GetChildModuleSpec() override;
+#endif
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H

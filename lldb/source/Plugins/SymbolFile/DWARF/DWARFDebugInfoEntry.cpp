@@ -1,6 +1,6 @@
 //===-- DWARFDebugInfoEntry.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -531,6 +531,9 @@ DWARFRangeList DWARFDebugInfoEntry::GetAttributeAddressRanges(
         ranges.Append(DWARFRangeList::Entry(lo_pc, hi_pc - lo_pc));
     }
   }
+#ifdef MS_DEBUGGER
+  ranges.Sort();
+#endif
   return ranges;
 }
 

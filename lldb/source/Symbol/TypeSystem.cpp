@@ -1,6 +1,6 @@
 //===-- TypeSystem.cpp ----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -107,6 +107,17 @@ CompilerType
 TypeSystem::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
+
+#ifdef MS_DEBUGGER
+CompilerType
+TypeSystem::AddAddressClassModifier(lldb::opaque_compiler_type_t type, uint32_t address_class) {
+  return CompilerType();
+}
+  
+uint32_t TypeSystem::GetAddressClass(lldb::opaque_compiler_type_t type) {
+  return 0U;
+}
+#endif
 
 CompilerType TypeSystem::CreateTypedef(lldb::opaque_compiler_type_t type,
                                        const char *name,

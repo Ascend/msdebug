@@ -1,6 +1,6 @@
 //===-- CommandObjectFrame.cpp --------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -370,7 +370,11 @@ public:
             nullptr,
             eCommandRequiresFrame | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
+#ifdef MS_DEBUGGER
+                eCommandRequiresProcess | eCommandProcessMustNotBeTaskKilled),
+#else
                 eCommandRequiresProcess),
+#endif
         m_option_variable(
             true), // Include the frame specific options by passing "true"
         m_option_format(eFormatDefault) {

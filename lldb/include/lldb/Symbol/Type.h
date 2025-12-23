@@ -1,6 +1,6 @@
 //===-- Type.h --------------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -537,6 +537,10 @@ public:
   /// Return the language-specific payload.
   void SetPayload(Payload opaque_payload) { m_payload = opaque_payload; }
 
+#ifdef MS_DEBUGGER
+  uint32_t &GetAddressClass() { return m_address_class; }
+#endif
+
 protected:
   ConstString m_name;
   SymbolFile *m_symbol_file = nullptr;
@@ -552,6 +556,7 @@ protected:
   ResolveState m_compiler_type_resolve_state = ResolveState::Unresolved;
   /// Language-specific flags.
   Payload m_payload;
+  uint32_t m_address_class{0};
 
   Type *GetEncodingType();
 

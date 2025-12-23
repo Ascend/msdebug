@@ -1,6 +1,6 @@
 //===-- FormatManager.cpp -------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -46,6 +46,9 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatHex, 'x', "hex"},
     {eFormatHexUppercase, 'X', "uppercase hex"},
     {eFormatFloat, 'f', "float"},
+#ifdef MS_DEBUGGER
+    {eFormatBFloat16, '\0', "brain float16"},
+#endif
     {eFormatOctal, 'o', "octal"},
     {eFormatOSType, 'O', "OSType"},
     {eFormatUnicode16, 'U', "unicode16"},
@@ -61,6 +64,9 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatVectorOfUInt32, '\0', "uint32_t[]"},
     {eFormatVectorOfSInt64, '\0', "int64_t[]"},
     {eFormatVectorOfUInt64, '\0', "uint64_t[]"},
+#ifdef MS_DEBUGGER
+    {eFormatVectorOfBFloat16, '\0', "bfloat16[]"},
+#endif
     {eFormatVectorOfFloat16, '\0', "float16[]"},
     {eFormatVectorOfFloat32, '\0', "float32[]"},
     {eFormatVectorOfFloat64, '\0', "float64[]"},

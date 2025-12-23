@@ -1,0 +1,552 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
+# RUN: cd ~/samples/operator/AddCustomSample/KernelLaunch/AddKernelInvocation/
+# RUN:  msdebug add_npu -s %s | FileCheck %s -dump-input=always
+
+b add_custom.cpp:77
+# CHECK-LABEL: b add_custom.cpp:77
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint 1.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:77:{{[0-9]+}}
+br delete
+y
+
+b 19
+# CHECK-LABEL: b 19
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:19:{{[0-9]+}}
+br delete
+y
+
+
+b 78
+# CHECK-LABEL: b 78
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:78:{{[0-9]+}}
+br delete
+y
+
+
+b 22
+# CHECK-LABEL: b 22
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:22:{{[0-9]+}}
+br delete
+y
+
+
+b 23
+# CHECK-LABEL: b 23
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:23:{{[0-9]+}}
+br delete
+y
+
+
+b 24
+# CHECK-LABEL: b 24
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:24:{{[0-9]+}}
+br delete
+y
+
+
+b 25
+# CHECK-LABEL: b 25
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:25:{{[0-9]+}}
+br delete
+y
+
+
+b 26
+# CHECK-LABEL: b 26
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:26:{{[0-9]+}}
+br delete
+y
+
+
+b 27
+# CHECK-LABEL: b 27
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:27:{{[0-9]+}}
+br delete
+y
+
+
+b 28
+# CHECK-LABEL: b 28
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:28:{{[0-9]+}}
+br delete
+y
+
+
+b 79
+# CHECK-LABEL: b 79
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:79:{{[0-9]+}}
+br delete
+y
+
+
+b 31
+# CHECK-LABEL: b 31
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:31:{{[0-9]+}}
+br delete
+y
+
+
+b 33
+# CHECK-LABEL: b 33
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:33:{{[0-9]+}}
+br delete
+y
+
+
+b 42
+# CHECK-LABEL: b 42
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:42:{{[0-9]+}}
+br delete
+y
+
+
+b 43
+# CHECK-LABEL: b 43
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:43:{{[0-9]+}}
+br delete
+y
+
+
+b 44
+# CHECK-LABEL: b 44
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:44:{{[0-9]+}}
+br delete
+y
+
+
+b 45
+# CHECK-LABEL: b 45
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:45:{{[0-9]+}}
+br delete
+y
+
+
+b 46
+# CHECK-LABEL: b 46
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:46:{{[0-9]+}}
+br delete
+y
+
+
+b 47
+# CHECK-LABEL: b 47
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:47:{{[0-9]+}}
+br delete
+y
+
+
+b 48
+# CHECK-LABEL: b 48
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:48:{{[0-9]+}}
+br delete
+y
+
+
+b 34
+# CHECK-LABEL: b 34
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:34:{{[0-9]+}}
+br delete
+y
+
+
+b 51
+# CHECK-LABEL: b 51
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:51:{{[0-9]+}}
+br delete
+y
+
+
+b 52
+# CHECK-LABEL: b 52
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:52:{{[0-9]+}}
+br delete
+y
+
+
+b 53
+# CHECK-LABEL: b 53
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:53:{{[0-9]+}}
+br delete
+y
+
+
+b 54
+# CHECK-LABEL: b 54
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:54:{{[0-9]+}}
+br delete
+y
+
+
+b 55
+# CHECK-LABEL: b 55
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:55:{{[0-9]+}}
+br delete
+y
+
+
+b 56
+# CHECK-LABEL: b 56
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:56:{{[0-9]+}}
+br delete
+y
+
+
+b 57
+# CHECK-LABEL: b 57
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:57:{{[0-9]+}}
+br delete
+y
+
+
+b 58
+# CHECK-LABEL: b 58
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:58:{{[0-9]+}}
+br delete
+y
+
+
+b 35
+# CHECK-LABEL: b 35
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:35:{{[0-9]+}}
+br delete
+y
+
+
+b 61
+# CHECK-LABEL: b 61
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:61:{{[0-9]+}}
+br delete
+y
+
+
+b 62
+# CHECK-LABEL: b 62
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:62:{{[0-9]+}}
+br delete
+y
+
+
+b 63
+# CHECK-LABEL: b 63
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:63:{{[0-9]+}}
+br delete
+y
+
+
+b 64
+# CHECK-LABEL: b 64
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:64:{{[0-9]+}}
+br delete
+y
+
+
+c
+# CHECK: Process {{[0-9]+}} resuming
+# CHECK: Process {{[0-9]+}} exited
+
+quit

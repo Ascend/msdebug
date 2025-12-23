@@ -1,6 +1,6 @@
 //===-- ThreadPlanStepOverBreakpoint.cpp ----------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -60,6 +60,9 @@ bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
       case eStopReasonTrace:
       case eStopReasonNone:
         return true;
+#ifdef MS_DEBUGGER
+      case eStopReasonDeviceBreakpoint:
+#endif
       case eStopReasonBreakpoint:
       {
         // It's a little surprising that we stop here for a breakpoint hit.

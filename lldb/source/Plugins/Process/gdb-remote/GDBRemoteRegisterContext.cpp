@@ -1,6 +1,6 @@
 //===-- GDBRemoteRegisterContext.cpp --------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -64,12 +64,37 @@ void GDBRemoteRegisterContext::SetAllRegisterValid(bool b) {
     *pos = b;
 }
 
+#ifdef MS_DEBUGGER
+void GDBRemoteRegisterContext::UpdateDeviceRegIfNeeded() {
+  if (IsStopInDevice() && m_device_reg_info.empty()) {
+    auto &gdb_process = static_cast<ProcessGDBRemote &>(*m_thread.GetProcess());
+    Status error = gdb_process.UpdateDeviceRegisterInfo(m_device_reg_info);
+    if (error.Fail()) {
+       Log *log(GetLog(GDBRLog::Thread | GDBRLog::Packets));
+       LLDB_LOG(log, "{0} failed: {1}", __FUNCTION__, error);
+    }
+  }
+}
+#endif
+
 size_t GDBRemoteRegisterContext::GetRegisterCount() {
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    UpdateDeviceRegIfNeeded();
+    return m_device_reg_info.size();
+  }
+#endif
   return m_reg_info_sp->GetNumRegisters();
 }
 
 const RegisterInfo *
 GDBRemoteRegisterContext::GetRegisterInfoAtIndex(size_t reg) {
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    UpdateDeviceRegIfNeeded();
+    return reg < GetRegisterCount() ? &m_device_reg_info[reg]: nullptr;
+  }
+#endif
   return m_reg_info_sp->GetRegisterInfoAtIndex(reg);
 }
 
@@ -81,8 +106,75 @@ const RegisterSet *GDBRemoteRegisterContext::GetRegisterSet(size_t reg_set) {
   return m_reg_info_sp->GetRegisterSet(reg_set);
 }
 
+#ifdef MS_DEBUGGER
+bool GDBRemoteRegisterContext::ReadDeviceRegister(uint32_t register_id, uint64_t &value) {
+  ExecutionContext exe_ctx(CalculateThread());
+  Process *process = exe_ctx.GetProcessPtr();
+  Thread *thread = exe_ctx.GetThreadPtr();
+  if (process == nullptr || thread == nullptr)
+    return false;
+
+  return process->ReadDeviceRegister(register_id, value);
+}
+
+bool GDBRemoteRegisterContext::ReadDeviceRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &value) {
+    if (!reg_info) {
+      LLDB_LOG(GetLog(GDBRLog::Thread | GDBRLog::Packets),
+               "register information is null, do not support to read device register");
+      return false;
+    }
+    ExecutionContext exe_ctx(CalculateThread());
+    Process *process = exe_ctx.GetProcessPtr();
+    DeviceStopInfo info;
+    uint32_t dwarf_num;
+    if (!process) {
+      LLDB_LOG(GetLog(GDBRLog::Thread | GDBRLog::Packets),
+               "process is null, do not support to read device register");
+      return false;
+    }
+    process->GetDeviceStopInfoCached(info);
+    if (info.soc_type == SocType::ASCEND910B || info.soc_type == SocType::ASCEND910D) {
+      constexpr uint32_t ASCEND_DWARF_OFFSET = 64U;
+      dwarf_num = reg_info->kinds[eRegisterKindDWARF] - ASCEND_DWARF_OFFSET;
+    } else if (info.soc_type == SocType::ASCEND310P) {
+      if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
+        constexpr uint32_t ASCEND_DWARF_OFFSET = 128U;
+        dwarf_num = reg_info->kinds[eRegisterKindDWARF] - ASCEND_DWARF_OFFSET;
+      } else {
+        dwarf_num = reg_info->kinds[eRegisterKindDWARF];
+      }
+    } else {
+      LLDB_LOG(GetLog(GDBRLog::Thread | GDBRLog::Packets), "soc type is "
+               "wrong, do not support to read device register");
+      return false;
+    }
+
+    uint64_t value_interger;
+    if (!ReadDeviceRegister(dwarf_num, value_interger)) {
+      return false;
+    }
+    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC ||
+        reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA) {
+      if (auto process_sp = m_thread.GetProcess()) {
+        uint64_t base_pc = process_sp->m_device_stop_info.base_pc;
+        if (value_interger >= base_pc) {
+          value_interger -= base_pc;
+        }
+      }
+    }
+    value.SetUInt64(value_interger);
+    return true;
+}
+
+#endif
 bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
                                             RegisterValue &value) {
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    return ReadDeviceRegister(reg_info, value);
+  }
+#endif
   // Read the register
   if (ReadRegisterBytes(reg_info)) {
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
@@ -755,6 +847,11 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
 
 uint32_t GDBRemoteRegisterContext::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    return RegisterContext::ConvertRegisterKindToRegisterNumber(kind, num);
+  }
+#endif
   return m_reg_info_sp->ConvertRegisterKindToRegisterNumber(kind, num);
 }
 

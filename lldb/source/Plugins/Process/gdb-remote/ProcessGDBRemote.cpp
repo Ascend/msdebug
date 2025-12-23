@@ -1,6 +1,6 @@
 //===-- ProcessGDBRemote.cpp ----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -91,6 +91,9 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#ifdef MS_DEBUGGER
+#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#endif
 
 #define DEBUGSERVER_BASENAME "debugserver"
 using namespace lldb;
@@ -372,6 +375,101 @@ static size_t SplitCommaSeparatedRegisterNumberString(
   return regnums.size();
 }
 
+#ifdef MS_DEBUGGER
+void ProcessGDBRemote::ParseDeviceRegisterInfo(StringExtractorGDBRemote &response, RegisterInfo &reg_info) {
+  llvm::StringRef name;
+  llvm::StringRef value;
+  while (response.GetNameColonValue(name, value)) {
+    if (name == "name") {
+      reg_info.name = ConstString(value).AsCString();
+    } else if (name == "alt-name") {
+      reg_info.alt_name = ConstString(value).AsCString();
+    } else if (name == "bitsize") {
+      if (!value.getAsInteger(0, reg_info.byte_size))
+        reg_info.byte_size /= CHAR_BIT;
+    } else if (name == "offset") {
+      value.getAsInteger(0, reg_info.byte_offset);
+    } else if (name == "encoding") {
+      const Encoding encoding = Args::StringToEncoding(value);
+      if (encoding != eEncodingInvalid)
+        reg_info.encoding = encoding;
+    } else if (name == "format") {
+      if (!OptionArgParser::ToFormat(value.str().c_str(), reg_info.format, nullptr).Success())
+        reg_info.format =
+            llvm::StringSwitch<Format>(value)
+                .Case("binary", eFormatBinary)
+                .Case("decimal", eFormatDecimal)
+                .Case("hex", eFormatHex)
+                .Case("float", eFormatFloat)
+                .Case("vector-sint8", eFormatVectorOfSInt8)
+                .Case("vector-uint8", eFormatVectorOfUInt8)
+                .Case("vector-sint16", eFormatVectorOfSInt16)
+                .Case("vector-uint16", eFormatVectorOfUInt16)
+                .Case("vector-sint32", eFormatVectorOfSInt32)
+                .Case("vector-uint32", eFormatVectorOfUInt32)
+                .Case("vector-float32", eFormatVectorOfFloat32)
+                .Case("vector-uint64", eFormatVectorOfUInt64)
+                .Case("vector-uint128", eFormatVectorOfUInt128)
+                .Default(eFormatInvalid);
+    } else if (name == "ehframe") {
+      value.getAsInteger(0, reg_info.kinds[eRegisterKindEHFrame]);
+    } else if (name == "dwarf") {
+      value.getAsInteger(0, reg_info.kinds[eRegisterKindDWARF]);
+    } else if (name == "generic") {
+      reg_info.kinds[eRegisterKindGeneric] = Args::StringToGenericRegister(value);
+    }
+  }
+}
+
+Status ProcessGDBRemote::UpdateDeviceRegisterInfo(std::vector<RegisterInfo> &registers, bool force) {
+  Status error;
+  if (!force && !m_device_register_info.empty()) {
+    registers = m_device_register_info;
+    return error;
+  }
+  const auto host_packet_timeout = m_gdb_comm.GetHostDefaultPacketTimeout();
+  if (host_packet_timeout > std::chrono::seconds(0)) {
+    GetGlobalPluginProperties().SetPacketTimeout(host_packet_timeout.count());
+  }
+  ArchSpec arch_to_use("hiipu64");
+
+  m_device_register_info.clear();
+  uint32_t reg_num = 0;
+  for (StringExtractorGDBRemote::ResponseType response_type = StringExtractorGDBRemote::eResponse;
+       response_type == StringExtractorGDBRemote::eResponse; ++reg_num) {
+    StreamString packet;
+    packet.Printf("qRegisterInfo%x", reg_num);
+    StringExtractorGDBRemote response;
+    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString().data(), response) ==
+        GDBRemoteCommunication::PacketResult::Success) {
+      response_type = response.GetResponseType();
+      if (response_type != StringExtractorGDBRemote::eResponse) {
+        break;
+      }
+      RegisterInfo reg_info = {
+         nullptr, nullptr, 0, 0, lldb::eEncodingUint, eFormatHex,
+         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+         nullptr, nullptr
+      };
+      ParseDeviceRegisterInfo(response, reg_info);
+      if (reg_info.byte_size == 0) {
+        error.SetErrorString("invalid reg, bytes_size=0");
+        return error;
+      }
+      m_device_register_info.push_back(reg_info);
+    } else {
+      break;
+    }
+  }
+  for (uint32_t index = 0; index < m_device_register_info.size(); index++) {
+    m_device_register_info[index].kinds[eRegisterKindLLDB] = index;
+  }
+  registers = m_device_register_info;
+  return error;
+}
+
+#endif
 void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   if (!force && m_register_info_sp)
     return;
@@ -766,6 +864,9 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                         llvm::fmt_consume(std::move(err)));
       } else {
         SetID(m_gdb_comm.GetCurrentProcessID());
+#ifdef MS_DEBUGGER
+        SendDeviceId(GetTarget().GetDeviceId());
+#endif
       }
     }
 
@@ -1378,7 +1479,11 @@ Status ProcessGDBRemote::DoResume() {
           std::make_shared<EventDataBytes>(continue_packet.GetString());
       m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
+#ifdef MS_DEBUGGER
+      if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(30))) {
+#else
       if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
+#endif
         error.SetErrorString("Resume timed out.");
         LLDB_LOGF(log, "ProcessGDBRemote::DoResume: Resume timed out.");
       } else if (event_sp->BroadcasterIs(&m_async_broadcaster)) {
@@ -1781,6 +1886,24 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               thread_sp->SetStopInfo(invalid_stop_info_sp);
             }
           }
+#ifdef MS_DEBUGGER
+        // FIXME: can merged with breakpoint case
+        } else if (reason == "device_breakpoint") {
+          if (!m_thread_pcs.empty()) {
+            addr_t pc = m_thread_pcs.back();
+            lldb::BreakpointSiteSP bp_site_sp =
+                thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+            if (bp_site_sp) {
+              handled = true;
+              if (bp_site_sp->ValidForThisThread(*thread_sp)) {
+                thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSite(*thread_sp, bp_site_sp));
+              } else {
+                StopInfoSP invalid_stop_info_sp;
+                thread_sp->SetStopInfo(invalid_stop_info_sp);
+              }
+            }
+          }
+#endif
         } else if (reason == "trap") {
           // Let the trap just use the standard signal stop reason below...
         } else if (reason == "watchpoint") {
@@ -2154,6 +2277,13 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     QueueKind queue_kind = eQueueKindUnknown;
     uint64_t queue_serial_number = 0;
     ExpeditedRegisterMap expedited_register_map;
+#ifdef MS_DEBUGGER
+    DeviceStopInfo stop_info;
+    stop_info.core_type = CoreType::UNKNOWN_CORE_TYPE;
+    stop_info.core_id = UINT32_MAX;
+    stop_info.kernel_name = "unknown";
+    static constexpr unsigned RADIX_HEX = 16;
+#endif
     AddressableBits addressable_bits;
     while (stop_packet.GetNameColonValue(key, value)) {
       if (key.compare("metype") == 0) {
@@ -2314,6 +2444,28 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))
           expedited_register_map[reg] = std::string(std::move(value));
+#ifdef MS_DEBUGGER
+      } else if (key.compare("core_type") == 0) {
+        uint8_t integer_value;
+        if(!value.getAsInteger(RADIX_HEX, integer_value)) {
+          stop_info.core_type = static_cast<CoreType>(integer_value);
+        } else {
+          stop_info.core_type = CoreType::UNKNOWN_CORE_TYPE;
+        }
+      } else if ((key.compare("core_id") == 0) && (value.getAsInteger(RADIX_HEX, stop_info.core_id))) {
+        stop_info.core_id = UINT32_MAX;
+      } else if (key.compare("kernel_name") == 0) {
+        stop_info.kernel_name = value.str();
+      } else if (key.compare("base_pc") == 0 && (value.getAsInteger(RADIX_HEX, stop_info.base_pc))) {
+        stop_info.base_pc = 0;
+      } else if (key.compare("soc_type") == 0) {
+        int integer_value;
+        if(!value.getAsInteger(RADIX_HEX, integer_value)) {
+          stop_info.soc_type = static_cast<SocType>(integer_value);
+        } else {
+          stop_info.soc_type = SocType::SOC_END;
+        }
+#endif
       }
     }
 
@@ -2338,6 +2490,9 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     }
 
     SetAddressableBitMasks(addressable_bits);
+#ifdef MS_DEBUGGER
+    SetDeviceStopInfoCached(stop_info);
+#endif
 
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
@@ -2563,6 +2718,14 @@ void ProcessGDBRemote::WillPublicStop() {
 // Process Memory
 size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                       Status &error) {
+#ifdef MS_DEBUGGER
+  static const MemoryReaderParamClient param{};
+  return DoReadMemory(addr, buf, size, param, error);
+}
+
+size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
+                                      const MemoryReaderParamClient &param, Status &error) {
+#endif
   GetMaxMemorySize();
   bool binary_memory_read = m_gdb_comm.GetxPacketSupported();
   // M and m packets take 2 bytes for 1 byte of memory
@@ -2575,11 +2738,27 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
     size = max_memory_size;
   }
 
+#ifdef MS_DEBUGGER
+  char packet[64] = {0};
+  StreamString temp;
+  int packet_len = temp.Printf("%c%" PRIx64 ",%" PRIx64 ",%i,%i,%i",
+                               binary_memory_read ? 'x' : 'm', (uint64_t)addr,
+                               (uint64_t)size, param.arch_spec.GetMachine(),
+                               (uint8_t)param.address_class, (uint8_t)param.element_size);
+  if (packet_len >= static_cast<int>(sizeof(packet))) {
+    error.SetErrorStringWithFormatv("invalid packet len, which is {0}", packet_len);
+    return 0;
+  }
+  for (int i = 0; i < packet_len; ++i) {
+    packet[i] = *(temp.GetString().data() + i);
+  }
+#else
   char packet[64];
   int packet_len;
   packet_len = ::snprintf(packet, sizeof(packet), "%c%" PRIx64 ",%" PRIx64,
                           binary_memory_read ? 'x' : 'm', (uint64_t)addr,
                           (uint64_t)size);
+#endif
   assert(packet_len + 1 < (int)sizeof(packet));
   UNUSED_IF_ASSERT_DISABLED(packet_len);
   StringExtractorGDBRemote response;
@@ -3001,9 +3180,17 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
   // breakpoints.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) &&
       (!bp_site->HardwareRequired())) {
+#ifdef MS_DEBUGGER
+    if (bp_site->GetArchSpec().GetMachine() == llvm::Triple::hiipu64) {
+      SendKernelHash();
+    }
+    uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, true, addr, bp_op_size,
+                                                             GetInterruptTimeout(), bp_site->GetArchSpec());
+#else
     // Try to send off a software breakpoint packet ($Z0)
     uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(
         eBreakpointSoftware, true, addr, bp_op_size, GetInterruptTimeout());
+#endif
     if (error_no == 0) {
       // The breakpoint was placed successfully
       bp_site->SetEnabled(true);
@@ -3042,8 +3229,14 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
   // hardware breakpoint.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     // Try to send off a hardware breakpoint packet ($Z1)
+#ifdef MS_DEBUGGER
+    uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, true, addr, bp_op_size,
+                                                             GetInterruptTimeout(), bp_site->GetArchSpec());
+#else
+    // Try to send off a software breakpoint packet ($Z0)
     uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(
         eBreakpointHardware, true, addr, bp_op_size, GetInterruptTimeout());
+#endif
     if (error_no == 0) {
       // The breakpoint was placed successfully
       bp_site->SetEnabled(true);
@@ -3106,16 +3299,30 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
       break;
 
     case BreakpointSite::eHardware:
+#ifdef MS_DEBUGGER
+      if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, false,
+                                                addr, bp_op_size,
+                                                GetInterruptTimeout(),
+                                                bp_site->GetArchSpec()))
+#else
       if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, false,
                                                 addr, bp_op_size,
                                                 GetInterruptTimeout()))
+#endif
         error.SetErrorToGenericError();
       break;
 
     case BreakpointSite::eExternal: {
+#ifdef MS_DEBUGGER
+      if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false,
+                                                addr, bp_op_size,
+                                                GetInterruptTimeout(),
+                                                bp_site->GetArchSpec()))
+#else
       if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, false,
                                                 addr, bp_op_size,
                                                 GetInterruptTimeout()))
+#endif
         error.SetErrorToGenericError();
     } break;
     }
@@ -5366,6 +5573,116 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
                                  "Unable to send qSaveCore");
 }
 
+#ifdef MS_DEBUGGER
+Status ProcessGDBRemote::SetDeviceSingleCoreRunFlag(bool isSingleCoreRunning)
+{
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendDeviceRuningMode(isSingleCoreRunning, std::chrono::seconds(3));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d sending core running type falied", error_no);
+  } else {
+    m_single_core_mode = isSingleCoreRunning;
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::SetAicOnFocus(const uint32_t &core_id)
+{
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendDeviceAicOnFocusPacket(core_id, std::chrono::seconds(3));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d sending changing aic on focus", error_no);
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::SetAivOnFocus(const uint32_t &core_id)
+{
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendDeviceAivOnFocusPacket(core_id, std::chrono::seconds(3));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d sending changing aiv on focus", error_no);
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::GetDeviceInfo(DeviceInfo &info)
+{
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBAscendInfoDevicePacket(info, std::chrono::seconds(3));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d get device info failed", error_no);
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::GetCoresInfo(std::vector<CoreInfo> &info)
+{
+  Status error;
+  CoreInfo core_info;
+  core_info.core_id = 0;
+  static constexpr uint32_t DURATION_SEC = 3;
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBAscendInfoCoresPacket(core_info,
+                                                                    std::chrono::seconds(DURATION_SEC));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d get cores info", error_no);
+    return error;
+  }
+  info.emplace_back(core_info);
+  uint32_t core_num = core_info.total_num;
+  for (uint32_t i = 1; i < core_num; ++i) {
+    core_info.core_id = i;
+    error_no = m_gdb_comm.SendAndWaitGDBAscendInfoCoresPacket(core_info,
+                                                              std::chrono::seconds(DURATION_SEC));
+    info.emplace_back(core_info);
+    if (error_no != 0) {
+      error.SetErrorStringWithFormat("error: %d get cores info", error_no);
+      break;
+    }
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::GetKernelInfo(KernelInfo &info)
+{
+  Status error;
+  static constexpr uint32_t DURATION_SEC = 3;
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBAscendInfoKernelPacket(info,
+                                                                     std::chrono::seconds(DURATION_SEC));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d get kernel info", error_no);
+    return error;
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::GetDeviceRegisterInfo(const llvm::StringRef reg_name, uint64_t &reg_value)
+{
+  Status error;
+  static constexpr uint32_t DURATION_SEC = 3;
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBAscendInfoRegisterPacket(reg_name, reg_value,
+                                                                     std::chrono::seconds(DURATION_SEC));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d get register info", error_no);
+    return error;
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::GetDeviceRegisterList(std::vector<std::string> &reg_list)
+{
+  Status error;
+  static constexpr uint32_t DURATION_SEC = 3;
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBAscendInfoRegisterListPacket(reg_list,
+                                                                     std::chrono::seconds(DURATION_SEC));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d get register list", error_no);
+    return error;
+  }
+  return error;
+}
+#endif
+
 static const char *const s_async_json_packet_prefix = "JSON-async:";
 
 static StructuredData::ObjectSP
@@ -5701,6 +6018,11 @@ CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
 void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(bool enable) {
   GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
     if (bp_site->IsEnabled() &&
+#ifdef MS_DEBUGGER
+        // Breakpoints on the device side are
+        // independent of whether the process forks.
+        bp_site->GetArchSpec().GetMachine() != llvm::Triple::hiipu64 &&
+#endif
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
       m_gdb_comm.SendGDBStoppointTypePacket(
@@ -5714,6 +6036,11 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
       if (bp_site->IsEnabled() &&
+#ifdef MS_DEBUGGER
+        // Breakpoints on the device side are
+        // independent of whether the process forks.
+        bp_site->GetArchSpec().GetMachine() != llvm::Triple::hiipu64 &&
+#endif
           bp_site->GetType() == BreakpointSite::eHardware) {
         m_gdb_comm.SendGDBStoppointTypePacket(
             eBreakpointHardware, enable, bp_site->GetLoadAddress(),
@@ -5874,3 +6201,55 @@ void ProcessGDBRemote::DidExec() {
   }
   Process::DidExec();
 }
+
+#ifdef MS_DEBUGGER
+static constexpr uint32_t DURATION_SEC = 5;
+bool ProcessGDBRemote::ReadDeviceRegister(uint32_t register_id, uint64_t &value) {
+  StreamString temp;
+  const size_t packet_len = temp.Printf("qDeviceRegisterValue:%d;", register_id);
+  std::string packet = temp.GetString().data();
+
+  if (packet_len != packet.size()) {
+    return false;
+  }
+
+  StringExtractorGDBRemote response;
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, std::chrono::seconds(DURATION_SEC)) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    llvm::StringRef reg_key;
+    llvm::StringRef reg_value;
+    if (response.GetNameColonValue(reg_key, reg_value) && reg_key.compare("reg_value") == 0) {
+      if (response.IsNormalResponse() && !reg_value.getAsInteger(16, value)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+Status ProcessGDBRemote::SendKernelHash() {
+  auto module_size = GetTarget().GetImages().GetSize();
+  LLDB_LOGF(GetLog(GDBRLog::Process), "module size: %zu", module_size);
+  std::string kernel_hash {};
+  for (size_t i = 0; i < module_size; ++i) {
+    std::string tmp_kernel_hash = GetTarget().GetImages().GetModuleAtIndex(i)->GetObjectFile()->GetKernelHash();
+    kernel_hash = tmp_kernel_hash.empty() ? kernel_hash : tmp_kernel_hash;
+  }
+  LLDB_LOGF(GetLog(GDBRLog::Process), "send kernel hash: %s", kernel_hash.c_str());
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendKernelHashPacket(kernel_hash);
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d send kernel hash failed", error_no);
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::SendDeviceId(const int32_t device_id) {
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendDeviceIdPacket(device_id);
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d send kernel hash failed", error_no);
+  }
+  return error;
+}
+#endif

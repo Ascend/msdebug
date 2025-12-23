@@ -1,0 +1,88 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh; bash ~/test/test_case_add_framework_aclnn.sh
+# RUN: cd ~/samples/operator/AddCustomSample/FrameworkLaunch/AclNNInvocationNaive/build/
+# RUN: LAUNCH_KERNEL_PATH=../../AddCustom/build_out/op_kernel/binary/ascend910b/bin/add_custom/AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o msdebug execute_add_op -s %s | FileCheck %s -dump-input=always
+
+b add_custom.cpp:44
+# CHECK-LABEL: b add_custom.cpp:44
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint 1.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:44:{{[0-9]+}}
+
+var
+# CHECK-LABEL: var
+# CHECK: (KernelAdd *__stack__) this = 0x{{[0-9a-z]+}}
+# CHECK-NEXT: (int32_t) progress = {{[0-9]+}}
+# CHECK-NEXT: (AscendC::LocalTensor<__fp16>) xLocal = {
+# CHECK-NEXT:   AscendC::BaseLocalTensor<__fp16> = {
+# CHECK-NEXT:     address_ = (dataLen = {{[0-9]+}}, bufferAddr = {{[0-9]+}}, bufferHandle = "{{.*}}", logicPos = '{{.*}}')
+# CHECK-NEXT:   }
+# CHECK-NEXT:   shapeInfo_ = {
+# CHECK-NEXT:     shapeDim = '{{.*}}'
+# CHECK-NEXT:     originalShapeDim = '{{.*}}'
+# CHECK-NEXT:     shape = ({{.*}})
+# CHECK-NEXT:     originalShape = ({{.*}})
+# CHECK-NEXT:     dataFormat = {{[0-9a-zA-Z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+# CHECK-NEXT: (AscendC::LocalTensor<__fp16>) yLocal = {
+# CHECK-NEXT:   AscendC::BaseLocalTensor<__fp16> = {
+# CHECK-NEXT:     address_ = (dataLen = {{[0-9]+}}, bufferAddr = {{[0-9]+}}, bufferHandle = "{{.*}}", logicPos = '{{.*}}')
+# CHECK-NEXT:   }
+# CHECK-NEXT:   shapeInfo_ = {
+# CHECK-NEXT:     shapeDim = '{{.*}}'
+# CHECK-NEXT:     originalShapeDim = '{{.*}}'
+# CHECK-NEXT:     shape = ({{.*}})
+# CHECK-NEXT:     originalShape = ({{.*}})
+# CHECK-NEXT:     dataFormat = {{[0-9a-zA-Z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+
+p xLocal
+# CHECK-LABEL: p xLocal
+# CHECK: (AscendC::LocalTensor<__fp16>) ${{[0-9]+}} = {
+# CHECK-NEXT:   AscendC::BaseLocalTensor<__fp16> = {
+# CHECK-NEXT:     address_ = (dataLen = {{[0-9]+}}, bufferAddr = {{[0-9]+}}, bufferHandle = "{{.*}}", logicPos = '{{.*}}')
+# CHECK-NEXT:   }
+# CHECK-NEXT:   shapeInfo_ = {
+# CHECK-NEXT:     shapeDim = '{{.*}}'
+# CHECK-NEXT:     originalShapeDim = '{{.*}}'
+# CHECK-NEXT:     shape = ({{.*}})
+# CHECK-NEXT:     originalShape = ({{.*}})
+# CHECK-NEXT:     dataFormat = {{[0-9a-zA-Z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+
+x -m UB -f float16[] 0 -s 256 -c 1
+# CHECK-LABEL: x -m UB -f float16[] 0 -s 256 -c 1
+# CHECK-NEXT: 0x00000000: {
+
+p xGm
+# CHECK-LABEL: p xGm
+# CHECK: (AscendC::GlobalTensor<__fp16>) ${{[0-9]+}} = {
+# CHECK-NEXT:   AscendC::BaseGlobalTensor<__fp16> = {
+# CHECK-NEXT:     address_ = 0x{{[0-9a-z]+}}
+# CHECK-NEXT:     oriAddress_ = 0x{{[0-9a-z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   bufferSize_ = {{[0-9]+}}
+# CHECK-NEXT:   shapeInfo_ = {
+# CHECK-NEXT:     shapeDim = '{{.*}}'
+# CHECK-NEXT:     originalShapeDim = '{{.*}}'
+# CHECK-NEXT:     shape = ({{.*}})
+# CHECK-NEXT:     originalShape = ({{.*}})
+# CHECK-NEXT:     dataFormat = {{[0-9a-zA-Z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   cacheMode_ = {{.*}}
+# CHECK-NEXT: }
+
+x -m GM -f float16[] 0x000012c0c0013000 -s 256 -c 1
+# CHECK-LABEL: x -m GM -f float16[] 0x000012c0c0013000 -s 256 -c 1
+# CHECK: 0x12c0c0013000: {
+
+quit

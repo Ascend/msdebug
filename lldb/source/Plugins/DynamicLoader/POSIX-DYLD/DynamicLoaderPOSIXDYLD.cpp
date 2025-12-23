@@ -1,6 +1,6 @@
 //===-- DynamicLoaderPOSIXDYLD.cpp ----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -181,7 +181,12 @@ void DynamicLoaderPOSIXDYLD::DidLaunch() {
     ModuleList module_list;
     module_list.Append(executable);
     UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_offset, true);
-
+#ifdef MS_DEBUGGER
+    auto child_executable = m_process->GetTarget().GetImages().GetModuleAtIndex(1);
+    if (child_executable.get() && child_executable->GetArchitecture().GetMachine() == llvm::Triple::hiipu64) {
+      UpdateLoadedSections(child_executable, LLDB_INVALID_ADDRESS, 0U, true);
+    }
+#endif
     LLDB_LOGF(log, "DynamicLoaderPOSIXDYLD::%s about to call ProbeEntry()",
               __FUNCTION__);
 
@@ -462,6 +467,43 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
         }
       }
 
+#ifdef MS_DEBUGGER
+      // search the section ".aicore_binary" in all dynamically loaded shared libraries.
+      // extract and append it to module list if we hit it
+      auto images = m_process->GetTarget().GetImages();
+      bool aicore_binary_exist = false;
+      for (size_t i = 0; i < images.GetSize(); ++i) {
+        if (images.GetModuleAtIndex(i)->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) {
+          aicore_binary_exist = true;
+          break;
+        }
+      }
+      ModuleSP child_module;
+      if (!aicore_binary_exist && module_sp->GetObjectFile() && module_sp->GetObjectFile()->GetChildModuleSpec()) {
+        auto child_module_spec = module_sp->GetObjectFile()->GetChildModuleSpec();
+        ModuleList::GetSharedModule(*child_module_spec, child_module, nullptr, nullptr, nullptr);
+        if (!child_module) {
+          LLDB_LOG(GetLog(LLDBLog::DynamicLoader), 
+              "DynamicLoaderPOSIXDYLD::{0} get child module from {1} failed",
+              __FUNCTION__, module_sp->GetFileSpec().GetPath());
+          continue;
+        }
+        UpdateLoadedSections(child_module, LLDB_INVALID_ADDRESS, 0U, true);
+        ObjectFile *obj = child_module->GetObjectFile();
+        if (!obj) {
+          LLDB_LOG(GetLog(LLDBLog::DynamicLoader),
+              "DynamicLoaderPOSIXDYLD::{0} get object file from {1} failed",
+              __FUNCTION__, child_module->GetFileSpec().GetPath());
+          continue;
+        }
+        obj->SetType(ObjectFile::eTypeSharedLibrary);
+        loaded_modules.AppendIfNeeded(child_module);
+        new_modules.Append(child_module);
+        LLDB_LOGF(GetLog(LLDBLog::DynamicLoader), 
+            "DynamicLoaderPOSIXDYLD::{0} added kernel obj module from {1}",
+            __FUNCTION__, module_sp->GetFileSpec().GetPath());
+      }
+#endif
       loaded_modules.AppendIfNeeded(module_sp);
       new_modules.Append(module_sp);
     }

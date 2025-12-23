@@ -1,6 +1,6 @@
 //===-- Breakpoint.cpp ----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -528,7 +528,12 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
         // address that we haven't resolved to a section yet.  So we'll have to
         // look in all the new modules to resolve this location. Otherwise, if
         // it was set in this module, re-resolve it here.
+#ifdef MS_DEBUGGER
+        if (section_sp && (section_sp->GetModule() == module_sp ||
+            section_sp->GetArchSpec().GetMachine() == llvm::Triple::hiipu64)) {
+#else
         if (section_sp && section_sp->GetModule() == module_sp) {
+#endif
           if (!seen)
             seen = true;
 
@@ -899,7 +904,11 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
   case lldb::eDescriptionLevelInitial:
     s->Printf("Breakpoint %i: ", GetID());
     if (num_locations == 0) {
+#ifdef MS_DEBUGGER
+      s->Printf("no locations (pending on future shared library load).");
+#else
       s->Printf("no locations (pending).");
+#endif
     } else if (num_locations == 1 && !show_locations) {
       // There is only one location, so we'll just print that location
       // information.

@@ -1,6 +1,6 @@
 //===-- NativeRegisterContextLinux.h ----------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -33,6 +33,13 @@ public:
   static std::unique_ptr<NativeRegisterContextLinux>
   CreateHostNativeRegisterContextLinux(const ArchSpec &target_arch,
                                        NativeThreadLinux &native_thread);
+
+#ifdef MS_DEBUGGER
+  static std::unique_ptr<NativeRegisterContextLinux>
+  CreateDeviceNativeRegisterContextLinux(const ArchSpec &target_arch,
+                                         const SocType &soc_type, 
+                                         NativeThreadLinux &native_thread);
+#endif
 
   // Determine the architecture of the thread given by its ID.
   static llvm::Expected<ArchSpec> DetermineArchitecture(lldb::tid_t tid);

@@ -1,6 +1,6 @@
 //===-- CommandObjectTarget.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -153,6 +153,50 @@ static uint32_t DumpTargetList(TargetList &target_list,
   return num_targets;
 }
 
+#ifdef MS_DEBUGGER
+static bool IsDeviceFile(const FileSpec &file) {
+  auto module_spec = std::make_shared<ModuleSpec>(file);
+  if (!module_spec) {
+    return false;
+  }
+  ModuleSP module;
+  ModuleList::GetSharedModule(*module_spec, module, nullptr, nullptr, nullptr);
+  if (!module) {
+    return false;
+  }
+  auto *object_file = module->GetObjectFile();
+  if (!object_file) {
+    return false;
+  }
+  return object_file->GetArchitecture().GetMachine() == llvm::Triple::hiipu64;
+}
+
+static void UpdateExecutableTarget(TargetSP target_sp, const LoadDependentFiles &load_dependent_files,
+    CommandReturnObject &result) {
+  auto executable_module = target_sp->GetExecutableModule();
+  if (!executable_module) {
+    return;
+  }
+  auto *object_file = executable_module->GetObjectFile();
+  if (!object_file) {
+    return;
+  }
+  if (object_file->GetArchitecture().GetMachine() == llvm::Triple::hiipu64) {
+    return;
+  }
+  auto child_module_spec = object_file->GetChildModuleSpec();
+  if (!child_module_spec) {
+    result.AppendError("Can not find device binary from fatbin.");
+    return;
+  }
+  ModuleSP child_module;
+  ModuleList::GetSharedModule(*child_module_spec, child_module, nullptr, nullptr, nullptr);
+  if (!child_module) {
+    result.AppendError("Generate device module from child_module_spec failed.");
+  }
+  target_sp->SetExecutableModule(child_module, load_dependent_files);
+}
+#endif
 #define LLDB_OPTIONS_target_dependents
 #include "CommandOptions.inc"
 
@@ -233,11 +277,15 @@ public:
     AddSimpleArgumentList(eArgTypeFilename);
 
     m_option_group.Append(&m_arch_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+#ifndef MS_DEBUGGER
     m_option_group.Append(&m_platform_options, LLDB_OPT_SET_ALL, 1);
+#endif
     m_option_group.Append(&m_core_file, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_label, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_symbol_file, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+#ifndef MS_DEBUGGER
     m_option_group.Append(&m_remote_file, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+#endif
     m_option_group.Append(&m_add_dependents, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
   }
@@ -305,6 +353,12 @@ protected:
         return;
       }
 
+#ifdef MS_DEBUGGER
+      /* 如果加载的.o权属校验失败，仅录入该异常信息 */
+      if (error.GetType() == lldb::eErrorTypeAscend) {
+        result.AppendError(error.AsCString());
+      }
+#endif
       auto on_error = llvm::make_scope_exit(
           [&target_list = debugger.GetTargetList(), &target_sp]() {
             target_list.DeleteTarget(target_sp);
@@ -410,7 +464,15 @@ protected:
         FileSpec core_file_dir;
         core_file_dir.SetDirectory(core_file.GetDirectory());
         target_sp->AppendExecutableSearchPaths(core_file_dir);
-
+#ifdef MS_DEBUGGER
+        // need update executbale before create process
+        if (IsDeviceFile(core_file)) {
+          UpdateExecutableTarget(target_sp, m_add_dependents.m_load_dependent_files, result);
+          if (!result.Succeeded()) {
+            return;
+          }
+        }
+#endif
         ProcessSP process_sp(target_sp->CreateProcess(
             GetDebugger().GetListener(), llvm::StringRef(), &core_file, false));
 
@@ -428,6 +490,11 @@ protected:
                 target_sp->GetArchitecture().GetArchitectureName());
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
             on_error.release();
+#ifdef MS_DEBUGGER
+            Stream &strm = result.GetOutputStream();
+            process_sp->UpdateStopInfo(true);
+            process_sp->ShowDeviceStopInfoCached(strm);
+#endif
           }
         } else {
           result.AppendErrorWithFormatv("Unknown core file format '{0}'\n",
@@ -2798,9 +2865,38 @@ protected:
           if (m_symbol_file.GetOptionValue().OptionWasSet())
             module_spec.GetSymbolFileSpec() =
                 m_symbol_file.GetOptionValue().GetCurrentValue();
-          if (!module_spec.GetArchitecture().IsValid())
+#ifdef MS_DEBUGGER
+          // we assume that the module is an obj file of ascend kernel if the module
+          // meets the following two conditions:
+          // 1. its type is executable file
+          // 2. its entry point is 0x0
+          Status error = module_spec.CheckOwnerAndWritablePermission();
+          if (error.Fail()) {
+            result.AppendError(error.AsCString());
+            return;
+          }
+          ModuleSP temp_module;
+          ModuleList::GetSharedModule(module_spec, temp_module, nullptr, nullptr, nullptr);
+          if (!temp_module) {
+            result.AppendErrorWithFormat("unsupported module: %s", entry.c_str());
+            return;
+          }
+          auto *objfile = temp_module->GetObjectFile();
+          objfile->SetKernelHash(FileSystem::Instance().CreateDataBuffer(file_spec)->GetData());
+          if (objfile && (objfile->GetEntryPointAddress().GetOffset() == 0U) &&
+            (objfile->GetType() == ObjectFile::eTypeExecutable)) {
+            module_spec.GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+          } else {
+#endif
+          if (!module_spec.GetArchitecture().IsValid()) {
             module_spec.GetArchitecture() = target->GetArchitecture();
+          }
+#ifdef MS_DEBUGGER
+          }
+          error.Clear();
+#else
           Status error;
+#endif
           ModuleSP module_sp(target->GetOrCreateModule(
               module_spec, true /* notify */, &error));
           if (!module_sp) {

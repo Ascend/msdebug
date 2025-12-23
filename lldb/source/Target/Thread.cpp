@@ -1,6 +1,6 @@
 //===-- Thread.cpp --------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -568,6 +568,16 @@ void Thread::SetState(StateType state) {
 }
 
 std::string Thread::GetStopDescription() {
+#ifdef MS_DEBUGGER
+  auto process_sp = GetProcess();
+  if (process_sp && process_sp->DeviceCoredumpEnable()) {
+      DeviceStopInfo info;
+      process_sp->GetDeviceStopInfoCached(info);
+      if (!info.stop_description.empty()) {
+        return info.stop_description;
+      }
+  }
+#endif
   StackFrameSP frame_sp = GetStackFrameAtIndex(0);
 
   if (!frame_sp)
@@ -1691,6 +1701,10 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "none";
   case eStopReasonTrace:
     return "trace";
+#ifdef MS_DEBUGGER
+  case eStopReasonDeviceBreakpoint:
+    return "device_breakpoint";
+#endif
   case eStopReasonBreakpoint:
     return "breakpoint";
   case eStopReasonWatchpoint:
@@ -1902,7 +1916,11 @@ bool Thread::IsStillAtLastBreakpointHit() {
   // stopinfo, such as when thread-stepping in multithreaded programs.
   if (m_stop_info_sp) {
     StopReason stop_reason = m_stop_info_sp->GetStopReason();
+#ifdef MS_DEBUGGER
+    if (stop_reason == lldb::eStopReasonBreakpoint || stop_reason == lldb::eStopReasonDeviceBreakpoint) {
+#else
     if (stop_reason == lldb::eStopReasonBreakpoint) {
+#endif
       uint64_t value = m_stop_info_sp->GetValue();
       lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
       if (reg_ctx_sp) {
@@ -2064,3 +2082,31 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
     process_sp->GetByteOrder(), arch.GetAddressByteSize()};
   return ValueObjectConstResult::Create(&target, type, ConstString("__lldb_siginfo"), data_extractor);
 }
+
+#ifdef MS_DEBUGGER
+
+// refresh stack frame PC
+void Thread::RefreshStackFramePC() {
+  Log *log = GetLog(LLDBLog::Process);
+  StackFrameSP frame_sp = GetStackFrameAtIndex(0);
+  if (!frame_sp) {
+      LLDB_LOGF(log, "GetStackFrameAtIndex: get frame_sp failed, frame_sp is nullptr");
+      return;
+    }
+
+  frame_sp->ClearFrameBaseCache();
+  if (GetRegisterContext() == nullptr) {
+    LLDB_LOGF(log, "GetRegisterContext: get register context failed, context is nullptr");
+    return;
+  }
+  GetRegisterContext()->InvalidateAllRegisters();
+  addr_t pc = GetRegisterContext()->GetPC(LLDB_INVALID_ADDRESS);
+  if (pc == LLDB_INVALID_ADDRESS) {
+    LLDB_LOGF(log, "RefreshStackFramePC: update stack frame pc failed");
+  } else {
+    frame_sp->ChangePC(pc);
+    LLDB_LOGF(log, "RefreshStackFramePC: update stack frame pc success with pc=%#lx", pc);
+  }
+}
+
+#endif

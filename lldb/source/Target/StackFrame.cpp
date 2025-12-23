@@ -1,6 +1,6 @@
 //===-- StackFrame.cpp ----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1076,6 +1076,12 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   return valobj_sp;
 }
 
+#ifdef MS_DEBUGGER
+void StackFrame::ClearFrameBaseCache() {
+  m_flags.Clear(GOT_FRAME_BASE);
+}
+#endif
+
 bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
@@ -1111,7 +1117,6 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
 
   if (m_frame_base_error.Success())
     frame_base = m_frame_base;
-
   if (error_ptr)
     *error_ptr = m_frame_base_error;
   return m_frame_base_error.Success();

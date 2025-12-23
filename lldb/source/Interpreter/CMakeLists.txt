@@ -6,7 +6,7 @@ lldb_tablegen(InterpreterPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesEnumGen)
 
-add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
+set(LLDB_COMMAND_INTERPRETER_SRC
   CommandAlias.cpp
   CommandHistory.cpp
   CommandInterpreter.cpp
@@ -52,6 +52,12 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   Options.cpp
   Property.cpp
   ScriptInterpreter.cpp
+)
+if(MS_DEBUGGER)
+  list(APPEND LLDB_COMMAND_INTERPRETER_SRC OptionValueMemoryType.cpp)
+endif()
+add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
+  ${LLDB_COMMAND_INTERPRETER_SRC}
 
   LINK_LIBS
     lldbCommands

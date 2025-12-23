@@ -1,6 +1,6 @@
 //===-- Memory.h ------------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -141,7 +141,15 @@ private:
   AllocatedMemoryCache(const AllocatedMemoryCache &) = delete;
   const AllocatedMemoryCache &operator=(const AllocatedMemoryCache &) = delete;
 };
-
+#ifdef MS_DEBUGGER
+class MemoryType {
+public:
+    static const char *GetNameForMemoryType(DeviceAddressClass mem_type);
+    static DeviceAddressClass GetMemoryTypeFromString(llvm::StringRef string);
+    static void PrintAllMemoryTypes(Stream &s, const char *prefix, const char *suffix);
+    static std::vector<DeviceAddressClass> GetAllMemoryTypes();
+};
+#endif
 } // namespace lldb_private
 
 #endif // LLDB_TARGET_MEMORY_H

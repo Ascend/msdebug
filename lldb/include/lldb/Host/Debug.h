@@ -1,6 +1,6 @@
 //===-- Debug.h -------------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -131,6 +131,9 @@ protected:
 struct ThreadStopInfo {
   lldb::StopReason reason;
   uint32_t signo;
+#ifdef MS_DEBUGGER
+  bool still_break_in_device;
+#endif
   union {
     // eStopReasonException
     struct {
@@ -144,6 +147,18 @@ struct ThreadStopInfo {
       lldb::pid_t child_pid;
       lldb::tid_t child_tid;
     } fork;
+
+#ifdef MS_DEBUGGER
+    struct {
+      lldb::addr_t break_addr;
+      uint32_t core_id;
+      uint16_t thread_x;
+      uint16_t thread_y;
+      uint16_t thread_z;
+      uint8_t core_type;
+      uint8_t pos_type;
+    } device;
+#endif
   } details;
 };
 }

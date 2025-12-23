@@ -1,6 +1,6 @@
 //===-- CompilerType.cpp --------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -733,6 +733,24 @@ CompilerType CompilerType::AddRestrictModifier() const {
       return type_system_sp->AddRestrictModifier(m_type);
   return CompilerType();
 }
+
+#ifdef MS_DEBUGGER
+CompilerType CompilerType::AddAddressClassModifier(uint32_t address_class) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddAddressClassModifier(m_type, address_class);
+  else
+    return CompilerType();
+}
+
+uint32_t CompilerType::GetAddressClass() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetAddressClass(m_type);
+  else
+    return 0U;
+}
+#endif
 
 CompilerType CompilerType::CreateTypedef(const char *name,
                                          const CompilerDeclContext &decl_ctx,

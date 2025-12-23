@@ -1,6 +1,6 @@
 //===-- Version.cpp -------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -10,6 +10,16 @@
 #include "VCSVersion.inc"
 #include "lldb/Version/Version.inc"
 #include "clang/Basic/Version.h"
+
+#ifdef MS_DEBUGGER
+static const char *GetMsdebugVersion() {
+#ifdef MSDEBUG_VERSION_STRING
+  return "msdebug version " MSDEBUG_VERSION_STRING;
+#else
+  return nullptr;
+#endif
+}
+#endif
 
 static const char *GetLLDBVersion() {
 #ifdef LLDB_FULL_VERSION_STRING
@@ -39,6 +49,13 @@ const char *lldb_private::GetVersion() {
   static std::string g_version_str;
 
   if (g_version_str.empty()) {
+#ifdef MS_DEBUGGER
+    const char *msdebug_version = GetMsdebugVersion();
+    if (msdebug_version) {
+      g_version_str += msdebug_version;
+      g_version_str += "\n";
+    }
+#endif
     const char *lldb_version = GetLLDBVersion();
     const char *lldb_repo = GetLLDBRepository();
     const char *lldb_rev = GetLLDBRevision();

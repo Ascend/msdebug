@@ -1,6 +1,6 @@
 //===-- CommandObjectPlatform.cpp -----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -218,6 +218,9 @@ protected:
     ostrm.Format("{0}: {1}\n", host_platform_sp->GetPluginName(),
                  host_platform_sp->GetDescription());
 
+#ifdef MS_DEBUGGER
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+#else
     uint32_t idx;
     for (idx = 0; true; ++idx) {
       llvm::StringRef plugin_name =
@@ -233,6 +236,7 @@ protected:
       result.AppendError("no platforms are available\n");
     } else
       result.SetStatus(eReturnStatusSuccessFinishResult);
+#endif
   }
 };
 
@@ -1577,6 +1581,10 @@ public:
   // Constructors and Destructors
   CommandObjectPlatformProcess(CommandInterpreter &interpreter)
       : CommandObjectMultiword(interpreter, "platform process",
+#ifdef MS_DEBUGGER
+                               "Commands to query processes on the current platform.",
+                               "platform process [list|info] ...") {
+#else
                                "Commands to query, launch and attach to "
                                "processes on the current platform.",
                                "platform process [attach|launch|list] ...") {
@@ -1586,6 +1594,7 @@ public:
     LoadSubCommand(
         "launch",
         CommandObjectSP(new CommandObjectPlatformProcessLaunch(interpreter)));
+#endif
     LoadSubCommand("info", CommandObjectSP(new CommandObjectPlatformProcessInfo(
                                interpreter)));
     LoadSubCommand("list", CommandObjectSP(new CommandObjectPlatformProcessList(
@@ -1804,21 +1813,31 @@ public:
 
 CommandObjectPlatform::CommandObjectPlatform(CommandInterpreter &interpreter)
     : CommandObjectMultiword(
+#ifdef MS_DEBUGGER
+          interpreter, "platform", "Commands to manage platforms.",
+          "platform [list|process|status|settings] ...") {
+#else
           interpreter, "platform", "Commands to manage and create platforms.",
           "platform [connect|disconnect|info|list|status|select] ...") {
+#endif
+#ifndef MS_DEBUGGER
   LoadSubCommand("select",
                  CommandObjectSP(new CommandObjectPlatformSelect(interpreter)));
+#endif
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectPlatformList(interpreter)));
   LoadSubCommand("status",
                  CommandObjectSP(new CommandObjectPlatformStatus(interpreter)));
+#ifndef MS_DEBUGGER
   LoadSubCommand("connect", CommandObjectSP(
                                 new CommandObjectPlatformConnect(interpreter)));
   LoadSubCommand(
       "disconnect",
       CommandObjectSP(new CommandObjectPlatformDisconnect(interpreter)));
+#endif
   LoadSubCommand("settings", CommandObjectSP(new CommandObjectPlatformSettings(
                                  interpreter)));
+#ifndef MS_DEBUGGER
   LoadSubCommand("mkdir",
                  CommandObjectSP(new CommandObjectPlatformMkDir(interpreter)));
   LoadSubCommand("file",
@@ -1833,13 +1852,16 @@ CommandObjectPlatform::CommandObjectPlatform(CommandInterpreter &interpreter)
                                  interpreter)));
   LoadSubCommand("put-file", CommandObjectSP(new CommandObjectPlatformPutFile(
                                  interpreter)));
+#endif
   LoadSubCommand("process", CommandObjectSP(
                                 new CommandObjectPlatformProcess(interpreter)));
+#ifndef MS_DEBUGGER
   LoadSubCommand("shell",
                  CommandObjectSP(new CommandObjectPlatformShell(interpreter)));
   LoadSubCommand(
       "target-install",
       CommandObjectSP(new CommandObjectPlatformInstall(interpreter)));
+#endif
 }
 
 CommandObjectPlatform::~CommandObjectPlatform() = default;

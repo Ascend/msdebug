@@ -1,6 +1,6 @@
 //===-- TypeSystem.h ------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -294,6 +294,12 @@ public:
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
+#ifdef MS_DEBUGGER
+  virtual CompilerType AddAddressClassModifier(lldb::opaque_compiler_type_t type, uint32_t address_class);
+
+  virtual uint32_t GetAddressClass(lldb::opaque_compiler_type_t type);
+
+#endif
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           uint32_t payload);
 

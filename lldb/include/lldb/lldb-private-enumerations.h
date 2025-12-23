@@ -1,6 +1,6 @@
 //===-- lldb-private-enumerations.h -----------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -57,6 +57,77 @@ enum class AddressClass {
   eRuntime
 };
 
+#ifdef MS_DEBUGGER
+enum class DeviceAddressClass {
+    NONE = 0U,
+    GM = 1U << 0,
+    CBUF = 1U << 1,
+    CA = 1U << 2,
+    CB = 1U << 3,
+    CC = 1U << 4,
+    UBUF = 1U << 5,
+    STACK = 1U << 6,
+    FBUF = 1U << 7,
+    DCACHE = 1U << 20,
+    ICACHE = 1U << 21
+};
+// lldb/include/lldb/Core/ModuleSpec.h CheckInputFileValid checker_register_v
+// when add a new term, it should follow the check-valid order
+enum class CheckInputValidClass {
+    eNone = 0U,
+    eCheckPathExists = 1U << 0,
+    eCheckOwnerAndWritablePermission = 1U << 1,
+    eCheckIsSymlink = 1U << 2,
+    eCheckReadablePermission = 1U << 3,
+    eCheckIsDir = 1U << 4,
+    eCheckFileSize = 1U << 5,
+    eCheckExecutablePermission = 1U << 6,
+    eCheckParentPathOwnerAndWritablePermission = 1U << 7,
+};
+
+inline CheckInputValidClass operator|(lldb_private::CheckInputValidClass lhs,
+                                      lldb_private::CheckInputValidClass rhs) {
+  return static_cast<CheckInputValidClass>(
+             static_cast<std::underlying_type<CheckInputValidClass>::type>(lhs) |
+             static_cast<std::underlying_type<CheckInputValidClass>::type>(rhs)
+         );
+}
+
+inline CheckInputValidClass operator&(lldb_private::CheckInputValidClass lhs,
+                                      lldb_private::CheckInputValidClass rhs) {
+  return static_cast<CheckInputValidClass>(
+             static_cast<std::underlying_type<CheckInputValidClass>::type>(lhs) &
+             static_cast<std::underlying_type<CheckInputValidClass>::type>(rhs)
+         );
+}
+
+inline CheckInputValidClass operator^(lldb_private::CheckInputValidClass lhs,
+                                      lldb_private::CheckInputValidClass rhs) {
+  return static_cast<CheckInputValidClass>(
+             static_cast<std::underlying_type<CheckInputValidClass>::type>(lhs) ^
+             static_cast<std::underlying_type<CheckInputValidClass>::type>(rhs)
+         );
+}
+
+inline CheckInputValidClass operator~(lldb_private::CheckInputValidClass rhs) {
+  return static_cast<CheckInputValidClass>(
+             ~static_cast<std::underlying_type<CheckInputValidClass>::type>(rhs)
+         );
+}
+
+inline CheckInputValidClass& operator&=(lldb_private::CheckInputValidClass& lhs,
+                                        lldb_private::CheckInputValidClass rhs) {
+  lhs = lhs & rhs;
+  return lhs;
+}
+
+inline CheckInputValidClass& operator|=(lldb_private::CheckInputValidClass& lhs,
+                                        lldb_private::CheckInputValidClass rhs) {
+  lhs = lhs | rhs;
+  return lhs;
+}
+
+#endif
 // Votes - Need a tri-state, yes, no, no opinion...
 enum Vote { eVoteNo = -1, eVoteNoOpinion = 0, eVoteYes = 1 };
 

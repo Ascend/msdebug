@@ -1,6 +1,6 @@
 //===-- ObjectFileELF.cpp -------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1617,7 +1617,11 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         arch_spec.GetTriple().setVendorName(llvm::StringRef());
       if (arch_spec.GetTriple().getOS() == llvm::Triple::UnknownOS)
         arch_spec.GetTriple().setOSName(llvm::StringRef());
-
+#ifdef MS_DEBUGGER
+      if (arch_spec.GetTriple().getArch() == llvm::Triple::hiipu64) {
+        arch_spec.GetTriple().setOSName(llvm::StringRef(std::string("linux")));
+      }
+#endif
       return section_headers.size();
     }
   }
@@ -1904,6 +1908,93 @@ static SectionSP FindMatchingSection(const SectionList &section_list,
   return sect_sp;
 }
 
+#ifdef MS_DEBUGGER
+struct AclrtLaunchKernelNode {
+  uint32_t version;
+  uint32_t type_cnt; // mix=0,aiv=1,aic=2
+  uint32_t aicore_type;
+  uint32_t aicore_len;
+  uint32_t aicore_file_len;
+};
+
+const std::vector<ConstString> BINARY_NAME = {
+  // for <<<>>>
+  ConstString(".aicore_binary"),
+
+  // for neo
+  ConstString(".ascend.kernel.ascend910b1."),
+  ConstString(".ascend.kernel.ascend910b2."),
+  ConstString(".ascend.kernel.ascend910b3."),
+  ConstString(".ascend.kernel.ascend910b4."),
+  ConstString(".ascend.kernel.ascend310p1."),
+  ConstString(".ascend.kernel.ascend310p2."),
+  ConstString(".ascend.kernel.ascend310p3."),
+  ConstString(".ascend.kernel.ascend310p4."),
+
+  // for ascc
+  ConstString(".ascend.kernel.ascend910b4-1."),
+  ConstString(".ascend.kernel.ascend910_9391."),
+  ConstString(".ascend.kernel.ascend910_9381."),
+  ConstString(".ascend.kernel.ascend910_9372."),
+  ConstString(".ascend.kernel.ascend910_9392."),
+  ConstString(".ascend.kernel.ascend910_9382."),
+  ConstString(".ascend.kernel.ascend910_9362."),
+  ConstString(".ascend.kernel.ascend310p5."),
+  ConstString(".ascend.kernel.ascend310p7."),
+  ConstString(".ascend.kernel.ascend310p3vir01."),
+  ConstString(".ascend.kernel.ascend310p3vir02."),
+  ConstString(".ascend.kernel.ascend310p3vir04."),
+  ConstString(".ascend.kernel.ascend310p3vir08.")
+};
+
+std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec() {
+  SectionSP section;
+  uint8_t match_id = UINT8_MAX;
+  SectionList *section_list = GetSectionList();
+  if (!section_list) {
+    return nullptr;
+  }
+  for (size_t i = 0; i < BINARY_NAME.size(); ++i) {
+    section = section_list->FindSectionByPrefixName(BINARY_NAME[i]);
+    if (section) {
+      match_id = i;
+      break;
+    }
+  }
+  if (match_id == UINT8_MAX) {
+    return nullptr;
+  }
+  Log *log = GetLog(LLDBLog::Modules);
+  LLDB_LOG(log, "Kernel section {0} matched", section->GetName());
+  DataExtractor data;
+  section->GetSectionData(data);
+  DataBufferSP data_buf;
+  if (match_id == 0) {
+    // .aicore_binary 段仅保存了算子.o
+    data_buf.reset(new DataBufferHeap(data.GetDataStart(), data.GetByteSize()));
+  } else if (match_id > 0 && match_id < BINARY_NAME.size()){
+    // 其他段首放置了20个字节的额外信息
+    AclrtLaunchKernelNode node;
+    lldb::offset_t offset = 0;
+    node.version = data.GetU32(&offset);
+    node.type_cnt = data.GetU32(&offset);
+    node.aicore_type = data.GetU32(&offset);
+    node.aicore_len = data.GetU32(&offset);
+    node.aicore_file_len = data.GetU32(&offset);
+    if (node.aicore_len == 0 || node.aicore_file_len == 0 ||
+        !data.ValidOffsetForDataOfSize(offset, node.aicore_len)) {
+      return nullptr;
+    }
+    data_buf.reset(new DataBufferHeap(data.GetDataStart() + offset, node.aicore_len));
+  }
+  SetKernelHash(data_buf->GetData());
+  auto fspec = GetFileSpec().CopyByAppendingPathComponent(llvm::StringRef("device_debugdata"));
+  auto module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
+  module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+  return module_spec;
+}
+#endif
+
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;
@@ -1912,6 +2003,11 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   VMAddressProvider regular_provider(GetType(), "PT_LOAD");
   VMAddressProvider tls_provider(GetType(), "PT_TLS");
 
+#ifdef MS_DEBUGGER
+  // ascend c binary elf header info problem, skip first load which
+  // contains elf header和program header table
+  bool ignore_first_load = true;
+#endif
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
     const ELFProgramHeader &PHdr = EnumPHdr.value();
     if (PHdr.p_type != PT_LOAD && PHdr.p_type != PT_TLS)
@@ -1923,6 +2019,12 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     if (!InfoOr)
       continue;
 
+#ifdef MS_DEBUGGER
+    if (ignore_first_load) {
+        ignore_first_load = false;
+        continue;
+    }
+#endif
     uint32_t Log2Align = llvm::Log2_64(std::max<elf_xword>(PHdr.p_align, 1));
     SectionSP Segment = std::make_shared<Section>(
         GetModule(), this, SegmentID(EnumPHdr.index()),

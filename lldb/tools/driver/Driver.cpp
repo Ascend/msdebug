@@ -1,6 +1,6 @@
 //===-- Driver.cpp ----------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -185,6 +185,9 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   // the main loop.
   m_debugger.SkipLLDBInitFiles(false);
   m_debugger.SkipAppInitFiles(false);
+#ifdef MS_DEBUGGER
+  llvm::outs() << lldb::SBDebugger::GetLogoString() << '\n';
+#endif
 
   if (args.hasArg(OPT_no_use_colors)) {
     m_debugger.SetUseColor(false);
@@ -679,6 +682,54 @@ static void sigtstp_handler(int signo) {
 }
 #endif
 
+#ifdef MS_DEBUGGER
+static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
+  std::string usage_str = tool_name.str() + " [options]";
+  table.printHelp(llvm::outs(), usage_str.c_str(), lldb::SBDebugger::GetLogoString(), false);
+
+  std::string examples = R"___(
+EXAMPLES:
+  The debugger can be started in several modes.
+
+  Passing an executable as a positional argument prepares msdebug to debug the
+  given executable. To disambiguate between arguments passed to msdebug and
+  arguments passed to the debugged executable, arguments starting with a - must
+  be passed after --.
+
+    msdebug --arch x86_64 /path/to/program program argument -- --arch armv7
+
+  For convenience, passing the executable after -- is also supported.
+
+    msdebug --arch x86_64 -- /path/to/program program argument --arch armv7
+
+  Passing one of the attach options causes msdebug to immediately attach to the
+  given process.
+
+    msdebug -p <pid>
+    msdebug -n <process-name>
+
+  Passing --repl starts msdebug in REPL mode.
+
+    msdebug -r
+
+  Passing --core causes msdebug to debug the core file.
+
+    msdebug -c /path/to/core
+
+  Command options can be combined with these modes and cause msdebug to run the
+  specified commands before or after events, like loading the file or crashing,
+  in the order provided on the command line.
+
+    msdebug -O 'settings set stop-disassembly-count 20' -o 'run' -o 'bt'
+    msdebug -S /source/before/file -s /source/after/file
+    msdebug -K /source/before/crash -k /source/after/crash
+
+  Note: In REPL mode no file is loaded, so commands specified to run after
+  loading the file (via -o or -s) will be ignored.)___";
+  llvm::outs() << examples << '\n';
+}
+#else
+
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB", false);
@@ -724,6 +775,7 @@ EXAMPLES:
   loading the file (via -o or -s) will be ignored.)___";
   llvm::outs() << examples << '\n';
 }
+#endif
 
 int main(int argc, char const *argv[]) {
   // Editline uses for example iswprint which is dependent on LC_CTYPE.

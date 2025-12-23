@@ -1,6 +1,6 @@
 //===-- CommandObjectThread.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -17,6 +17,9 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Host/Debug.h"
+#endif
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -125,6 +128,9 @@ public:
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+#ifdef MS_DEBUGGER
+                eCommandProcessMustNotBeTaskKilled |
+#endif
                 eCommandProcessMustBePaused) {}
 
   ~CommandObjectThreadBacktrace() override = default;
@@ -516,6 +522,9 @@ protected:
           range = sc.line_entry.range;
         }
 
+#ifdef MS_DEBUGGER
+      process->SetDeviceSingleCoreRunFlag(true);
+#endif
         new_plan_sp = thread->QueueThreadPlanForStepInRange(
             abort_other_plans, range,
             frame->GetSymbolContext(eSymbolContextEverything),
@@ -534,6 +543,9 @@ protected:
     } else if (m_step_type == eStepTypeOver) {
       StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
 
+#ifdef MS_DEBUGGER
+      process->SetDeviceSingleCoreRunFlag(true);
+#endif
       if (frame->HasDebugInformation())
         new_plan_sp = thread->QueueThreadPlanForStepOverRange(
             abort_other_plans,
@@ -544,6 +556,7 @@ protected:
       else
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
             true, abort_other_plans, bool_stop_other_threads, new_plan_status);
+      
     } else if (m_step_type == eStepTypeTrace) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
           false, abort_other_plans, bool_stop_other_threads, new_plan_status);
@@ -551,6 +564,9 @@ protected:
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
           true, abort_other_plans, bool_stop_other_threads, new_plan_status);
     } else if (m_step_type == eStepTypeOut) {
+#ifdef MS_DEBUGGER
+      process->SetDeviceSingleCoreRunFlag(true);
+#endif
       new_plan_sp = thread->QueueThreadPlanForStepOut(
           abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
           eVoteNoOpinion,

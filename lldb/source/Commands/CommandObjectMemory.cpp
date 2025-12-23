@@ -1,6 +1,6 @@
 //===-- CommandObjectMemory.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -21,6 +21,9 @@
 #include "lldb/Interpreter/OptionGroupOutputFile.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Interpreter/OptionValueMemoryType.h"
+#endif
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -51,7 +54,11 @@ class OptionGroupReadMemory : public OptionGroup {
 public:
   OptionGroupReadMemory()
       : m_num_per_line(1, 1), m_offset(0, 0),
+#ifdef MS_DEBUGGER
+        m_language_for_type(eLanguageTypeUnknown), m_mem_type(DeviceAddressClass::NONE) {}
+#else
         m_language_for_type(eLanguageTypeUnknown) {}
+#endif
 
   ~OptionGroupReadMemory() override = default;
 
@@ -92,7 +99,11 @@ public:
     case 'E':
       error = m_offset.SetValueFromString(option_value);
       break;
-
+#ifdef MS_DEBUGGER
+    case 'm':
+      error = m_mem_type.SetValueFromString(option_value);
+      break;
+#endif
     default:
       llvm_unreachable("Unimplemented option");
     }
@@ -106,7 +117,39 @@ public:
     m_force = false;
     m_offset.Clear();
     m_language_for_type.Clear();
+#ifdef MS_DEBUGGER
+    m_mem_type.Clear();
+#endif
   }
+
+#ifdef MS_DEBUGGER
+  static uint8_t GetElementSize(lldb::Format format) {
+    switch (format) {
+      default:
+        return 0;
+
+      case eFormatBoolean:
+      case eFormatVectorOfSInt8:
+      case eFormatVectorOfUInt8:
+        return 1;
+      case eFormatVectorOfSInt16:
+      case eFormatVectorOfUInt16:
+      case eFormatBFloat16:
+      case eFormatVectorOfFloat16:
+      case eFormatVectorOfBFloat16:
+        return 2;
+      case eFormatFloat:
+      case eFormatVectorOfSInt32:
+      case eFormatVectorOfUInt32:
+      case eFormatVectorOfFloat32:
+        return 4;
+      case eFormatVectorOfSInt64:
+      case eFormatVectorOfUInt64:
+      case eFormatVectorOfFloat64:
+        return 8;
+    }
+  }
+#endif
 
   Status FinalizeSettings(Target *target, OptionGroupFormat &format_options) {
     Status error;
@@ -153,6 +196,19 @@ public:
       if (!count_option_set)
         format_options.GetCountValue() = 8;
       break;
+
+#ifdef MS_DEBUGGER
+    case eFormatBFloat16:
+      static constexpr uint64_t BYTE_NUM = 2;
+      static constexpr uint64_t ROW_NUM = 4;
+      if (!byte_size_option_set)
+        byte_size_value = BYTE_NUM;
+      if (!num_per_line_option_set)
+        m_num_per_line = 1;
+      if (!count_option_set)
+        format_options.GetCountValue() = ROW_NUM;
+      break;
+#endif
 
     case eFormatBinary:
     case eFormatFloat:
@@ -256,6 +312,9 @@ public:
     case eFormatVectorOfFloat32:
     case eFormatVectorOfFloat64:
     case eFormatVectorOfUInt128:
+#ifdef MS_DEBUGGER
+    case eFormatVectorOfBFloat16:
+#endif
       if (!byte_size_option_set)
         byte_size_value = 128;
       if (!num_per_line_option_set)
@@ -270,7 +329,11 @@ public:
   bool AnyOptionWasSet() const {
     return m_num_per_line.OptionWasSet() || m_output_as_binary ||
            m_view_as_type.OptionWasSet() || m_offset.OptionWasSet() ||
+#ifdef MS_DEBUGGER
+           m_language_for_type.OptionWasSet() || m_mem_type.OptionWasSet();
+#else
            m_language_for_type.OptionWasSet();
+#endif
   }
 
   OptionValueUInt64 m_num_per_line;
@@ -279,6 +342,9 @@ public:
   bool m_force = false;
   OptionValueUInt64 m_offset;
   OptionValueLanguage m_language_for_type;
+#ifdef MS_DEBUGGER
+  OptionValueMemoryType m_mem_type;
+#endif
 };
 
 // Read memory from the inferior process
@@ -288,7 +354,12 @@ public:
       : CommandObjectParsed(
             interpreter, "memory read",
             "Read from the memory of the current target process.", nullptr,
+#ifdef MS_DEBUGGER
+            eCommandRequiresTarget | eCommandProcessMustBePaused |
+            eCommandProcessMustNotBeTaskKilled),
+#else
             eCommandRequiresTarget | eCommandProcessMustBePaused),
+#endif
         m_format_options(eFormatBytesWithASCII, 1, 8),
         m_memory_tag_options(/*note_binary=*/true),
         m_prev_format_options(eFormatBytesWithASCII, 1, 8) {
@@ -660,8 +731,17 @@ protected:
       }
 
       Address address(addr, nullptr);
+#ifdef MS_DEBUGGER
+      MemoryReaderParamClient param{};
+      param.element_size = OptionGroupReadMemory::GetElementSize(m_format_options.GetFormat());
+      param.address_class = m_memory_options.m_mem_type.GetCurrentValue();
+      bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
+                                      data_sp->GetByteSize(), error, true,
+                                      nullptr, param);
+#else
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
+#endif
       if (bytes_read == 0) {
         const char *error_cstr = error.AsCString();
         if (error_cstr && error_cstr[0]) {
@@ -1329,6 +1409,9 @@ protected:
       switch (m_format_options.GetFormat()) {
       case kNumFormats:
       case eFormatFloat: // TODO: add support for floats soon
+#ifdef MS_DEBUGGER
+      case eFormatBFloat16:
+#endif
       case eFormatCharPrintable:
       case eFormatBytesWithASCII:
       case eFormatComplex:
@@ -1349,6 +1432,9 @@ protected:
       case eFormatVectorOfFloat32:
       case eFormatVectorOfFloat64:
       case eFormatVectorOfUInt128:
+#ifdef MS_DEBUGGER
+      case eFormatVectorOfBFloat16:
+#endif
       case eFormatOSType:
       case eFormatComplexInteger:
       case eFormatAddressInfo:

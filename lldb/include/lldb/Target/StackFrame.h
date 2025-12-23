@@ -1,7 +1,7 @@
 
 //===-- StackFrame.h --------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -505,6 +505,10 @@ public:
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
   lldb::RecognizedStackFrameSP GetRecognizedFrame();
+
+#ifdef MS_DEBUGGER
+  void ClearFrameBaseCache();
+#endif
 
 protected:
   friend class StackFrameList;

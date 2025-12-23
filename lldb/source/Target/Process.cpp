@@ -1,6 +1,6 @@
 //===-- Process.cpp -------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -74,10 +74,16 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Target/ProcessStatus.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
+#ifdef MS_DEBUGGER
+using namespace device_core;
+#endif
 
 // Comment out line below to disable memory caching, overriding the process
 // setting target.process.disable-memory-cache
@@ -885,6 +891,9 @@ bool Process::HandleProcessStateChangedEvent(
             }
             case eStopReasonTrace:
             case eStopReasonBreakpoint:
+#ifdef MS_DEBUGGER
+            case eStopReasonDeviceBreakpoint:
+#endif
             case eStopReasonWatchpoint:
             case eStopReasonException:
             case eStopReasonExec:
@@ -967,6 +976,11 @@ bool Process::HandleProcessStateChangedEvent(
           stream->Printf(") stopped.\n");
         }
       }
+
+      ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
+#ifdef MS_DEBUGGER
+      HandleDeviceProcessStateChanged(process_sp);
+#endif
 
       // Pop the process IO handler
       pop_process_io_handler = true;
@@ -1725,6 +1739,10 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       bp_site_sp.reset(
           new BreakpointSite(constituent, load_addr, use_hardware));
       if (bp_site_sp) {
+#ifdef MS_DEBUGGER
+        ModuleSP module_sp = constituent->GetAddress().GetModule();
+        bp_site_sp->SetArchSpec(module_sp ? module_sp->GetArchitecture() : ArchSpec());
+#endif
         Status error = EnableBreakpointSite(bp_site_sp.get());
         if (error.Success()) {
           constituent->SetBreakpointSite(bp_site_sp);
@@ -1968,11 +1986,27 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
 //#define VERIFY_MEMORY_READS
 
 size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
+#ifdef MS_DEBUGGER
+  MemoryReaderParamClient param{};
+  if (IsStopInDevice()) {
+    param.arch_spec = ArchSpec("hiipu64");
+    param.address_class = DeviceAddressClass::STACK;
+    return ReadMemory(addr, buf, size, param, error);
+  }
+  return ReadMemory(addr, buf, size, param, error);
+}
+
+size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, const MemoryReaderParamClient &param, Status &error) {
+#endif
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
   error.Clear();
+#ifdef MS_DEBUGGER
+  if (!GetDisableMemoryCache() && param.arch_spec.GetMachine() != llvm::Triple::hiipu64) {
+#else
   if (!GetDisableMemoryCache()) {
+#endif
 #if defined(VERIFY_MEMORY_READS)
     // Memory caching is enabled, with debug verification
 
@@ -2006,8 +2040,11 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 #endif // defined (VERIFY_MEMORY_READS)
   } else {
     // Memory caching is disabled
-
+#ifdef MS_DEBUGGER
+    return ReadMemoryWithFixedSize(addr, buf, size, param, error);
+#else
     return ReadMemoryFromInferior(addr, buf, size, error);
+#endif
   }
 }
 
@@ -2204,6 +2241,14 @@ size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
 
 size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
                                        Status &error) {
+#ifdef MS_DEBUGGER
+  static const MemoryReaderParamClient param{};
+  return ReadMemoryFromInferior(addr, buf, size, param, error);
+}
+
+size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
+                                       const MemoryReaderParamClient &param, Status &error) {
+#endif
   LLDB_SCOPED_TIMER();
 
   if (ABISP abi_sp = GetABI())
@@ -2217,8 +2262,13 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
 
   while (bytes_read < size) {
     const size_t curr_size = size - bytes_read;
+#ifdef MS_DEBUGGER
+    const size_t curr_bytes_read =
+        DoReadMemory(addr + bytes_read, bytes + bytes_read, curr_size, param, error);
+#else
     const size_t curr_bytes_read =
         DoReadMemory(addr + bytes_read, bytes + bytes_read, curr_size, error);
+#endif
     bytes_read += curr_bytes_read;
     if (curr_bytes_read == curr_size || curr_bytes_read == 0)
       break;
@@ -2230,6 +2280,35 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
     RemoveBreakpointOpcodesFromBuffer(addr, bytes_read, (uint8_t *)buf);
   return bytes_read;
 }
+#ifdef MS_DEBUGGER
+size_t Process::ReadMemoryWithFixedSize(addr_t addr, void *buf, size_t size,
+                                        const MemoryReaderParamClient &param, Status &error) {
+  // There is a bug in lldb. When the memory value is 0x2d and the size is 1 byte,
+  // it will be considered as eNack in the communication protocol,
+  // so we do a workaround
+  if (size == 1) {
+    if (buf == nullptr) {
+      error.SetErrorString("buf is nullptr");
+      return 0;
+    }
+    constexpr size_t temp_size = 2;
+    auto temp_addr = addr;
+    if (addr > 0) {
+      temp_addr -= 1;
+    }
+    std::vector<uint8_t> temp_buffer(temp_size);
+    auto read_bytes = ReadMemoryFromInferior(temp_addr,
+        static_cast<void *>(temp_buffer.data()), temp_size, param, error);
+    if (read_bytes == temp_size) {
+      uint8_t *u8_buf = static_cast<uint8_t*>(buf);
+      u8_buf[0] = addr > 0 ? temp_buffer[1] : temp_buffer[0];
+      read_bytes = 1;
+    }
+    return read_bytes;
+  }
+  return ReadMemoryFromInferior(addr, buf, size, param, error);
+}
+#endif
 
 uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
                                                 size_t integer_byte_size,
@@ -4896,8 +4975,14 @@ HandleStoppedEvent(lldb::tid_t thread_id, const ThreadPlanSP &thread_plan_sp,
   }
 
   StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
+#ifdef MS_DEBUGGER
+  bool is_hit_breakpoint = stop_info_sp && (stop_info_sp->GetStopReason() == eStopReasonBreakpoint ||
+          stop_info_sp->GetStopReason() == eStopReasonDeviceBreakpoint);
+  if (is_hit_breakpoint && stop_info_sp->ShouldNotify(event_sp.get())) {
+#else
   if (stop_info_sp && stop_info_sp->GetStopReason() == eStopReasonBreakpoint &&
       stop_info_sp->ShouldNotify(event_sp.get())) {
+#endif
     LLDB_LOG(log, "stopped for breakpoint: {0}.", stop_info_sp->GetDescription());
     if (!options.DoesIgnoreBreakpoints()) {
       // Restore the plan state and then force Private to false.  We are going
@@ -5763,6 +5848,11 @@ void Process::GetStatus(Stream &strm) {
         strm.Printf("Connected to remote target.\n");
       else
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
+#ifdef MS_DEBUGGER
+        if (state == StateType::eStateStopped) {
+          ShowDeviceStopInfoCached(strm);
+        }
+#endif
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());
@@ -6467,6 +6557,116 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
   return DoWriteMemoryTags(addr, len, tag_manager->GetAllocationTagType(),
                            *packed_tags);
 }
+
+#ifdef MS_DEBUGGER
+void Process::GetDeviceStopInfoCached(DeviceStopInfo &info) const
+{
+  info = m_device_stop_info;
+}
+
+void Process::SetDeviceStopInfoCached(const DeviceStopInfo &info) {
+  m_device_stop_info = info;
+  ProcessStatus::Instance().SetStatus(IsStopInDevice());
+}
+
+bool Process::IsStopInDevice() {
+  return m_device_stop_info.core_id != UINT32_MAX;
+}
+
+inline std::string GetSimpleKernelName(const std::string &name) {
+  constexpr size_t MAX_SIZE = 64;
+  return name.substr(0, std::min(MAX_SIZE, name.length()));
+}
+
+void Process::ShowDeviceStopInfoCached(Stream &stream) {
+  if (!IsStopInDevice()) {
+    return;
+  }
+  std::string core_type_str;
+  if (m_device_stop_info.core_type == CoreType::AIC) {
+    core_type_str = "aic";
+  } else if (m_device_stop_info.core_type == CoreType::AIV) {
+    core_type_str = "aiv";
+  } else {
+    core_type_str = "unknown";
+  }
+ 
+  std::string name = GetSimpleKernelName(m_device_stop_info.kernel_name);
+  if (name.empty()) {
+    stream.Printf("[Switching to focus on CoreId %u, Type %s]\n",
+      m_device_stop_info.core_id, core_type_str.c_str());
+  } else {
+    stream.Printf("[Switching to focus on Kernel %s, CoreId %u, Type %s]\n",
+    name.c_str(), m_device_stop_info.core_id,
+    core_type_str.c_str());
+  }
+  stream.Flush();
+}
+
+void Process::RefreshStopReason(lldb::ThreadSP &threadSp) {
+  std::string reason = (threadSp && threadSp->GetStopInfo()) ? threadSp->GetStopInfo()->GetDescription() :"NULL";
+  if (m_device_core_stop_reason.empty()) {
+    std::vector<CoreInfo> infos;
+    Status error = GetCoresInfo(infos);
+    if (error.Fail()) {
+     return;
+    }
+    for (const auto &info : infos) {
+      std::string key = std::to_string(static_cast<uint8_t>(info.core_type)) + '_' + std::to_string(info.core_id);
+      m_device_core_stop_reason.insert(std::make_pair(key, reason));
+    }
+    return;
+  }
+  if (m_single_core_mode) {
+    std::string key = std::to_string(static_cast<uint8_t>(m_device_stop_info.core_type)) 
+        + '_' + std::to_string(m_device_stop_info.core_id);
+    m_device_core_stop_reason[key] = reason;
+  } else {
+    for (auto iter {m_device_core_stop_reason.begin()}; iter != m_device_core_stop_reason.end(); ++iter) {
+      iter->second = reason.c_str();
+    }
+  }
+}
+
+const std::map<std::string, std::string>& Process::GetCoreStopReason() {
+  return m_device_core_stop_reason;
+}
+
+bool Process::HandleDeviceProcessStateChanged(const ProcessSP &process_sp) {
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log, "Process::HandleDeviceProcessStateChanged()");
+  if (!process_sp) {
+    return false;
+  }
+  ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
+  if (!thread_sp) {
+    return false;
+  }
+  auto reason = (thread_sp && thread_sp->GetStopInfo()) ?
+                  thread_sp->GetStopInfo()->GetStopReason() : eStopReasonInvalid;
+  if (process_sp->IsStopInDevice() && reason == eStopReasonSignal) {
+    process_sp->SetDeviceSingleCoreRunFlag(false);
+  }
+  process_sp->RefreshStopReason(thread_sp);
+  if (process_sp->m_single_core_mode) {
+    process_sp->SetDeviceSingleCoreRunFlag(false);
+  }
+  return true;
+}
+
+void Process::SetDeviceCoredumpEnable(bool flag) {
+  m_device_coredump = flag;
+}
+
+bool Process::DeviceCoredumpEnable() const {
+  return m_device_coredump;
+}
+
+const SummaryInfo& Process::GetSummaryInfo() {
+  static SummaryInfo default_summary;
+  return default_summary;
+}
+#endif
 
 // Create a CoreFileMemoryRange from a MemoryRegionInfo
 static Process::CoreFileMemoryRange

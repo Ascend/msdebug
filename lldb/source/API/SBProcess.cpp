@@ -1,6 +1,6 @@
 //===-- SBProcess.cpp -----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1457,6 +1457,26 @@ lldb::SBError SBProcess::DeallocateMemory(lldb::addr_t ptr) {
   }
   return sb_error;
 }
+
+#ifdef MS_DEBUGGER
+bool SBProcess::IsSBStopInDevice() {
+  ProcessSP process_sp(GetSP());
+  if (process_sp && process_sp->IsStopInDevice()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool SBProcess::HandleDeviceSBProcessStateChanged() {
+  ProcessSP process_sp(GetSP());
+  if (process_sp && Process::HandleDeviceProcessStateChanged(process_sp)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+#endif
 
 lldb::SBScriptObject SBProcess::GetScriptedImplementation() {
   LLDB_INSTRUMENT_VA(this);

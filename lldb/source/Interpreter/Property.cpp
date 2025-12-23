@@ -1,6 +1,6 @@
 //===-- Property.cpp ------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -153,7 +153,23 @@ Property::Property(const PropertyDefinition &definition)
       m_value_sp = std::make_shared<OptionValueLanguage>(new_lang);
     }
     break;
-
+#ifdef MS_DEBUGGER
+  case OptionValue::eTypeMemoryType:
+    // "definition.default_uint_value" is the default language enumeration
+    // value if "definition.default_cstr_value" is NULL, otherwise interpret
+    // "definition.default_cstr_value" as a string value that represents the
+    // default value.
+  {
+    DeviceAddressClass mem_type = DeviceAddressClass::NONE;
+    if (definition.default_cstr_value) {
+      MemoryType::GetMemoryTypeFromString(llvm::StringRef(definition.default_cstr_value));
+    } else {
+      mem_type = (DeviceAddressClass)definition.default_uint_value;
+    }
+    m_value_sp = std::make_shared<OptionValueMemoryType>(mem_type);
+  }
+    break;
+#endif
   case OptionValue::eTypeFormatEntity:
     // "definition.default_cstr_value" as a string value that represents the
     // default

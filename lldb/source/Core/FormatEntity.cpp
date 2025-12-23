@@ -1,6 +1,6 @@
 //===-- FormatEntity.cpp --------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1181,6 +1181,33 @@ bool FormatEntity::FormatCString(const char *format, Stream &s,
   }
   return false;
 }
+
+#ifdef MS_DEBUGGER
+static void CustomShowFuncArgs(llvm::StringRef var_representation, 
+                               ValueObjectSP var_value_sp,
+                               const char *var_name,
+                               Stream &s) {
+  if (var_value_sp->GetCompilerType().GetAddressClass() == 
+      static_cast<uint32_t>(DeviceAddressClass::GM)) {
+    CompilerType elem_or_pointee_compiler_type;
+    const Flags type_flags(var_value_sp->GetTypeInfo(&elem_or_pointee_compiler_type));
+    addr_t cstr_address = LLDB_INVALID_ADDRESS;
+    AddressType cstr_address_type = eAddressTypeInvalid;
+    if (type_flags.Test(eTypeIsPointer)) {
+      cstr_address = var_value_sp->GetPointerValue(&cstr_address_type);
+    } else if (type_flags.Test(eTypeIsArray)) {
+      cstr_address = var_value_sp->GetAddressOf(true, &cstr_address_type);
+    }
+    if (cstr_address == LLDB_INVALID_ADDRESS) {
+      s.Printf("%s=\"\"", var_name);
+    } else {
+      s.Printf("%s=%#lx", var_name, cstr_address);
+    }
+  } else {
+    s.Printf("%s=%s", var_name, var_representation.str().c_str());
+  }
+}
+#endif
 
 bool FormatEntity::Format(const Entry &entry, Stream &s,
                           const SymbolContext *sc,
@@ -2482,6 +2509,19 @@ void FormatEntity::PrettyPrintFunctionArguments(
                                           "");
         format.FormatObject(var_value_sp.get(), buffer, TypeSummaryOptions());
         var_representation = buffer;
+#ifdef MS_DEBUGGER
+          // Because the kernel function argument sometimes contains an invalid workspace address,
+          // so gm data is not displayed.
+      } else if (var_value_sp->GetCompilerType().GetAddressClass() ==
+            static_cast<uint32_t>(DeviceAddressClass::GM)) {
+          var_value_sp->DumpPrintableRepresentation(
+            ss,
+            ValueObject::ValueObjectRepresentationStyle::
+                eValueObjectRepresentationStyleValue, /* it seems this style only read point address */
+            eFormatDefault,
+            ValueObject::PrintableRepresentationSpecialCases::eDisable,
+            false);
+#endif
       } else
         var_value_sp->DumpPrintableRepresentation(
             ss,
@@ -2496,14 +2536,19 @@ void FormatEntity::PrettyPrintFunctionArguments(
     if (arg_idx > 0)
       out_stream.PutCString(", ");
     if (var_value_sp->GetError().Success()) {
+#ifdef MS_DEBUGGER
+      if (!var_representation.empty())
+        CustomShowFuncArgs(var_representation, var_value_sp, var_name, out_stream);
+#else
       if (!var_representation.empty())
         out_stream.Printf("%s=%s", var_name, var_representation.str().c_str());
+#endif
       else
         out_stream.Printf("%s=%s at %s", var_name,
                           var_value_sp->GetTypeName().GetCString(),
                           var_value_sp->GetLocationAsCString());
-    } else
-      out_stream.Printf("%s=<unavailable>", var_name);
+      } else
+        out_stream.Printf("%s=<unavailable>", var_name);
   }
 }
 

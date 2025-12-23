@@ -12,6 +12,17 @@ if(lldb_vc AND LLVM_APPEND_VC_REV)
   set(lldb_source_dir ${LLDB_SOURCE_DIR})
 endif()
 
+if(MS_DEBUGGER)
+add_custom_command(OUTPUT "${vcs_version_inc}"
+  DEPENDS "${lldb_vc}" "${generate_vcs_version_script}"
+  COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
+                           "-DLLDB_SOURCE_DIR=${lldb_source_dir}"
+                           "-DHEADER_FILE=${vcs_version_inc}"
+                           "-DMS_DEBUGGER=1"
+                           "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                           "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
+                           -P "${generate_vcs_version_script}")
+else()
 add_custom_command(OUTPUT "${vcs_version_inc}"
   DEPENDS "${lldb_vc}" "${generate_vcs_version_script}"
   COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
@@ -20,6 +31,8 @@ add_custom_command(OUTPUT "${vcs_version_inc}"
                            "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
                            "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
                            -P "${generate_vcs_version_script}")
+endif()
+
 
 set_source_files_properties("${vcs_version_inc}"
   PROPERTIES GENERATED TRUE

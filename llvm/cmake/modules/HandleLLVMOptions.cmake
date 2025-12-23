@@ -150,6 +150,9 @@ if(LLVM_RUNTIMES_GPU_BUILD)
   return()
 endif()
 
+# FIXME: use MS_DEBUGGER
+include(HandleAscendDebuggerOptions)
+
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
   # using assert(). An explicit check is performed here.

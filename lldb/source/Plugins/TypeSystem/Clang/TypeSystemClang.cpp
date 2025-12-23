@@ -1,6 +1,6 @@
 //===-- TypeSystemClang.cpp -----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -72,6 +72,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
+#ifdef MS_DEBUGGER
+#include "lldb/lldb-private-enumerations.h"
+#endif
 #include "lldb/Utility/ThreadSafeDenseMap.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
@@ -102,6 +105,18 @@ static void VerifyDecl(clang::Decl *decl) {
   decl->getAccess();
 #endif
 }
+#ifdef MS_DEBUGGER
+const static std::map<uint32_t, LangAS> g_addr_class_to_addr_space = {
+    {static_cast<uint32_t>(DeviceAddressClass::GM), LangAS::ascend_gm},
+    {static_cast<uint32_t>(DeviceAddressClass::CBUF), LangAS::ascend_cbuf},
+    {static_cast<uint32_t>(DeviceAddressClass::CA), LangAS::ascend_ca},
+    {static_cast<uint32_t>(DeviceAddressClass::CB), LangAS::ascend_cb},
+    {static_cast<uint32_t>(DeviceAddressClass::CC), LangAS::ascend_cc},
+    {static_cast<uint32_t>(DeviceAddressClass::UBUF), LangAS::ascend_ubuf},
+    {static_cast<uint32_t>(DeviceAddressClass::STACK), LangAS::ascend_stack},
+    {static_cast<uint32_t>(DeviceAddressClass::FBUF), LangAS::ascend_fbuf},
+};
+#endif
 
 static inline bool
 TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
@@ -4633,6 +4648,35 @@ TypeSystemClang::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+#ifdef MS_DEBUGGER
+CompilerType
+TypeSystemClang::AddAddressClassModifier(lldb::opaque_compiler_type_t type, uint32_t address_class) {
+  if (type) {
+    clang::QualType result(GetQualType(type));
+    auto it = g_addr_class_to_addr_space.find(address_class);
+    if (it == g_addr_class_to_addr_space.end()) {
+      return CompilerType();
+    }
+    result = m_ast_up->getAddrSpaceQualType(result, it->second);
+    return GetType(result);
+  }
+  return CompilerType();
+}
+
+uint32_t TypeSystemClang::GetAddressClass(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetQualType(type));
+    auto addr_space = qual_type.getAddressSpace();
+    for (const auto &it: g_addr_class_to_addr_space) {
+      if (it.second == addr_space) {
+        return it.first;
+      }
+    }
+  }
+  return 0U;
+}
+
+#endif
 CompilerType TypeSystemClang::CreateTypedef(
     lldb::opaque_compiler_type_t type, const char *typedef_name,
     const CompilerDeclContext &compiler_decl_ctx, uint32_t payload) {

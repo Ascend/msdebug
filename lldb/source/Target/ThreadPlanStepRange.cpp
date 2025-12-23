@@ -1,6 +1,6 @@
 //===-- ThreadPlanStepRange.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -10,6 +10,11 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Disassembler.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Core/Module.h"
+#include "lldb/Core/Section.h"
+#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#endif
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -266,9 +271,24 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
         // Disassemble the address range given:
         const char *plugin_name = nullptr;
         const char *flavor = nullptr;
+#ifdef MS_DEBUGGER
+        DeviceStopInfo stop_info;
+        ArchSpec arch = GetTarget().GetArchitecture();
+        if (GetThread().GetProcess()->IsStopInDevice()) {
+          GetThread().GetProcess()->GetDeviceStopInfoCached(stop_info);
+          arch = ArchSpec("hiipu64");
+          arch.SetAicoreType((CoreType)stop_info.core_type);
+        }
+        Log *log = GetLog(LLDBLog::Step);
+        LLDB_LOGF(log, "get arch success, arch: %s", arch.GetArchitectureName());
         m_instruction_ranges[i] = Disassembler::DisassembleRange(
-            GetTarget().GetArchitecture(), plugin_name, flavor, GetTarget(),
+            arch, plugin_name, flavor, GetTarget(),
             m_address_ranges[i]);
+#else
+        m_instruction_ranges[i] = Disassembler::DisassembleRange(
+          GetTarget().GetArchitecture(), plugin_name, flavor, GetTarget(),
+          m_address_ranges[i]);
+#endif
       }
       if (!m_instruction_ranges[i])
         return nullptr;

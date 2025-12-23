@@ -1,6 +1,6 @@
 //===-- StackFrameList.cpp ------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -142,6 +142,9 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     m_current_inlined_pc = curr_pc;
     m_current_inlined_depth = 0;
     break;
+#ifdef MS_DEBUGGER
+  case eStopReasonDeviceBreakpoint:
+#endif
   case eStopReasonBreakpoint: {
     // FIXME: Figure out what this break point is doing, and set the inline
     // depth appropriately.  Be careful to take into account breakpoints that

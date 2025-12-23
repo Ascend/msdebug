@@ -1,10 +1,20 @@
-lldb_tablegen(CoreProperties.inc -gen-lldb-property-defs
-  SOURCE CoreProperties.td
-  TARGET LLDBCorePropertiesGen)
-
-lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
-  SOURCE CoreProperties.td
-  TARGET LLDBCorePropertiesEnumGen)
+if(MS_DEBUGGER)
+  lldb_tablegen(CoreProperties.inc -gen-lldb-property-defs
+    SOURCE AscendDebuggerCoreProperties.td
+    TARGET LLDBCorePropertiesGen)
+ 
+  lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
+    SOURCE AscendDebuggerCoreProperties.td
+    TARGET LLDBCorePropertiesEnumGen)
+else()
+  lldb_tablegen(CoreProperties.inc -gen-lldb-property-defs
+    SOURCE CoreProperties.td
+    TARGET LLDBCorePropertiesGen)
+ 
+  lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
+    SOURCE CoreProperties.td
+    TARGET LLDBCorePropertiesEnumGen)
+endif()
 
 set(LLDB_CURSES_LIBS)
 set(LLDB_LIBEDIT_LIBS)

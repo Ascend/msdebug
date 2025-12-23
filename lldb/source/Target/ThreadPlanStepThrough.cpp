@@ -1,6 +1,6 @@
 //===-- ThreadPlanStepThrough.cpp -----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -244,7 +244,12 @@ bool ThreadPlanStepThrough::MischiefManaged() {
 bool ThreadPlanStepThrough::HitOurBackstopBreakpoint() {
   Thread &thread = GetThread();
   StopInfoSP stop_info_sp(thread.GetStopInfo());
+#ifdef MS_DEBUGGER
+  if (stop_info_sp && (stop_info_sp->GetStopReason() == eStopReasonBreakpoint || 
+      stop_info_sp->GetStopReason() == eStopReasonDeviceBreakpoint)) {
+#else
   if (stop_info_sp && stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
+#endif
     break_id_t stop_value = (break_id_t)stop_info_sp->GetValue();
     BreakpointSiteSP cur_site_sp =
         m_process.GetBreakpointSiteList().FindByID(stop_value);

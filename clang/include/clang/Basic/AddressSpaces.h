@@ -1,6 +1,6 @@
 //===- AddressSpaces.h - Language-specific address spaces -------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -65,7 +65,18 @@ enum class LangAS : unsigned {
   // This denotes the count of language-specific address spaces and also
   // the offset added to the target-specific address spaces, which are usually
   // specified by address space attributes __attribute__(address_space(n))).
-  FirstTargetAddressSpace
+  FirstTargetAddressSpace,
+#ifdef MS_DEBUGGER
+  ascend_gm,
+  ascend_cbuf,
+  ascend_ca,
+  ascend_cb,
+  ascend_cc,
+  ascend_ubuf,
+  ascend_stack,
+  ascend_fbuf,
+  SecondTargetAddressSpace,
+#endif
 };
 
 /// The type of a lookup table which maps from language-specific address spaces

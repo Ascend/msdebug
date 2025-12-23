@@ -1,6 +1,6 @@
 //===-- ModuleSpec.h --------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -18,9 +18,17 @@
 #include "lldb/Utility/UUID.h"
 
 #include "llvm/Support/Chrono.h"
+#ifdef MS_DEBUGGER
+#include "lldb/lldb-enumerations.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/ErrorOr.h"
+#endif
 
 #include <mutex>
 #include <vector>
+#ifdef MS_DEBUGGER
+#include <unistd.h>
+#endif
 
 namespace lldb_private {
 
@@ -257,6 +265,218 @@ public:
     }
     return true;
   }
+
+#ifdef MS_DEBUGGER
+  Status CheckOwnerAndWritablePermission() {
+    Status error;
+    FileSpec &file = GetFileSpec();
+    llvm::ErrorOr<llvm::vfs::Status> status = FileSystem::Instance().GetStatus(file);
+    const uint32_t permissions = FileSystem::Instance().GetPermissions(file);
+
+    if (status) {
+      // 不允许其他用户组可写
+      if (permissions & lldb::eFilePermissionsWorldWrite) {
+        error.SetErrorStringWithFormat("Risky action, \"%s\" is writable by any other users.",
+                                       file.GetPath().c_str());
+        return error;
+      }
+      // 目标文件是root所有的，可以被任意用户执行；目标文件非root所有，只能被实际所有者执行
+      // 当前用户为root时, 不做文件从属权限校验
+      if ((getuid() != 0) && (status->getUser() != 0 && status->getUser() != getuid())) {
+        error.SetErrorStringWithFormat("Risky action, \"%s\" is not owned by root or current user.",
+                                       file.GetPath().c_str());
+        return error;
+      }
+    } else {
+      error.SetErrorStringWithFormat(
+        "Unable to find \"%s\". File does Not exist.",
+        file.GetPath().c_str());
+    }
+    return error;
+  }
+
+  Status CheckExecutablePermission() {
+    Status error;
+    FileSpec &file = GetFileSpec();
+    llvm::ErrorOr<llvm::vfs::Status> status = FileSystem::Instance().GetStatus(file);
+
+    if(!status) {
+      error.SetErrorStringWithFormat(
+        "Unable to find \"%s\". File does Not exist.",
+        file.GetPath().c_str());
+      return error;
+    }
+
+    const uint32_t file_permissions = FileSystem::Instance().GetPermissions(file);
+    const uint32_t curr_user = getuid();
+    const uint32_t curr_group = getgid();
+    const uint32_t curr_file_owner = status->getUser();
+    const uint32_t curr_file_group = status->getGroup();
+
+    // 0 represents the root's uid.
+    if (curr_user != 0) {
+      if ((curr_file_owner == curr_user) &&
+          (file_permissions & lldb::eFilePermissionsUserExecute)) {
+        return error;
+      } else if ((curr_file_group == curr_group) &&
+                 (file_permissions & lldb::eFilePermissionsGroupExecute)) {
+        return error;
+      } else if (file_permissions & lldb::eFilePermissionsWorldExecute) {
+        return error;
+      }
+      error.SetErrorStringWithFormat("Missing executable permissions for \"%s\".",
+        file.GetPath().c_str());
+    } else if ((file_permissions & lldb::eFilePermissionsEveryoneX) == 0) {
+      error.SetErrorStringWithFormat(
+        "Missing executable permissions for \"%s\".",
+        file.GetPath().c_str());
+    }
+    return error;
+  }
+
+  Status CheckReadablePermission() {
+    Status error;
+    FileSpec &file = GetFileSpec();
+    llvm::ErrorOr<llvm::vfs::Status> status = FileSystem::Instance().GetStatus(file);
+
+    if(!status) {
+      error.SetErrorStringWithFormat(
+              "Unable to find \"%s\". File does Not exist.",
+              file.GetPath().c_str());
+      return error;
+    }
+
+    const uint32_t file_permissions = FileSystem::Instance().GetPermissions(file);
+    const uint32_t curr_user = getuid();
+    const uint32_t curr_group = getgid();
+    const uint32_t curr_file_owner = status->getUser();
+    const uint32_t curr_file_group = status->getGroup();
+
+    // 0 represents the root's uid.
+    if (curr_user != 0) {
+      if ((curr_file_owner == curr_user) &&
+          (file_permissions & lldb::eFilePermissionsUserRead)) {
+        return error;
+      } else if ((curr_file_group == curr_group) &&
+                 (file_permissions & lldb::eFilePermissionsGroupRead)) {
+        return error;
+      } else if (file_permissions & lldb::eFilePermissionsWorldRead) {
+        return error;
+      }
+      error.SetErrorStringWithFormat("Missing readable permissions for \"%s\".",
+                                     file.GetPath().c_str());
+    } else if ((file_permissions & lldb::eFilePermissionsEveryoneR) == 0) {
+      error.SetErrorStringWithFormat(
+              "Missing readable permissions for \"%s\".",
+              file.GetPath().c_str());
+    }
+    return error;
+  }
+
+  // Symbolic link = symlink = soft link
+  Status CheckIsSymlink() {
+    Status error;
+    FileSpec &file = GetFileSpec();
+    std::string path = file.GetPath();
+
+    if(FileSystem::Instance().IsSymlink(path)){
+      error.SetErrorStringWithFormat("\"%s\" is a soft link, which is not supported.", path.c_str());
+    }
+    return error;
+  }
+
+  Status CheckPathExists(){
+    Status error;
+    FileSpec &file = GetFileSpec();
+
+    if(!FileSystem::Instance().Exists(file)){
+      error.SetErrorStringWithFormat("\"%s\" does NOT exist, please check it.", file.GetPath().c_str());
+    }
+    return error;
+  }
+
+  Status CheckIsDir() {
+    Status error;
+    FileSpec &file = GetFileSpec();
+
+    if(FileSystem::Instance().IsDirectory(file)){
+      error.SetErrorStringWithFormat("\"%s\" is a directory, which is not supported.", file.GetPath().c_str());
+    }
+    return error;
+  }
+
+  Status CheckFileSize() {
+    Status error;
+    FileSpec &file = GetFileSpec();
+    auto size = FileSystem::Instance().GetByteSize(file);
+    constexpr uint64_t MAX_FILE_SIZE = 100ULL * 1024 * 1024 * 1024;
+    if (size == 0) {
+      error.SetErrorStringWithFormatv("\"{0}\" is an empty file, which is not supported.", file.GetPath());
+    } else if (size > MAX_FILE_SIZE) {
+      error.SetErrorStringWithFormatv("\"{0}\" is too large, total {1} bytes, limit is {2} bytes.",
+                                      file.GetPath(), size, MAX_FILE_SIZE);
+    }
+    return error;
+  }
+
+  Status CheckParentPathOwnerAndWritablePermission() {
+    Status error;
+    FileSpec parentFile(GetFileSpec().GetDirectory().GetStringRef());
+    llvm::ErrorOr<llvm::vfs::Status> status = FileSystem::Instance().GetStatus(parentFile);
+    const uint32_t permissions = FileSystem::Instance().GetPermissions(parentFile);
+
+    if (status) {
+      // 目标文件是root所有的，可以被任意用户执行；目标文件非root所有，只能被实际所有者执行
+      // 当前用户为root时, 不做文件从属权限校验
+      if ((getuid() != 0) && (status->getUser() != 0 && status->getUser() != getuid())) {
+        error.SetErrorStringWithFormat("Risky action, \"%s\" is not owned by root or current user.",
+                                       parentFile.GetPath().c_str());
+        return error;
+      }
+
+      // 不允许其他或用户组可写
+      if (permissions & (lldb::eFilePermissionsWorldWrite | lldb::eFilePermissionsGroupWrite)) {
+        error.SetErrorStringWithFormat("Risky action, \"%s\" is writable by any other users or groups.",
+                                       parentFile.GetPath().c_str());
+        return error;
+      }
+    } else {
+      error.SetErrorStringWithFormat(
+          "Unable to find \"%s\". File does Not exist.",
+          parentFile.GetPath().c_str());
+    }
+    return error;
+  }
+
+  Status CheckInputFileValid(CheckInputValidClass flags) {
+    Status error;
+    // when add a new term, it should follow the check-valid order;
+    // keep the same order as lldb/include/lldb/lldb-private-enumerations.h CheckInputValidClass
+    std::vector<std::function<Status(ModuleSpec*)>> checker_register_v = {
+      &ModuleSpec::CheckPathExists,
+      &ModuleSpec::CheckOwnerAndWritablePermission,
+      &ModuleSpec::CheckIsSymlink,
+      &ModuleSpec::CheckReadablePermission,
+      &ModuleSpec::CheckIsDir,
+      &ModuleSpec::CheckFileSize,
+      &ModuleSpec::CheckExecutablePermission,
+      &ModuleSpec::CheckParentPathOwnerAndWritablePermission
+    };
+
+    auto execute = [this, &error, flags](std::vector<std::function<Status(ModuleSpec*)>>& vc) mutable {
+      for (unsigned int i = 0; i < vc.size(); ++i){
+        if((static_cast<unsigned int>(flags)) & (1 << i)){
+          error = vc[i](this);
+          if (error.Fail())
+            return;
+        }
+      }
+    };
+    execute(checker_register_v);
+    return error;
+  }
+
+#endif
 
 protected:
   FileSpec m_file;

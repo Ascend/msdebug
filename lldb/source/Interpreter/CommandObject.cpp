@@ -1,6 +1,6 @@
 //===-- CommandObject.cpp -------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -215,6 +215,9 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   }
 
   if (GetFlags().AnySet(eCommandProcessMustBeLaunched |
+#ifdef MS_DEBUGGER
+                        eCommandProcessMustBePausedInDevice |
+#endif
                         eCommandProcessMustBePaused)) {
     Process *process = m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process == nullptr) {
@@ -246,7 +249,11 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
 
       case eStateRunning:
       case eStateStepping:
+#ifdef MS_DEBUGGER
+        if (GetFlags().AnySet(eCommandProcessMustBePaused | eCommandProcessMustBePausedInDevice)) {
+#else
         if (GetFlags().Test(eCommandProcessMustBePaused)) {
+#endif
           result.AppendError("Process is running.  Use 'process interrupt' to "
                              "pause execution.");
           return false;
@@ -262,6 +269,81 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       return false;
     }
   }
+
+#ifdef MS_DEBUGGER
+  if (GetFlags().Test(eCommandProcessMustBePausedInDevice)) {
+    // check if program stops at device breakpoint
+    auto thread = GetDefaultThread();
+    if (thread == nullptr) {
+      result.AppendError("Failed to get thread info");
+      return false;
+    }
+    Process *process = m_interpreter.GetExecutionContext().GetProcessPtr();
+    if (process == nullptr) {
+      result.AppendError("Process must exist.");
+      return false;
+    }
+    if (!(process->IsStopInDevice())) {
+      result.AppendError("this command is only supported "
+        "when program stops at breakpoint in kernel function.");
+      return false;
+    }
+  }
+
+  if (GetFlags().Test(eCommandProcessMustNotBeTaskKilled)) {
+    auto thread = GetDefaultThread();
+    if (thread == nullptr) {
+      result.AppendError("Failed to get thread info");
+      return false;
+    }
+    Process *process = m_interpreter.GetExecutionContext().GetProcessPtr();
+    if (process == nullptr) {
+      result.AppendError("Process must exist.");
+      return false;
+    }
+    if (process->IsStopInDevice() && thread->GetStopReason() == eStopReasonSignal &&
+        !process->DeviceCoredumpEnable()) {
+      result.AppendError("this command is not supported when ctrl c");
+      return false;
+    }
+  }
+
+  if (GetFlags().Test(eCommandProcessMustBeCoredump)) {
+    auto thread = GetDefaultThread();
+    if (thread == nullptr) {
+      result.AppendError("Failed to get thread info");
+      return false;
+    }
+    Process *process = m_interpreter.GetExecutionContext().GetProcessPtr();
+    if (process == nullptr) {
+      result.AppendError("Process must exist.");
+      return false;
+    }
+    if (!process->DeviceCoredumpEnable()) {
+      result.AppendError("this command is only supported when loading coredump");
+      return false;
+    }
+  }
+
+  if (GetFlags().Test(eCommandProcessMustBePausedInDeviceOrCoredump)) {
+    auto thread = GetDefaultThread();
+    if (thread == nullptr) {
+      result.AppendError("Failed to get thread info");
+      return false;
+    }
+    Process *process = m_interpreter.GetExecutionContext().GetProcessPtr();
+    if (process == nullptr) {
+      result.AppendError("Process must exist.");
+      return false;
+    }
+    if (!process->DeviceCoredumpEnable() && !process->IsStopInDevice()) {
+      result.AppendError("this command is only supported when loading coredump"
+                         "stopping at breakpoint in kernel function");
+      return false;
+    }
+  }
+#endif
+
 
   return true;
 }

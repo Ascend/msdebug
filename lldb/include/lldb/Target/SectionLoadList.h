@@ -1,7 +1,7 @@
 //===-- SectionLoadList.h -----------------------------------------------*- C++
 //-*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -23,6 +23,10 @@ class SectionLoadList {
 public:
   // Constructors and Destructors
   SectionLoadList() = default;
+
+#ifdef MS_DEBUGGER
+  SectionLoadList(bool is_child) : SectionLoadList() { m_is_child = is_child;};
+#endif
 
   SectionLoadList(const SectionLoadList &rhs);
 
@@ -66,6 +70,10 @@ protected:
   addr_to_sect_collection m_addr_to_sect;
   sect_to_addr_collection m_sect_to_addr;
   mutable std::recursive_mutex m_mutex;
+#ifdef MS_DEBUGGER
+  lldb::SectionLoadListSP m_device_section_list{nullptr};
+  bool m_is_child{false};
+#endif
 };
 
 } // namespace lldb_private

@@ -1,0 +1,88 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
+# RUN: cd ~/samples/operator/MatMulCustomSample/KernelLaunch/MatMulInvocationNeo/
+# RUN: LD_LIBRARY_PATH=$(pwd)/out/lib:$LD_LIBRARY_PATH msdebug ascendc_kernels_bbit -s %s | FileCheck %s -dump-input=always
+
+b matmul_custom.cpp:13
+# CHECK-LABEL: b matmul_custom.cpp:13
+# CHECK-NEXT: Breakpoint {{[1-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[1-9]+}}.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_custom.cpp:13:{{[1-9]+}}
+br delete
+y
+
+ascend info devices
+# CHECK-LABEL: ascend info devices
+# CHECK-NEXT:  Device Aic_Num Aiv_Num Aic_Mask Aiv_Mask
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}}
+
+ascend info cores
+# CHECK-LABEL: ascend info cores
+# CHECK-NEXT:  CoreId  Type  Device Stream Task Block         PC               stop reason
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aic {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+
+ascend info tasks
+# CHECK-LABEL: ascend info tasks
+# CHECK-NEXT:  Device Stream Task Invocation
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9a-zA-Z_]+}}
+
+ascend info stream
+# CHECK-LABEL: ascend info stream
+# CHECK-NEXT:  Device Stream Type
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} aiv
+
+ascend info blocks
+# CHECK-LABEL: ascend info blocks
+# CHECK-NEXT:  Device Stream Task Block
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+
+ascend info blocks -d
+# CHECK-LABEL: ascend info blocks -d
+# CHECK-NEXT: Current stop state of all blocks:
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`CalcGMOffset(blockIdx={{[0-9]+}}, usedCoreNum={{[0-9]+}}, param=0x{{[0-9a-f]+}}, offsetA=0x{{[0-9a-f]+}}, offsetB=0x{{[0-9a-f]+}}, offsetC=0x{{[0-9a-f]+}}, curSingleCoreM=0x{{[0-9a-f]+}}, curSingleCoreN=0x{{[0-9a-f]+}}, curSingleCoreK=0x{{[0-9a-f]+}}) (.cube) at matmul_custom.cpp:13:{{[1-9]+}}
+# CHECK-NEXT:    10                                       int& curSingleCoreM, int& curSingleCoreN,
+# CHECK-NEXT:    11                                       int& curSingleCoreK) {
+# CHECK-NEXT:    12     ASSERT(blockIdx < usedCoreNum);
+# CHECK-NEXT: -> 13     uint32_t mIterSize = Ceil(param.M, param.singleCoreM);
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    14     uint32_t mCoreIndx = blockIdx % mIterSize;
+# CHECK-NEXT:    15     uint32_t nCoreIndx = blockIdx / mIterSize;
+# CHECK-NEXT:    16
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`CalcGMOffset(blockIdx={{[0-9]+}}, usedCoreNum={{[0-9]+}}, param=0x{{[0-9a-f]+}}, offsetA=0x{{[0-9a-f]+}}, offsetB=0x{{[0-9a-f]+}}, offsetC=0x{{[0-9a-f]+}}, curSingleCoreM=0x{{[0-9a-f]+}}, curSingleCoreN=0x{{[0-9a-f]+}}, curSingleCoreK=0x{{[0-9a-f]+}}) (.vector) at matmul_custom.cpp:13:{{[1-9]+}}
+# CHECK-NEXT:    10                                       int& curSingleCoreM, int& curSingleCoreN,
+# CHECK-NEXT:    11                                       int& curSingleCoreK) {
+# CHECK-NEXT:    12     ASSERT(blockIdx < usedCoreNum);
+# CHECK-NEXT: -> 13     uint32_t mIterSize = Ceil(param.M, param.singleCoreM);
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    14     uint32_t mCoreIndx = blockIdx % mIterSize;
+# CHECK-NEXT:    15     uint32_t nCoreIndx = blockIdx / mIterSize;
+# CHECK-NEXT:    16
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`CalcGMOffset(blockIdx={{[0-9]+}}, usedCoreNum={{[0-9]+}}, param=0x{{[0-9a-f]+}}, offsetA=0x{{[0-9a-f]+}}, offsetB=0x{{[0-9a-f]+}}, offsetC=0x{{[0-9a-f]+}}, curSingleCoreM=0x{{[0-9a-f]+}}, curSingleCoreN=0x{{[0-9a-f]+}}, curSingleCoreK=0x{{[0-9a-f]+}}) (.vector) at matmul_custom.cpp:13:{{[1-9]+}}
+# CHECK-NEXT:    10                                       int& curSingleCoreM, int& curSingleCoreN,
+# CHECK-NEXT:    11                                       int& curSingleCoreK) {
+# CHECK-NEXT:    12     ASSERT(blockIdx < usedCoreNum);
+# CHECK-NEXT: -> 13     uint32_t mIterSize = Ceil(param.M, param.singleCoreM);
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    14     uint32_t mCoreIndx = blockIdx % mIterSize;
+# CHECK-NEXT:    15     uint32_t nCoreIndx = blockIdx / mIterSize;
+# CHECK-NEXT:    16
+
+
+quit
+y

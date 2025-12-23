@@ -1,6 +1,6 @@
 //===- llvm/BinaryFormat/ELF.h - ELF constants and structures ---*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -321,6 +321,9 @@ enum {
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
   EM_LOONGARCH = 258,     // LoongArch
+#ifdef MS_DEBUGGER
+  EM_ASCEND = 0x1029,     // Ascend
+#endif
 };
 
 // Object file classes.

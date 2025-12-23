@@ -1,6 +1,6 @@
 //===-- GDBRemoteCommunicationClient.h --------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -31,6 +31,9 @@
 #endif
 
 #include "llvm/Support/VersionTuple.h"
+#ifdef MS_DEBUGGER
+#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#endif
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -286,7 +289,47 @@ public:
       lldb::addr_t addr,     // Address of breakpoint or watchpoint
       uint32_t length,       // Byte Size of breakpoint or watchpoint
       std::chrono::seconds interrupt_timeout); // Time to wait for an interrupt
+#ifdef MS_DEBUGGER
+  uint8_t SendGDBStoppointTypePacket(
+      GDBStoppointType type, // Type of breakpoint or watchpoint
+      bool insert,           // Insert or remove?
+      lldb::addr_t addr,     // Address of breakpoint or watchpoint
+      uint32_t length,       // Byte Size of breakpoint or watchpoint
+      std::chrono::seconds interrupt_timeout, // Time to wait for an interrup
+      const ArchSpec &arch_spec); // Arch Type of breakpoint
 
+  uint8_t SendDeviceAicOnFocusPacket(
+    int32_t core_id, // Core id on focus in device
+    std::chrono::seconds timeout); // Time to wait for an interrup
+
+  uint8_t SendDeviceRuningMode(
+  bool IsSingleCoreRun, // if need device running in foucs core
+  std::chrono::seconds timeout); // Time to wait for an interrup
+
+  uint8_t SendDeviceAivOnFocusPacket(
+    int32_t core_id, // Core id on focus in device
+    std::chrono::seconds timeout); // Time to wait for an interrup
+
+  uint8_t SendAndWaitGDBAscendInfoDevicePacket(
+      DeviceInfo &device_info,     // ascend device info
+      std::chrono::seconds timeout); // Time to wait for an interrup);
+
+  uint8_t SendAndWaitGDBAscendInfoCoresPacket(
+      CoreInfo &core_info,     // ascend cores info
+      std::chrono::seconds timeout); // Time to wait for an interrup);
+  uint8_t SendAndWaitGDBAscendInfoKernelPacket(
+      KernelInfo &kernel_info,     // ascend kernel info
+      std::chrono::seconds timeout); // Time to wait for an interrup);
+  uint8_t SendAndWaitGDBAscendInfoRegisterPacket(
+      const llvm::StringRef reg_name, // ascend register name
+      uint64_t &reg_value,  // ascend register value
+      std::chrono::seconds timeout); // Time to wait for an interrup);
+  uint8_t SendAndWaitGDBAscendInfoRegisterListPacket( //ascend register list
+      std::vector<std::string> &reg_list, //ascend register list
+      std::chrono::seconds timeout); // Time to wait for an interrup);
+  uint8_t SendKernelHashPacket(const std::string &kernel_hash);
+  uint8_t SendDeviceIdPacket(const int32_t device_id);
+#endif
   void TestPacketSpeed(const uint32_t num_packets, uint32_t max_send,
                        uint32_t max_recv, uint64_t recv_amount, bool json,
                        Stream &strm);

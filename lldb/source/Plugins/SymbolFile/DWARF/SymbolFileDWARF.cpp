@@ -1,6 +1,6 @@
 //===-- SymbolFileDWARF.cpp -----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -3472,6 +3472,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue type_die_form;
   bool is_external = false;
   bool is_artificial = false;
+#ifdef MS_DEBUGGER
+  uint64_t address_class = 0;
+#endif
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
 
@@ -3517,6 +3520,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     case DW_AT_artificial:
       is_artificial = form_value.Boolean();
       break;
+#ifdef MS_DEBUGGER
+    case DW_AT_address_class:
+      address_class = form_value.Unsigned();
+#endif
     case DW_AT_declaration:
     case DW_AT_description:
     case DW_AT_endianity:
@@ -3544,6 +3551,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     return DWARFExpressionList(module, DWARFExpression(), die.GetCU());
   }();
 
+#ifdef MS_DEBUGGER
+  location_list.SetAddressClass(DeviceAddressClass(address_class));
+#endif
   const DWARFDIE parent_context_die = GetDeclContextDIEContainingDIE(die);
   const DWARFDIE sc_parent_die = GetParentSymbolContextDIE(die);
   const dw_tag_t parent_tag = sc_parent_die.Tag();
@@ -3710,12 +3720,29 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                           type_sp->GetType()->GetByteSize(nullptr).value_or(0),
                           die.GetCU()->GetAddressByteSize());
   }
-
+#ifdef MS_DEBUGGER
+  DeviceAddressClass pointee_address_class = GetPointeeAddressClass(type_die_form);
+  location_list.SetPointeeAddressClass(pointee_address_class);
+#endif
   return std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
       location_is_const_value_data, is_static_member);
 }
+
+#ifdef MS_DEBUGGER
+DeviceAddressClass SymbolFileDWARF::GetPointeeAddressClass(DWARFFormValue type_form_value) {
+    DWARFDIE type = type_form_value.Reference();
+    while (type.IsValid()) {
+      if (type.Tag() == DW_TAG_pointer_type ||
+        type.Tag() == DW_TAG_reference_type || type.Tag() == DW_TAG_rvalue_reference_type) {
+        return (DeviceAddressClass)type.GetAttributeValueAsUnsigned(DW_AT_address_class, 0);
+      }
+      type = type.GetReferencedDIE(DW_AT_type);
+    }
+    return DeviceAddressClass::NONE;
+}
+#endif
 
 DWARFDIE
 SymbolFileDWARF::FindBlockContainingSpecification(

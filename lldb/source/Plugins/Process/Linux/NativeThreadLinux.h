@@ -1,6 +1,6 @@
 //===-- NativeThreadLinux.h ----------------------------------- -*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -28,6 +28,9 @@ class NativeProcessLinux;
 
 class NativeThreadLinux : public NativeThreadProtocol {
   friend class NativeProcessLinux;
+#ifdef MS_DEBUGGER
+  friend class AscendThreadLinux;
+#endif
 
 public:
   NativeThreadLinux(NativeProcessLinux &process, lldb::tid_t tid);
@@ -39,6 +42,10 @@ public:
 
   bool GetStopReason(ThreadStopInfo &stop_info,
                      std::string &description) override;
+
+#ifdef MS_DEBUGGER
+  void SetStoppedByTrace() override;
+#endif
 
   NativeRegisterContextLinux &GetRegisterContext() override {
     return *m_reg_context_up;
@@ -59,12 +66,19 @@ public:
 
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   GetSiginfo() const override;
-
+#ifndef MS_DEBUGGER
 private:
+#endif
+
   // Interface for friend classes
 
   /// Resumes the thread.  If \p signo is anything but
   /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
+#ifdef MS_DEBUGGER
+  virtual Status Resume(uint32_t signo);
+  virtual Status SingleStep(uint32_t signo);
+  virtual void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
+#else
   Status Resume(uint32_t signo);
 
   /// Single steps the thread.  If \p signo is anything but
@@ -72,7 +86,7 @@ private:
   Status SingleStep(uint32_t signo);
 
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
-
+#endif
   /// Return true if the thread is stopped.
   /// If stopped by a signal, indicate the signo in the signo argument.
   /// Otherwise, return LLDB_INVALID_SIGNAL_NUMBER.
@@ -88,7 +102,9 @@ private:
 
   bool IsStoppedAtWatchpoint();
 
+#ifndef MS_DEBUGGER
   void SetStoppedByTrace();
+#endif
 
   void SetStoppedByFork(bool is_vfork, lldb::pid_t child_pid);
 
@@ -111,7 +127,11 @@ private:
   /// If there is an error along the way just add the information we were able
   /// to get.
   void AnnotateSyncTagCheckFault(lldb::addr_t fault_addr);
-
+#ifdef MS_DEBUGGER
+  const ThreadStopInfo& GetStopInfo() const {
+    return m_stop_info;
+  }
+#endif
   // Member Variables
   lldb::StateType m_state;
   ThreadStopInfo m_stop_info;

@@ -1,6 +1,6 @@
 //===-- Thread.h ------------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1244,6 +1244,10 @@ public:
   ///     The PC value before execution was resumed.  May not be available;
   ///     an empty std::optional is returned in that case.
   std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
+
+#ifdef MS_DEBUGGER
+  void RefreshStackFramePC();
+#endif
 
 protected:
   friend class ThreadPlan;

@@ -1,0 +1,7 @@
+option(MS_DEBUGGER "Enable Ascend Debugger" OFF)
+if(MS_DEBUGGER)
+  set(MS_DEBUGGER 1)
+  add_definitions(-DMS_DEBUGGER)
+else()
+  set(MS_DEBUGGER 0)
+endif()

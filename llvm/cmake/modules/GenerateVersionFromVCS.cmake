@@ -56,6 +56,16 @@ foreach(name IN LISTS NAMES)
   append_info(${name} "${revision}" "${repository}")
 endforeach()
 
+if(LLDB_SOURCE_DIR AND MS_DEBUGGER)
+  get_source_info("${LLDB_SOURCE_DIR}" revision repository)
+  set(version "1.1.0")
+  if(version AND revision)
+    string(SUBSTRING ${revision} 0 7 revision)
+    set(version "${version}-${revision}")
+    file(APPEND "${HEADER_FILE}.tmp"
+      "#define MSDEBUG_VERSION_STRING \"${version}\"\n")
+  endif()
+endif()
 # Copy the file only if it has changed.
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
   "${HEADER_FILE}.tmp" "${HEADER_FILE}")

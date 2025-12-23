@@ -242,6 +242,7 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
+
   // Properties Functions
   enum StopDisassemblyType {
     eStopDisassemblyTypeNever = 0,

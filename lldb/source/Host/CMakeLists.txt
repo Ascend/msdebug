@@ -73,6 +73,20 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/ProcessRunLock.cpp
     )
 else()
+if (MS_DEBUGGER)
+  add_host_subdirectory(posix
+    posix/DomainSocket.cpp
+    posix/AscendDomainSocket.cpp
+    posix/FileSystemPosix.cpp
+    posix/HostInfoPosix.cpp
+    posix/HostProcessPosix.cpp
+    posix/HostThreadPosix.cpp
+    posix/LockFilePosix.cpp
+    posix/MainLoopPosix.cpp
+    posix/PipePosix.cpp
+    posix/ProcessLauncherPosixFork.cpp
+    )
+else()
   add_host_subdirectory(posix
     posix/DomainSocket.cpp
     posix/FileSystemPosix.cpp
@@ -84,6 +98,7 @@ else()
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
     )
+endif()
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_subdirectory(macosx/objcxx)

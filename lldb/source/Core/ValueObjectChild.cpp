@@ -1,6 +1,6 @@
 //===-- ValueObjectChild.cpp ----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -41,6 +41,19 @@ ValueObjectChild::ValueObjectChild(
   m_name = name;
   SetAddressTypeOfChildren(child_ptr_or_ref_addr_type);
   SetLanguageFlags(language_flags);
+#ifdef MS_DEBUGGER
+  DeviceAddressClass address_class = static_cast<DeviceAddressClass>(compiler_type.GetAddressClass());
+  if (address_class == DeviceAddressClass::NONE) {
+      address_class = static_cast<DeviceAddressClass>(parent.GetValue().GetAddressClass());
+  }
+  if (parent.IsPointerType()) {
+      m_value.SetAddressClass(parent.GetValue().GetPointeeAddressClass());
+  } else {
+      m_value.SetAddressClass(parent.GetValue().GetAddressClass());
+  }
+  m_value.SetPointeeAddressClass(address_class);
+  m_value.SetArchSpec(parent.GetValue().GetArchSpec());
+#endif
 }
 
 ValueObjectChild::~ValueObjectChild() = default;

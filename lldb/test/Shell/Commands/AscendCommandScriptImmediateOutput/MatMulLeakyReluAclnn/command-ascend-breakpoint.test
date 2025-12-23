@@ -1,0 +1,792 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh; bash ~/test/test_case_matmul_leakyrelu_framework_aclnn.sh
+# RUN: cd ~/samples/operator/MatMulLeakyReluCustomSample/FrameworkLaunch/AclNNInvocation/output/
+# RUN: LAUNCH_KERNEL_PATH=../../MatmulLeakyReluCustom/build_out/op_kernel/binary/ascend910b/bin/matmul_leakyrelu_custom/MatmulLeakyreluCustom_0a4ecf73240c8db04ac5059db7c787a7.o msdebug execute_matmul_leakyrelu_op -s %s | FileCheck %s -dump-input=always
+
+b matmul_leakyrelu_custom.cpp:126
+# CHECK-LABEL: b matmul_leakyrelu_custom.cpp:126
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint 1.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:126:{{[0-9]+}}
+br delete
+y
+
+b 127
+# CHECK-LABEL: b 127
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:127:{{[0-9]+}}
+br delete
+y
+
+
+b 10
+# CHECK-LABEL: b 10
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:10:{{[0-9]+}}
+br delete
+y
+
+
+b 128
+# CHECK-LABEL: b 128
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:128:{{[0-9]+}}
+br delete
+y
+
+
+b 129
+# CHECK-LABEL: b 129
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:129:{{[0-9]+}}
+br delete
+y
+
+
+b 130
+# CHECK-LABEL: b 130
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:130:{{[0-9]+}}
+br delete
+y
+
+
+b 37
+# CHECK-LABEL: b 37
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:37:{{[0-9]+}}
+br delete
+y
+
+
+b 38
+# CHECK-LABEL: b 38
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:38:{{[0-9]+}}
+br delete
+y
+
+
+b 39
+# CHECK-LABEL: b 39
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:39:{{[0-9]+}}
+br delete
+y
+
+
+b 40
+# CHECK-LABEL: b 40
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:40:{{[0-9]+}}
+br delete
+y
+
+
+b 41
+# CHECK-LABEL: b 41
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:41:{{[0-9]+}}
+br delete
+y
+
+
+b 42
+# CHECK-LABEL: b 42
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:42:{{[0-9]+}}
+br delete
+y
+
+
+b 44
+# CHECK-LABEL: b 44
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:44:{{[0-9]+}}
+br delete
+y
+
+
+b 45
+# CHECK-LABEL: b 45
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:45:{{[0-9]+}}
+br delete
+y
+
+
+b 46
+# CHECK-LABEL: b 46
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:46:{{[0-9]+}}
+br delete
+y
+
+
+b 47
+# CHECK-LABEL: b 47
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:47:{{[0-9]+}}
+br delete
+y
+
+
+b 48
+# CHECK-LABEL: b 48
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:48:{{[0-9]+}}
+br delete
+y
+
+
+b 115
+# CHECK-LABEL: b 115
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:115:{{[0-9]+}}
+br delete
+y
+
+
+b 116
+# CHECK-LABEL: b 116
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:116:{{[0-9]+}}
+br delete
+y
+
+
+b 117
+# CHECK-LABEL: b 117
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:117:{{[0-9]+}}
+br delete
+y
+
+
+b 119
+# CHECK-LABEL: b 119
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:119:{{[0-9]+}}
+br delete
+y
+
+
+b 120
+# CHECK-LABEL: b 120
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:120:{{[0-9]+}}
+br delete
+y
+
+
+b 121
+# CHECK-LABEL: b 121
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:121:{{[0-9]+}}
+br delete
+y
+
+
+b 122
+# CHECK-LABEL: b 122
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:122:{{[0-9]+}}
+br delete
+y
+
+
+b 49
+# CHECK-LABEL: b 49
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:49:{{[0-9]+}}
+br delete
+y
+
+
+b 50
+# CHECK-LABEL: b 50
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:50:{{[0-9]+}}
+br delete
+y
+
+
+b 51
+# CHECK-LABEL: b 51
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:51:{{[0-9]+}}
+br delete
+y
+
+
+b 52
+# CHECK-LABEL: b 52
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:52:{{[0-9]+}}
+br delete
+y
+
+
+b 53
+# CHECK-LABEL: b 53
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:53:{{[0-9]+}}
+br delete
+y
+
+
+b 54
+# CHECK-LABEL: b 54
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:54:{{[0-9]+}}
+br delete
+y
+
+
+b 132
+# CHECK-LABEL: b 132
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:132:{{[0-9]+}}
+br delete
+y
+
+
+b 64
+# CHECK-LABEL: b 64
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:64:{{[0-9]+}}
+br delete
+y
+
+
+b 73
+# CHECK-LABEL: b 73
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:73:{{[0-9]+}}
+br delete
+y
+
+
+b 74
+# CHECK-LABEL: b 74
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:74:{{[0-9]+}}
+br delete
+y
+
+
+b 75
+# CHECK-LABEL: b 75
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:75:{{[0-9]+}}
+br delete
+y
+
+
+b 78
+# CHECK-LABEL: b 78
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:78:{{[0-9]+}}
+br delete
+y
+
+
+b 89
+# CHECK-LABEL: b 89
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:89:{{[0-9]+}}
+br delete
+y
+
+
+b 90
+# CHECK-LABEL: b 90
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:90:{{[0-9]+}}
+br delete
+y
+
+
+b 79
+# CHECK-LABEL: b 79
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:79:{{[0-9]+}}
+br delete
+y
+
+
+b 95
+# CHECK-LABEL: b 95
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:95:{{[0-9]+}}
+br delete
+y
+
+
+b 96
+# CHECK-LABEL: b 96
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:96:{{[0-9]+}}
+br delete
+y
+
+
+b 80
+# CHECK-LABEL: b 80
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:80:{{[0-9]+}}
+br delete
+y
+
+
+b 102
+# CHECK-LABEL: b 102
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:102:{{[0-9]+}}
+br delete
+y
+
+
+b 103
+# CHECK-LABEL: b 103
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:103:{{[0-9]+}}
+br delete
+y
+
+
+b 104
+# CHECK-LABEL: b 104
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:104:{{[0-9]+}}
+br delete
+y
+
+
+b 105
+# CHECK-LABEL: b 105
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:105:{{[0-9]+}}
+br delete
+y
+
+
+b 106
+# CHECK-LABEL: b 106
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:106:{{[0-9]+}}
+br delete
+y
+
+
+b 109
+# CHECK-LABEL: b 109
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:109:{{[0-9]+}}
+br delete
+y
+
+
+b 110
+# CHECK-LABEL: b 110
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+continue
+# CHECK-LABEL: continue
+# CHECK-NEXT: Process {{[0-9]+}} resuming
+# CHECK-NEXT: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[0-9]+}}.{{[0-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:110:{{[0-9]+}}
+br delete
+y
+
+
+c
+# CHECK: Process {{[0-9]+}} resuming
+# CHECK: Process {{[0-9]+}} exited
+
+quit

@@ -1,6 +1,6 @@
 //===-- NativeThreadLinux.cpp ---------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -54,6 +54,12 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
     log.Printf("%s: %s breakpoint, stopping signal 0x%" PRIx32, __FUNCTION__,
                header, stop_info.signo);
     return;
+#ifdef MS_DEBUGGER
+  case eStopReasonDeviceBreakpoint:
+    log.Printf("%s: %s breakpoint, stopping signal 0x%" PRIx32, __FUNCTION__,
+               header, stop_info.signo);
+    return;
+#endif
   case eStopReasonWatchpoint:
     log.Printf("%s: %s watchpoint, stopping signal 0x%" PRIx32, __FUNCTION__,
                header, stop_info.signo);

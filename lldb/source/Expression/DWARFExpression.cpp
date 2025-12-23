@@ -1,6 +1,6 @@
 //===-- DWARFExpression.cpp -----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -327,6 +327,9 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   }
 
   case DW_OP_GNU_entry_value:
+#ifdef MS_DEBUGGER
+  case DW_OP_convert:
+#endif
   case DW_OP_entry_value: // 0xa3 ULEB128 size + variable-length block
   {
     uint64_t subexpr_len = data.GetULEB128(&offset);
@@ -823,7 +826,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
     const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
-    const Value *initial_value_ptr, const Value *object_address_ptr) {
+    const Value *initial_value_ptr, const Value *object_address_ptr
+#ifdef MS_DEBUGGER
+    , const DWARFExpressionList *expr_list) {
+#else
+    ) {
+#endif
 
   if (opcodes.GetByteSize() == 0)
     return llvm::createStringError(
@@ -1130,8 +1138,16 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
                 stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
             uint8_t addr_bytes[sizeof(lldb::addr_t)];
             Status error;
+#ifdef MS_DEBUGGER
+            MemoryReaderParamClient param{};
+            param.arch_spec = module_sp ? module_sp->GetArchitecture() : ArchSpec();
+            param.address_class = expr_list ? expr_list->GetAddressClass() : DeviceAddressClass::NONE;
+            if (process->ReadMemory(pointer_addr, &addr_bytes, size, param, error) ==
+                size) {
+#else
             if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
                 size) {
+#endif
 
               stack.back().GetScalar() =
                   DerefSizeExtractDataHelper(addr_bytes, sizeof(addr_bytes),
@@ -1188,6 +1204,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
     case DW_OP_xderef:
+#ifdef MS_DEBUGGER
+      if (expr_list) {
+        if (expr_list->GetAddressClass() != DeviceAddressClass::NONE) {
+          break;
+        }
+      }
+#endif
       return llvm::createStringError("unimplemented opcode: DW_OP_xderef");
 
     // All DW_OP_constXXX opcodes have a single operand as noted below:
@@ -2283,6 +2306,14 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       LLDB_LOGF(log, "  %s", new_value.GetData());
     }
   }
+#ifdef MS_DEBUGGER
+  auto &result = stack.back();
+  if (expr_list) {
+    result.SetAddressClass(expr_list->GetAddressClass());
+    result.SetPointeeAddressClass(expr_list->GetPointeeAddressClass());
+  }
+  result.SetArchSpec(module_sp ? module_sp->GetArchitecture() : ArchSpec());
+#endif
   return stack.back();
 }
 

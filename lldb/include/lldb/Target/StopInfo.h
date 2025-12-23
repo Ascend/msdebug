@@ -1,6 +1,6 @@
 //===-- StopInfo.h ----------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -109,6 +109,10 @@ public:
   CreateStopReasonWithBreakpointSiteID(Thread &thread,
                                        lldb::break_id_t break_id);
 
+#ifdef MS_DEBUGGER
+  static lldb::StopInfoSP
+  CreateStopReasonWithBreakpointSite(Thread &thread, lldb::BreakpointSiteSP break_site);
+#endif
   // This creates a StopInfo for the thread where the should_stop is already
   // set, and won't be recalculated.
   static lldb::StopInfoSP CreateStopReasonWithBreakpointSiteID(

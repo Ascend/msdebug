@@ -1,6 +1,6 @@
 //===-- DWARFExpressionList.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -234,7 +234,13 @@ llvm::Expected<Value> DWARFExpressionList::Evaluate(
   }
   expr.GetExpressionData(data);
   reg_kind = expr.GetRegisterKind();
+#ifdef MS_DEBUGGER
+  return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, data,
+                                   m_dwarf_cu, reg_kind, initial_value_ptr,
+                                   object_address_ptr, this);
+#else
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, data,
                                    m_dwarf_cu, reg_kind, initial_value_ptr,
                                    object_address_ptr);
+#endif
 }

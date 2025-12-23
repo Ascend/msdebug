@@ -1,6 +1,6 @@
 //===-- lldb-gdbserver.cpp --------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -428,6 +428,13 @@ int main_gdbserver(int argc, char *argv[]) {
     return 1;
   }
 
+#ifdef MS_DEBUGGER
+  // msdebug remove supporting for remote debug
+  if (connection_fd == -1) {
+    WithColor::error() << "communication without file descriptor is not supported\n";
+    return 1;
+  }
+#endif
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
 

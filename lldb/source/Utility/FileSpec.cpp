@@ -179,7 +179,13 @@ void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
     return;
 
   llvm::SmallString<128> resolved(pathname);
-
+#ifdef ASCEND_DEBUGGER
+  // The following remove_dotsfunction has a bug when handling relative paths with symbolic links.
+  // Therefore, we perform a realpathhere; if it fails, fall back to the original path.
+  if (llvm::sys::fs::real_path(pathname.str(), resolved)) {
+    resolved = pathname;
+  }
+#endif
   // Normalize the path by removing ".", ".." and other redundant components.
   if (needsNormalization(resolved))
     llvm::sys::path::remove_dots(resolved, true, m_style);

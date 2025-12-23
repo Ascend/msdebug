@@ -1,6 +1,6 @@
 //===-- OptionValue.cpp ---------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -520,6 +520,10 @@ const char *OptionValue::GetBuiltinTypeAsCString(Type t) {
     return "unsigned";
   case eTypeUUID:
     return "uuid";
+#ifdef MS_DEBUGGER
+  case eTypeMemoryType:
+    return "memory-type";
+#endif
   }
   return nullptr;
 }

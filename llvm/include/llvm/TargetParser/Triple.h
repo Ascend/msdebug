@@ -1,6 +1,6 @@
 //===-- llvm/TargetParser/Triple.h - Target triple helper class--*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -106,6 +106,9 @@ public:
     wasm64,         // WebAssembly with 64-bit pointers
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
+#ifdef MS_DEBUGGER
+    hiipu64,        // Ascend
+#endif
     ve,             // NEC SX-Aurora Vector Engine
     LastArchType = ve
   };

@@ -1,6 +1,6 @@
 //===-- TargetList.cpp ----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -53,7 +53,12 @@ Status TargetList::CreateTarget(Debugger &debugger,
       debugger, user_exe_path, triple_str, load_dependent_files,
       platform_options, target_sp);
 
+#ifdef MS_DEBUGGER
+  // 仅.o的权属校验异常时，仍然添加target，确保可执行文件本身能够run
+  if (target_sp && (result.Success() || result.GetType() == lldb::eErrorTypeAscend))
+#else
   if (target_sp && result.Success())
+#endif
     AddTargetInternal(target_sp, /*do_select*/ true);
   return result;
 }
@@ -68,7 +73,12 @@ Status TargetList::CreateTarget(Debugger &debugger,
       debugger, user_exe_path, specified_arch, load_dependent_files,
       platform_sp, target_sp);
 
+#ifdef MS_DEBUGGER
+  // 仅.o的权属校验异常时，仍然添加target，确保可执行文件本身能够run
+  if (target_sp && (result.Success() || result.GetType() == lldb::eErrorTypeAscend))
+#else
   if (target_sp && result.Success())
+#endif
     AddTargetInternal(target_sp, /*do_select*/ true);
   return result;
 }
@@ -326,7 +336,17 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
       debugger.GetTargetList().RegisterInProcessTarget(target_sp);
+#ifdef MS_DEBUGGER
+      Status permission_error;
+      target_sp->SetExecutableModule(exe_module_sp, load_dependent_files, &permission_error);
+      /* 优先处理已有error，已有error无异常，再插入.o的权属校验异常信息 */
+      if (error.Success() && permission_error.Fail()) {
+        error.SetError(errno, lldb::eErrorTypeAscend);
+        error.SetErrorString(permission_error.AsCString());
+      }
+#else
       target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
+#endif
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));

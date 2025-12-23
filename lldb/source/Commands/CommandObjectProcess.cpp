@@ -1,6 +1,6 @@
 //===-- CommandObjectProcess.cpp ------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -432,8 +432,12 @@ public:
             "Continue execution of all threads in the current process.",
             "process continue",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
+#ifdef MS_DEBUGGER
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
+                eCommandProcessMustNotBeTaskKilled) {}
+#else
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
-
+#endif
   ~CommandObjectProcessContinue() override = default;
 
 protected:
@@ -1834,8 +1838,10 @@ CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
                  CommandObjectSP(new CommandObjectProcessLaunch(interpreter)));
   LoadSubCommand("continue", CommandObjectSP(new CommandObjectProcessContinue(
                                  interpreter)));
+#ifndef MS_DEBUGGER
   LoadSubCommand("connect",
                  CommandObjectSP(new CommandObjectProcessConnect(interpreter)));
+#endif
   LoadSubCommand("detach",
                  CommandObjectSP(new CommandObjectProcessDetach(interpreter)));
   LoadSubCommand("load",

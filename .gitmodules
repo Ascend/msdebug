@@ -1,0 +1,12 @@
+[submodule "third-party/makeself"]
+	path = third-party/makeself
+	url = https://szv-open.codehub.huawei.com/OpenSourceCenter/megastep/makeself.git
+	branch = huawei/computing/cann/2.5.0
+[submodule "third-party/libedit"]
+	path = third-party/libedit
+	url = https://szv-open.codehub.huawei.com/OpenSourceCenter/openEuler/libedit.git
+	branch = huawei/3.1-31.oe2403sp1
+[submodule "third-party/ncurses"]
+	path = third-party/ncurses
+	url = https://szv-open.codehub.huawei.com/OpenSourceCenter/openEuler-source/ncurses.git
+	branch = huawei/6.4-8.oe2403sp1

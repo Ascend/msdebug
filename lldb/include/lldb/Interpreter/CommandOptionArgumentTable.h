@@ -1,6 +1,6 @@
 //===-- CommandOptionArgumentTable.h ----------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -207,6 +207,9 @@ llvm::StringRef BreakpointNameHelpTextCallback();
 llvm::StringRef GDBFormatHelpTextCallback();
 llvm::StringRef FormatHelpTextCallback();
 llvm::StringRef LanguageTypeHelpTextCallback();
+#ifdef MS_DEBUGGER
+llvm::StringRef MemoryTypeHelpTextCallback();
+#endif
 llvm::StringRef SummaryStringHelpTextCallback();
 llvm::StringRef ExprPathHelpTextCallback();
 llvm::StringRef arch_helper();
@@ -312,6 +315,12 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeRemotePath, "remote-path", lldb::CompletionType::eRemoteDiskFileCompletion, {}, { nullptr, false }, "A path on the system managed by the current platform." },
     { lldb::eArgTypeRemoteFilename, "remote-filename", lldb::CompletionType::eRemoteDiskFileCompletion, {}, { nullptr, false }, "A file on the system managed by the current platform." },
     { lldb::eArgTypeModule, "module", lldb::CompletionType::eModuleCompletion, {}, { nullptr, false }, "The name of a module loaded into the current target." },
+#ifdef MS_DEBUGGER
+    { lldb::eArgTypeMemoryType, "memory-type", lldb::CompletionType::eTypeMemoryTypeCompletion, {},
+        { MemoryTypeHelpTextCallback, true }, nullptr },
+    { lldb::eArgTypeAscendCoreIndex, "ascend-core-id", lldb::CompletionType::eNoCompletion, {},
+        { nullptr, false }, "The ID for ascend aicore or aivector." },
+#endif
     // clang-format on
 };
 

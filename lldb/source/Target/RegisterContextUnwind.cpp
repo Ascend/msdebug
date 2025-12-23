@@ -1,6 +1,6 @@
 //===-- RegisterContextUnwind.cpp -----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1496,6 +1496,11 @@ RegisterContextUnwind::SavedLocationForRegister(
     // example, some ABIs allow to determine the caller's SP via the CFA. Also,
     // the ABI may set volatile registers to the undefined state.
     ABI *abi = process ? process->GetABI().get() : nullptr;
+#ifdef MS_DEBUGGER
+    if (IsStopInDevice() && regnum.GetAsKind(eRegisterKindGeneric) != LLDB_REGNUM_GENERIC_SP) {
+        abi = nullptr;
+    }
+#endif
     if (abi) {
       const RegisterInfo *reg_info =
           GetRegisterInfoAtIndex(regnum.GetAsKind(eRegisterKindLLDB));

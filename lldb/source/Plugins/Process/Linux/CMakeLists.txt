@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginProcessLinux
+set(LLDB_PLUGIN_PROCESS_LINUX_SRC
   IntelPTCollector.cpp
   IntelPTSingleBufferTrace.cpp
   IntelPTMultiCoreTrace.cpp
@@ -17,6 +17,33 @@ add_lldb_library(lldbPluginProcessLinux
   Perf.cpp
   Procfs.cpp
   SingleStepCheck.cpp
+  )
+if(MS_DEBUGGER)
+  add_subdirectory(DeviceContext)
+  list(APPEND LLDB_PLUGIN_PROCESS_LINUX_SRC
+    AscendThreadLinux.cpp
+    AscendProcessLinux.cpp
+    NativeRegisterContextLinux_ascend.cpp
+    AscendCommunicationServer.cpp)
+
+  add_lldb_library(lldbPluginProcessLinux
+    ${LLDB_PLUGIN_PROCESS_LINUX_SRC}
+
+    LINK_LIBS
+      lldbDeviceContext
+      lldbCore
+      lldbHost
+      lldbSymbol
+      lldbTarget
+      lldbUtility
+      lldbPluginProcessPOSIX
+      lldbPluginProcessUtility
+    LINK_COMPONENTS
+      Support
+  )
+else()
+add_lldb_library(lldbPluginProcessLinux
+  ${LLDB_PLUGIN_PROCESS_LINUX_SRC}
 
   LINK_LIBS
     lldbCore
@@ -30,3 +57,4 @@ add_lldb_library(lldbPluginProcessLinux
     Support
     TargetParser
   )
+endif()

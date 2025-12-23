@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginProcessUtility
+set(LLDB_PLUGIN_PROCESS_UTILITY_SRC
   AuxVector.cpp
   FreeBSDSignals.cpp
   GDBRemoteSignals.cpp
@@ -55,18 +55,47 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterInfoPOSIX_ppc64le.cpp
   RegisterInfoPOSIX_riscv64.cpp
   StopInfoMachException.cpp
-  ThreadMemory.cpp
+  ThreadMemory.cpp)
 
-  LINK_LIBS
-    lldbBreakpoint
-    lldbCore
-    lldbDataFormatters
-    lldbExpression
-    lldbHost
-    lldbSymbol
-    lldbTarget
-    lldbUtility
-  LINK_COMPONENTS
-    Support
-    TargetParser
+if (MS_DEBUGGER)
+    list(APPEND LLDB_PLUGIN_PROCESS_UTILITY_SRC
+      RegisterInfoPOSIX_ascend.cpp
+      RegisterInfoPOSIX_ascend310P.cpp
+      RegisterInfoPOSIX_ascend910B.cpp
+      RegisterInfoPOSIX_ascend910D.cpp)
+
+  add_lldb_library(lldbPluginProcessUtility
+    ${LLDB_PLUGIN_PROCESS_UTILITY_SRC}
+
+    LINK_LIBS
+      lldbDeviceContext
+      lldbBreakpoint
+      lldbCore
+      lldbDataFormatters
+      lldbExpression
+      lldbHost
+      lldbSymbol
+      lldbTarget
+      lldbUtility
+    LINK_COMPONENTS
+      Support
+      TargetParser
+   )
+else()
+  add_lldb_library(lldbPluginProcessUtility
+    ${LLDB_PLUGIN_PROCESS_UTILITY_SRC}
+
+    LINK_LIBS
+      lldbBreakpoint
+      lldbCore
+      lldbDataFormatters
+      lldbExpression
+      lldbHost
+      lldbSymbol
+      lldbTarget
+      lldbUtility
+    LINK_COMPONENTS
+      Support
+      TargetParser
   )
+endif()

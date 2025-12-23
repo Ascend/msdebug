@@ -1,6 +1,6 @@
 //===-- RegisterContext.cpp -----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -28,6 +28,13 @@ RegisterContext::RegisterContext(Thread &thread, uint32_t concrete_frame_idx)
       m_stop_id(thread.GetProcess()->GetStopID()) {}
 
 RegisterContext::~RegisterContext() = default;
+
+#ifdef MS_DEBUGGER
+bool RegisterContext::IsStopInDevice() const {
+  ProcessSP process_sp(m_thread.GetProcess());
+  return process_sp ? process_sp->IsStopInDevice() : false;
+}
+#endif
 
 void RegisterContext::InvalidateIfNeeded(bool force) {
   ProcessSP process_sp(m_thread.GetProcess());
@@ -360,6 +367,17 @@ Status RegisterContext::ReadRegisterValueFromMemory(
     // assuming they are the same.
     reg_value.SetFromMemoryData(*reg_info, src.data(), src_len,
                                 process_sp->GetByteOrder(), error);
+#ifdef MS_DEBUGGER
+    if (IsStopInDevice() && (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC
+        || reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA)) {
+      uint64_t pc = reg_value.GetAsUInt64();
+      uint64_t base_pc = m_thread.GetProcess()->m_device_stop_info.base_pc;
+      if (pc >= base_pc) {
+        pc -= base_pc;
+      }
+      reg_value.SetUInt64(pc);
+    }
+#endif
   } else
     error.SetErrorString("invalid process");
 

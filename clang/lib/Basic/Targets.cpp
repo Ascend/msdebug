@@ -1,6 +1,6 @@
 //===--- Targets.cpp - Implement target feature support -------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -589,7 +589,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     default:
       return std::make_unique<X86_32TargetInfo>(Triple, Opts);
     }
-
+#ifdef MS_DEBUGGER
+  case llvm::Triple::hiipu64:
+#endif
   case llvm::Triple::x86_64:
     if (Triple.isOSDarwin() || Triple.isOSBinFormatMachO())
       return std::make_unique<DarwinX86_64TargetInfo>(Triple, Opts);

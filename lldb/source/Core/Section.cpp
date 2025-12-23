@@ -1,6 +1,6 @@
 //===-- Section.cpp -------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -261,6 +261,16 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
   return true;
 }
 
+#ifdef MS_DEBUGGER
+const ArchSpec &Section::GetArchSpec() const {
+  static const ArchSpec default_arch_spec;
+  if (!GetModule()) {
+    return default_arch_spec;
+  }
+  return GetModule()->GetArchitecture();
+}
+
+#endif
 bool Section::ContainsFileAddress(addr_t vm_addr) const {
   const addr_t file_addr = GetFileAddress();
   if (file_addr != LLDB_INVALID_ADDRESS && !IsThreadSpecific()) {
@@ -570,6 +580,32 @@ SectionList::FindSectionByName(ConstString section_dstr) const {
   }
   return sect_sp;
 }
+
+#ifdef MS_DEBUGGER
+SectionSP
+SectionList::FindSectionByPrefixName(ConstString prefix_name) const {
+  SectionSP sect_sp;
+  // Check if we have a valid section string
+  if (prefix_name && !m_sections.empty()) {
+    const_iterator sect_iter;
+    const_iterator end = m_sections.end();
+    llvm::StringRef prefix_ref{prefix_name.GetCString()};
+    for (sect_iter = m_sections.begin();
+         sect_iter != end && sect_sp.get() == nullptr; ++sect_iter) {
+      Section *child_section = sect_iter->get();
+      if (child_section) {
+        if (llvm::StringRef(child_section->GetName().GetCString()).starts_with(prefix_ref)) {
+          sect_sp = *sect_iter;
+        } else {
+          sect_sp =
+              child_section->GetChildren().FindSectionByPrefixName(prefix_name);
+        }
+      }
+    }
+  }
+  return sect_sp;
+}
+#endif
 
 SectionSP SectionList::FindSectionByID(user_id_t sect_id) const {
   SectionSP sect_sp;

@@ -1,0 +1,24 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh; bash ~/test/test_case_matmul_framework_aclnn.sh
+# RUN: cd ~/samples/operator/MatMulCustomSample/FrameworkLaunch/AclNNInvocation/output/
+# RUN: LAUNCH_KERNEL_PATH=../../MatmulCustomMultiCore/build_out/op_kernel/binary/ascend910b/bin/matmul_custom/MatmulCustom_1396c02f7d7795e4c5cf7dddc5abe6da.o msdebug execute_matmul_op -s %s | FileCheck %s -dump-input=always
+
+b matmul_custom.cpp:10
+# CHECK-LABEL: b matmul_custom.cpp:10
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint 1.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_custom.cpp:10:{{[0-9]+}}
+br delete
+y
+
+c
+# CHECK: Process {{[0-9]+}} resuming
+# CHECK: Process {{[0-9]+}} exited
+
+quit

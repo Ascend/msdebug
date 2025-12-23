@@ -1,6 +1,6 @@
 //===-- NativeProcessProtocol.h ---------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -30,6 +30,11 @@
 #include <optional>
 #include <unordered_map>
 #include <vector>
+
+#ifdef MS_DEBUGGER
+#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Interpreter/OptionValueMemoryType.h"
+#endif
 
 namespace lldb_private {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -99,6 +104,25 @@ public:
   Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
                                size_t &bytes_read);
 
+#ifdef MS_DEBUGGER
+  virtual Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size, size_t &bytes_read,
+                                       const MemoryReaderParamForServer &param) {
+    return ReadMemoryWithoutTrap(addr, buf, size, bytes_read);
+  }
+  virtual void SetSingleCoreRunFlag(bool isSingleCoreRun) = 0;
+  virtual void SetAicOnFocus(const uint32_t &core_id) = 0;
+  virtual void SetAivOnFocus(const uint32_t &core_id) = 0;
+  virtual Status GetDeviceInfo(DeviceInfo &device_info) = 0;
+  virtual Status GetCoresInfo(std::vector<CoreInfo> &info) = 0;
+  virtual Status GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache = false) { return Status(); }
+  virtual Status GetStoppedCorePC(lldb::addr_t &pc) { return Status(); }
+  virtual Status GetKernelInfo(KernelInfo &info) = 0;
+  virtual lldb::addr_t GetBasePC() { return 0ULL; }
+  virtual void SetLoadedKernelHash(const std::string &kernel_hash) = 0;
+  virtual SocType GetSocType() {return SocType::SOC_END;};
+  virtual void SetClientDeviceId(const int32_t device_id) = 0;
+#endif
+
   virtual Status ReadMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
                                 std::vector<uint8_t> &tags);
 
@@ -159,8 +183,19 @@ public:
   // Breakpoint functions
   virtual Status SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                bool hardware) = 0;
+#ifdef MS_DEBUGGER
+  virtual Status SetBreakpoint(lldb::addr_t addr, uint32_t size, llvm::Triple::ArchType arch_type, bool hardware) {
+    return SetBreakpoint(addr, size, hardware);
+  }
+#endif
 
   virtual Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false);
+#ifdef MS_DEBUGGER
+  virtual Status RemoveBreakpoint(lldb::addr_t addr, llvm::Triple::ArchType arch_type, bool hardware = false) {
+    return RemoveBreakpoint(addr, hardware);
+  }
+  bool IsDeviceBreak();
+#endif
 
   // Hardware Breakpoint functions
   virtual const HardwareBreakpointMap &GetHardwareBreakpointMap() const;
@@ -213,6 +248,12 @@ public:
   NativeThreadProtocol *GetThreadAtIndex(uint32_t idx);
 
   NativeThreadProtocol *GetThreadByID(lldb::tid_t tid);
+
+#ifdef MS_DEBUGGER
+  virtual Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) = 0;
+  virtual Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) = 0;
+  virtual Status ReadDeviceRegisterList(std::vector<std::string> &reg_list) = 0;
+#endif
 
   void SetCurrentThreadID(lldb::tid_t tid) { m_current_thread_id = tid; }
 

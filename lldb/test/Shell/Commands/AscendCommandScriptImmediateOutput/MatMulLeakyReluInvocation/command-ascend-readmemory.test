@@ -1,0 +1,57 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
+# RUN: cd ~/samples/operator/MatMulLeakyReluCustomSample/KernelLaunch/MatMulLeakyReluInvocation/
+# RUN: LD_LIBRARY_PATH=$(pwd)/out/lib:$LD_LIBRARY_PATH msdebug ascendc_kernels_bbit -s %s | FileCheck %s -dump-input=always
+
+b matmul_leakyrelu_custom.cpp:50
+# CHECK-LABEL: b matmul_leakyrelu_custom.cpp:50
+# CHECK-NEXT: Breakpoint {{[1-9]+}}:
+
+run
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[1-9]+}}.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:50:{{[1-9]+}}
+
+var
+# CHECK-LABEL: var
+# CHECK: (MatmulLeakyKernel<__fp16, __fp16, float, float> *__stack__) this = 0x{{[0-9a-z]+}}
+# CHECK-NEXT: (uint8_t *__gm__) a = 0x{{[0-9a-z]+}} "{{.*}}"
+# CHECK-NEXT: (uint8_t *__gm__) b = 0x{{[0-9a-z]+}} "{{.*}}"
+# CHECK-NEXT: (uint8_t *__gm__) bias = 0x{{[0-9a-z]+}} "{{.*}}"
+# CHECK-NEXT: (uint8_t *__gm__) c = 0x{{[0-9a-z]+}} "{{.*}}"
+# CHECK-NEXT: (uint8_t *__gm__) workspace = 0x{{[0-9a-z]+}} "{{.*}}"
+# CHECK-NEXT: (uint8_t *__gm__) tilingGM = 0x{{[0-9a-z]+}} "{{.*}}"
+# CHECK-NEXT: (AscendC::TPipe *__stack__) pipe = 0x{{[0-9a-z]+}}
+# CHECK-NEXT: (uint32_t *__gm__) tempTilingGM = 0x{{[0-9a-z]+}}
+# CHECK-NEXT: (uint32_t *__stack__) tempTiling = 0x{{[0-9a-z]+}}
+# CHECK-NEXT: (int32_t) offsetA = {{[0-9]+}}
+# CHECK-NEXT: (int32_t) offsetB = {{[0-9]+}}
+# CHECK-NEXT: (int32_t) offsetC = {{[0-9]+}}
+# CHECK-NEXT: (int32_t) offsetBias = {{[0-9]+}}
+
+
+p aGlobal
+# CHECK: (AscendC::GlobalTensor<__fp16>) ${{[0-9]+}} = {
+# CHECK-NEXT:   AscendC::BaseGlobalTensor<__fp16> = {
+# CHECK-NEXT:     address_ = 0x{{[0-9a-z]+}}
+# CHECK-NEXT:     oriAddress_ = 0x{{[0-9a-z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   bufferSize_ = {{[0-9]+}}
+# CHECK-NEXT:   shapeInfo_ = {
+# CHECK-NEXT:     shapeDim = '{{.*}}'
+# CHECK-NEXT:     originalShapeDim = '{{.*}}'
+# CHECK-NEXT:     shape = ({{.*}})
+# CHECK-NEXT:     originalShape = ({{.*}})
+# CHECK-NEXT:     dataFormat = {{[0-9a-zA-Z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   cacheMode_ = {{.*}}
+# CHECK-NEXT: }
+
+x -m GM -f float16[] 0x000012c0c0015000 -s 256 -c 1
+# CHECK-LABEL: x -m GM -f float16[] 0x000012c0c0015000 -s 256 -c 1
+# CHECK: 0x000012c0c0015000: {
+
+quit

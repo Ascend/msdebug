@@ -61,7 +61,6 @@ protected:
   void ClearNextBranchBreakpoint();
 
   bool NextRangeBreakpointExplainsStop(lldb::StopInfoSP stop_info_sp);
-
   SymbolContext m_addr_context;
   std::vector<AddressRange> m_address_ranges;
   lldb::RunMode m_stop_others;

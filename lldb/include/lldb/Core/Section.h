@@ -1,6 +1,6 @@
 //===-- Section.h -----------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -60,6 +60,10 @@ public:
             bool show_header, uint32_t depth) const;
 
   lldb::SectionSP FindSectionByName(ConstString section_dstr) const;
+
+#ifdef MS_DEBUGGER
+  lldb::SectionSP FindSectionByPrefixName(ConstString prefix) const;
+#endif
 
   lldb::SectionSP FindSectionByID(lldb::user_id_t sect_id) const;
 
@@ -256,6 +260,9 @@ public:
   /// fast and simple only sections that contains only debug information should
   /// return true.
   bool ContainsOnlyDebugInfo() const;
+#ifdef MS_DEBUGGER
+  const ArchSpec& GetArchSpec() const;
+#endif
 
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should

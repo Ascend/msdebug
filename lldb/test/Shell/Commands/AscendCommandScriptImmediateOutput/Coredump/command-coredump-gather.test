@@ -1,0 +1,122 @@
+# REQUIRES: ascend-debugger
+# RUN: cd ~/coredump_file
+# RUN: msdebug --core GatherV3.core -s %s | FileCheck %s -dump-input=always
+
+ascend info summary
+# CHECK-LABEL: ascend info summary
+# CHECK:  CoreId  CoreType  DeviceId  ChipType
+# CHECK-NEXT:*  28       AIV       0        A2/A3
+# CHECK-EMPTY:
+# CHECK:  Id           DataType                   MemType                     Addr                       Size             CoreId          dim
+# CHECK-NEXT:   0    DEVICE_KERNEL_OBJECT                GM                   0x12c100102000                 407120             NA              NA
+# CHECK-NEXT:   1            STACK                    GM/DCACHE           0xff0000e0000(invalid)              32768             28              NA
+# CHECK-NEXT:   2      WORKSPACE_TENSOR                  GM                   0x12ca400cfe00                  76832             NA              NA
+# CHECK-NEXT:   3         TILING_DATA                 GM/DCACHE               0x12c140424838                   200              NA              NA
+# CHECK-NEXT:   4        OUTPUT_TENSOR                   GM                   0x12ca4008fc00                   320              NA              [8, 10]
+# CHECK-NEXT:   5        INPUT_TENSOR                    GM                   0x12ca40081800                   416              NA              [10, 10]
+# CHECK-NEXT:   6        INPUT_TENSOR                    GM                   0x12ca4008fa00                   64               NA              [8]
+# CHECK-NEXT:   7        INPUT_TENSOR                    GM                   0x12c140424918                   32               NA              [1]
+# CHECK-NEXT:   8            ARGS                     GM/DCACHE               0x12c140424800                   312              NA              NA
+
+register read -a
+# CHECK-LABEL: register read -a
+# CHECK:Registers:
+# CHECK-NEXT:                  GPR0 = 0x0000000000000000
+# CHECK-NEXT:                  GPR1 = 0x0000000000000000
+# CHECK-NEXT:                  GPR2 = 0x000000000000012c
+# CHECK-NEXT:                  GPR3 = 0x0000000000001e84
+# CHECK-NEXT:                  GPR4 = 0x0000000000000100
+# CHECK-NEXT:                  GPR5 = 0x0000000000000000
+# CHECK-NEXT:                  GPR6 = 0x0000000000000000
+# CHECK-NEXT:                  GPR7 = 0x0000000000000000
+# CHECK-NEXT:                  GPR8 = 0x00000012ca400818
+# CHECK-NEXT:                  GPR9 = 0x00000012ca400cfe
+# CHECK-NEXT:                 GPR10 = 0x0000000000000000
+# CHECK-NEXT:                 GPR11 = 0x0000000000000000
+# CHECK-NEXT:                 GPR12 = 0x0000000000000000
+# CHECK-NEXT:                 GPR13 = 0x0000000000000100
+# CHECK-NEXT:                 GPR14 = 0x00000012ca400cfe
+# CHECK-NEXT:                 GPR15 = 0x0000000000000000
+# CHECK-NEXT:                 GPR16 = 0x00000012ca400cfe
+# CHECK-NEXT:                 GPR17 = 0x0000000007ffffff
+# CHECK-NEXT:                 GPR18 = 0x000000000000030d
+# CHECK-NEXT:                 GPR19 = 0x0000010000000000
+# CHECK-NEXT:                 GPR20 = 0x0000000000000000
+# CHECK-NEXT:                 GPR21 = 0x0000000000000000
+# CHECK-NEXT:                 GPR22 = 0x0000000000000000
+# CHECK-NEXT:                 GPR23 = 0x0000000000001e7b
+# CHECK-NEXT:                 GPR24 = 0x0000000000000000
+# CHECK-NEXT:                 GPR25 = 0x0000000000000000
+# CHECK-NEXT:                 GPR26 = 0x0000000000000000
+# CHECK-NEXT:                 GPR27 = 0x0001000000000000
+# CHECK-NEXT:                 GPR28 = 0x0000000000000000
+# CHECK-NEXT:                 GPR29 = 0x0000000000000000
+# CHECK-NEXT:                 GPR30 = 0x0000000000001e81
+# CHECK-NEXT:                 GPR31 = 0x0000000000002800
+# CHECK-NEXT:                    PC = 0x00000012c1001037
+# CHECK-NEXT:                STATUS = 0x0000000000000000
+# CHECK-NEXT:                  CTRL = 0x0000010000000000
+# CHECK-NEXT:                 LPCNT = 0x0000000000000000
+# CHECK-NEXT:        CONDITION_FLAG = 0x0000000000000000
+# CHECK-NEXT:                  COND = 0x0000000000000000
+# CHECK-NEXT:               SYS_CNT = 0x00000007ce91b3a4
+# CHECK-NEXT:         SAFETY_CRC_EN = 0x0000000000000000
+# CHECK-NEXT:        CALL_DEPTH_CNT = 0x0000000000000000
+# CHECK-NEXT:         ICACHE_PRL_ST = 0x0000000000000000
+# CHECK-NEXT:         ST_ATOMIC_CFG = 0x0000000000000000
+# CHECK-NEXT:        FFTS_BASE_ADDR = 0x000000dffffd2120
+# CHECK-NEXT:       VEC_EVENT_TABLE = 0x0000000000000000
+# CHECK-NEXT:    SCALAR_EVENT_TABLE = 0x0000000000000000
+# CHECK-NEXT:      MTE2_EVENT_TABLE = 0x0000000000000000
+# CHECK-NEXT:      MTE3_EVENT_TABLE = 0x0000000000000000
+# CHECK-NEXT:                  MASK = 0x00ffffffffffffff
+# CHECK-NEXT:               CMPMASK = 0x000000000000008f
+# CHECK-NEXT:              DEQSCALE = 0x0000000000000000
+# CHECK-NEXT:            RPN_COR_IR = 0x0000000000000000
+# CHECK-NEXT:               VMS4_SR = 0x0000000000000000
+# CHECK-NEXT:             DATA_EXP0 = 0x0000000000000000
+# CHECK-NEXT:             DATA_EXP1 = 0x0000000000000000
+# CHECK-NEXT:             DATA_EXP2 = 0x0000000000000000
+# CHECK-NEXT:             DATA_EXP3 = 0x0000000000000000
+# CHECK-NEXT:            RPN_OFFSET = 0x0000003f8000003c
+# CHECK-NEXT:              RSVD_CNT = 0x0000000000000000
+# CHECK-NEXT:               PNT_COE = 0x0000000000000000
+# CHECK-NEXT:           LRELU_ALPHA = 0x0000000000000000
+# CHECK-NEXT:            MAXMIN_CNT = 0x0000000000000000
+# CHECK-NEXT:               ACC_VAL = 0x0000000000000000
+# CHECK-NEXT:                 VARF0 = 0x0000000000000000
+# CHECK-NEXT:                 VARF1 = 0x0000000000000000
+# CHECK-NEXT:                 VARF2 = 0x0000000000000000
+# CHECK-NEXT:                 VARF3 = 0x0000000000000000
+# CHECK-NEXT:                 VARF4 = 0x0000000000000000
+# CHECK-NEXT:                 VARF5 = 0x0000000000000000
+# CHECK-NEXT:                 VARF6 = 0x0000000000000000
+# CHECK-NEXT:                 VARF7 = 0x0000000000000000
+# CHECK-NEXT:3 registers were unavailable.
+
+register read PC
+# CHECK-LABEL:register read PC
+# CHECK:                  PC = 0x00000012c1001037
+
+x -m GM -f uint8_t 0x12c100102000 -s 8 -c 1
+# CHECK-LABEL:x -m GM -f uint8_t 0x12c100102000 -s 8 -c 1
+# CHECK: 0x12c100102000: {0x80 0x7f 0x3a 0x07 0x10 0x00 0x7b 0x07}
+
+x -m DCACHE -f uint8_t 0x12c140424800 -s 8 -c 1
+# CHECK-LABEL:x -m DCACHE -f uint8_t 0x12c140424800 -s 8 -c 1
+# CHECK:0x12c140424838: {0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00}
+
+ascend aiv 28
+# CHECK-LABEL:ascend aiv 28
+# CHECK:[Switching to focus on CoreId 28, Type aiv]
+
+x -m GM -f uint8_t 0xff0000e0000 -s 8 -c 1
+# CHECK-ERROR:error: this memory data is invalid, please check command: ascend info summary
+
+x -m GM -f uint8_t 0x12c100240000 -s 8 -c 1
+# CHECK-ERROR:error: addr is not in range, please check command: ascend info summary
+
+ascend aiv 20
+# CHECK-ERROR:Failed to switch focus to AIV 20
+
+quit

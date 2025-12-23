@@ -1,6 +1,6 @@
 //===-- BreakpointLocationList.cpp ----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -213,6 +213,36 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
   BreakpointLocationSP bp_loc_sp(FindByAddress(addr));
   if (!bp_loc_sp) {
     bp_loc_sp = Create(addr, resolve_indirect_symbols);
+#ifdef MS_DEBUGGER
+    collection device_bp_locations;
+    collection host_bp_locations;
+    for (unsigned idx = 0; idx < m_locations.size(); idx++) {
+      ModuleSP module_sp = m_locations[idx]->GetAddress().GetModule();
+      if (!module_sp) {
+        continue;
+      }
+      llvm::Triple::ArchType bp_arch_type = module_sp->GetArchitecture().GetMachine();
+      if (bp_arch_type == llvm::Triple::hiipu64) {
+        device_bp_locations.push_back(m_locations[idx]);
+      } else {
+        host_bp_locations.push_back(m_locations[idx]);
+      }
+    }
+    if (!device_bp_locations.empty()) {
+      for (const auto &bp: host_bp_locations) {
+        bp->ClearBreakpointSite();
+        RemoveLocation(bp);
+      }
+      if (m_locations.empty()) {
+        return nullptr;
+      }
+      ModuleSP module_sp = m_locations.back()->GetAddress().GetModule();
+      if ((!module_sp) || module_sp->GetArchitecture().GetMachine() != llvm::Triple::hiipu64) {
+        return nullptr;
+      }
+    }
+#endif
+
     if (bp_loc_sp) {
       bp_loc_sp->ResolveBreakpointSite();
 

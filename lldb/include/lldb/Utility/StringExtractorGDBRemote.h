@@ -1,6 +1,6 @@
 //===-- StringExtractorGDBRemote.h ------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -127,10 +127,24 @@ public:
     eServerPacketType_qWatchpointSupportInfo,
     eServerPacketType_qWatchpointSupportInfoSupported,
     eServerPacketType_qXfer,
+#ifdef MS_DEBUGGER
+    eServerPacketType_qDeviceRegisterValue,
+    eServerPacketType_qDeviceRegisterList,
+    eServerPacketType_qDeviceAic,
+    eServerPacketType_qDeviceAiv,
+    eServerPacketType_qDeviceInfo,
+    eServerPacketType_qDeviceCoresInfo,
+    eServerPacketType_qDeviceKernelInfo,
+#endif
 
     eServerPacketType_jSignalsInfo,
     eServerPacketType_jModulesInfo,
 
+#ifdef MS_DEBUGGER
+    eServerPacketType_vDeviceSingleCoreRun,
+    eServerPacketType_vKernelHash,
+    eServerPacketType_vDeviceId,
+#endif
     eServerPacketType_vAttach,
     eServerPacketType_vAttachWait,
     eServerPacketType_vAttachOrWait,

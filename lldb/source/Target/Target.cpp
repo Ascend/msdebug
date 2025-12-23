@@ -1,6 +1,6 @@
 //===-- Target.cpp --------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -1469,7 +1469,12 @@ void Target::DidExec() {
 }
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
+#ifdef MS_DEBUGGER
+                                 LoadDependentFiles load_dependent_files,
+                                 Status *error) {
+#else
                                  LoadDependentFiles load_dependent_files) {
+#endif
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
@@ -1481,6 +1486,48 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     const bool notify = true;
     m_images.Append(executable_sp,
                     notify); // The first image is our executable file
+#ifdef MS_DEBUGGER
+    ModuleSP child_module;
+    if (executable_sp->GetObjectFile() && executable_sp->GetObjectFile()->GetChildModuleSpec()) {
+      auto child_module_spec = executable_sp->GetObjectFile()->GetChildModuleSpec();
+      ModuleList::GetSharedModule(*child_module_spec, child_module, nullptr, nullptr, nullptr);
+    } else {
+      // added extra kernel object
+      const std::string kernel_object_path = Host::GetEnvironment().lookup("LAUNCH_KERNEL_PATH");
+      if (kernel_object_path.empty()) {
+        LLDB_LOG(log, "kernel file not found, ignored");
+      } else {
+        FileSpec file_spec(kernel_object_path);
+        auto module_spec = std::make_shared<ModuleSpec>(file_spec);
+        if (error) {
+          CheckInputValidClass flags =
+            static_cast<CheckInputValidClass>(
+              CheckInputValidClass::eCheckPathExists |
+              CheckInputValidClass::eCheckOwnerAndWritablePermission |
+              CheckInputValidClass::eCheckIsSymlink |
+              CheckInputValidClass::eCheckReadablePermission |
+              CheckInputValidClass::eCheckIsDir |
+              CheckInputValidClass::eCheckFileSize |
+              CheckInputValidClass::eCheckParentPathOwnerAndWritablePermission
+            );
+          *error = module_spec->CheckInputFileValid(flags);
+        }
+        if (!error || error->Success()) {
+          module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+          ModuleList::GetSharedModule(*module_spec.get(), child_module, nullptr, nullptr, nullptr);
+          if(child_module)
+            child_module->GetObjectFile()->SetKernelHash(FileSystem::Instance().CreateDataBuffer(file_spec)->GetData());
+        }
+      }
+    }
+    if (!child_module) {
+      LLDB_LOG(log, "get child module failed");
+    } else {
+      child_module->GetObjectFile()->SetType(ObjectFile::eTypeSharedLibrary);
+      m_images.Append(child_module, false);
+      LLDB_LOG(log, "child_module appended");
+    }
+#endif
 
     // If we haven't set an architecture yet, reset our architecture based on
     // what we found in the executable module.
@@ -1827,7 +1874,11 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
 
 size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
                           Status &error, bool force_live_memory,
+#ifdef MS_DEBUGGER
+                          lldb::addr_t *load_addr_ptr, MemoryReaderParamClient param) {
+#else
                           lldb::addr_t *load_addr_ptr) {
+#endif
   error.Clear();
 
   Address fixed_addr = addr;
@@ -1910,7 +1961,20 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
         error.SetErrorStringWithFormat("0x%" PRIx64 " can't be resolved",
                                        resolved_addr.GetFileAddress());
     } else {
+#ifdef MS_DEBUGGER
+      if (param.address_class != DeviceAddressClass::NONE) {
+        const ArchSpec arch_spec = ArchSpec("hiipu64");
+        param.arch_spec = arch_spec;
+        bytes_read = m_process_sp->ReadMemory(load_addr, dst, dst_len, param, error);
+      } else if (resolved_addr.GetModule()) {
+        param.arch_spec = resolved_addr.GetModule()->GetArchitecture();
+        bytes_read = m_process_sp->ReadMemory(load_addr, dst, dst_len, param, error);
+      } else {
+        bytes_read = m_process_sp->ReadMemory(load_addr, dst, dst_len, error);
+      }
+#else
       bytes_read = m_process_sp->ReadMemory(load_addr, dst, dst_len, error);
+#endif
       if (bytes_read != dst_len) {
         if (error.Success()) {
           if (bytes_read == 0)

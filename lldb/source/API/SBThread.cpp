@@ -1,6 +1,6 @@
 //===-- SBThread.cpp ------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -174,7 +174,9 @@ size_t SBThread::GetStopReasonDataCount() {
         case eStopReasonVForkDone:
           // There is no data for these stop reasons.
           return 0;
-
+#ifdef MS_DEBUGGER
+        case eStopReasonDeviceBreakpoint:
+#endif
         case eStopReasonBreakpoint: {
           break_id_t site_id = stop_info_sp->GetValue();
           lldb::BreakpointSiteSP bp_site_sp(
@@ -232,7 +234,9 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
         case eStopReasonVForkDone:
           // There is no data for these stop reasons.
           return 0;
-
+#ifdef MS_DEBUGGER
+        case eStopReasonDeviceBreakpoint:
+#endif
         case eStopReasonBreakpoint: {
           break_id_t site_id = stop_info_sp->GetValue();
           lldb::BreakpointSiteSP bp_site_sp(

@@ -1,6 +1,6 @@
 //===-- DisassemblerLLVMC.cpp ---------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -43,6 +43,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#ifdef MS_DEBUGGER
+#include "AscendDisassemblerHelper.h"
+#endif
 #include <optional>
 
 using namespace lldb;
@@ -60,6 +63,12 @@ public:
 
   uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
+#ifdef MS_DEBUGGER
+  uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
+                     uint64_t &flag) const;
+  bool CanBranch(uint64_t flags) const;
+  bool IsCall(uint64_t flags) const;
+#endif
   void PrintMCInst(llvm::MCInst &mc_inst, lldb::addr_t pc,
                    std::string &inst_string, std::string &comments_string);
   void SetStyle(bool use_hex_immed, HexImmediateStyle hex_style);
@@ -522,12 +531,27 @@ public:
           const size_t opcode_data_len = data.BytesLeft(data_offset);
           const addr_t pc = m_address.GetFileAddress();
           llvm::MCInst inst;
-
+#ifdef MS_DEBUGGER
+          if (!mc_disasm_ptr) {
+            Log *log = GetLog(LLDBLog::Process);
+            LLDB_LOGF(log, "GetDisasmToUse failed. mc_disasm_ptr is nullptr");
+            return 0;
+          }
+          size_t inst_size {0U};
+          auto disasm_wp = m_disasm_wp.lock();
+          if (disasm_wp && !disasm_wp->IsValid()) {
+            uint64_t flags;
+            inst_size = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, flags);
+          } else {
+            inst_size = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
+          }
+#else
           const size_t inst_size =
-              mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-          if (inst_size == 0)
+            mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
+#endif
+          if (inst_size == 0) {
             m_opcode.Clear();
-          else {
+          } else {
             m_opcode.SetOpcodeBytes(opcode_data, inst_size);
             m_is_valid = true;
           }
@@ -606,6 +630,14 @@ public:
         const uint8_t *opcode_data = data.GetDataStart();
         const size_t opcode_data_len = data.GetByteSize();
         llvm::MCInst inst;
+#ifdef MS_DEBUGGER
+        auto disasm_wp = m_disasm_wp.lock();
+        if (disasm_wp && !disasm_wp->IsValid()) {
+          Log *log = GetLog(LLDBLog::Process);
+          LLDB_LOGF(log, "can not use disassembly raw logical in function CalculateMnemonicOperandsAndComment");
+          return;
+        }
+#endif
         size_t inst_size =
             mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
 
@@ -1207,9 +1239,32 @@ protected:
         GetDisasmToUse(is_alternate_isa, disasm);
     const uint8_t *opcode_data = data.GetDataStart();
     const size_t opcode_data_len = data.GetByteSize();
+#ifdef MS_DEBUGGER
+    if (!mc_disasm_ptr) {
+      return;
+    }
+    auto disasm_wp = m_disasm_wp.lock();
+    if (disasm_wp != nullptr) {
+      std::string archs = disasm_wp->GetArchitecture().GetArchitectureName();
+      if (archs == "hiipu64") {
+        uint64_t flags {0};
+        if (mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, flags) == 0) {
+          return;
+        }
+        m_has_visited_instruction = true;
+        m_does_branch = mc_disasm_ptr->CanBranch(flags);
+        m_is_call = mc_disasm_ptr->IsCall(flags);
+        return;
+      }
+    }
+    if (!disasm_wp || !disasm_wp->IsValid()) {
+      LLDB_LOGF(GetLog(LLDBLog::Process), "arch is not ascend, but can not use disassembly raw logical");
+      return;
+    }
+#endif
     llvm::MCInst inst;
     const size_t inst_size =
-        mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
+      mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
     if (inst_size == 0)
       return;
 
@@ -1354,6 +1409,15 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
     return 0;
 }
 
+#ifdef MS_DEBUGGER
+uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
+    const uint8_t *opcode_data, size_t opcode_data_len, uint64_t &flags) const {
+  uint64_t inst_size;
+  AscendDisassemblerHelper::GetInstruction(opcode_data, opcode_data_len, flags, inst_size);
+  return inst_size;
+}
+#endif
+
 void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
     llvm::MCInst &mc_inst, lldb::addr_t pc, std::string &inst_string,
     std::string &comments_string) {
@@ -1407,11 +1471,23 @@ bool DisassemblerLLVMC::MCDisasmInstance::CanBranch(
   return m_instr_info_up->get(mc_inst.getOpcode())
       .mayAffectControlFlow(mc_inst, *m_reg_info_up);
 }
+#ifdef MS_DEBUGGER
+bool DisassemblerLLVMC::MCDisasmInstance::CanBranch(uint64_t flags) const {
+  return ((flags & (1ULL << llvm::MCID::Call)) || (flags & (1ULL << llvm::MCID::IndirectBranch)) ||
+            (flags & (1ULL << llvm::MCID::Branch)) || (flags & (1ULL << llvm::MCID::Return)));
+}
+#endif
 
 bool DisassemblerLLVMC::MCDisasmInstance::HasDelaySlot(
     llvm::MCInst &mc_inst) const {
   return m_instr_info_up->get(mc_inst.getOpcode()).hasDelaySlot();
 }
+
+#ifdef MS_DEBUGGER
+bool DisassemblerLLVMC::MCDisasmInstance::IsCall(uint64_t flags) const {
+  return (flags & (1ULL << llvm::MCID::Call));
+}
+#endif
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
   if (m_instr_analysis_up)
@@ -1559,7 +1635,16 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";
   }
-
+#ifdef MS_DEBUGGER
+  m_arch = arch;
+  if (triple.getArchName() == "hiipu64") {
+    if (arch.GetAicoreType() == CoreType::AIC) {
+        features_str += "+dav-c220-cube";
+    } else if (arch.GetAicoreType() == CoreType::AIV) {
+        features_str += "+dav-c220-vec";
+    }
+  }
+#endif
   if (triple.isRISCV()) {
     uint32_t arch_flags = arch.GetFlags();
     if (arch_flags & ArchSpec::eRISCV_rvc)
@@ -1619,6 +1704,12 @@ lldb::DisassemblerSP DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
                                                        const char *flavor) {
   if (arch.GetTriple().getArch() != llvm::Triple::UnknownArch) {
     auto disasm_sp = std::make_shared<DisassemblerLLVMC>(arch, flavor);
+#ifdef MS_DEBUGGER
+    // determines whether the compiler object which in DisassemblerLLVMC is valid.
+    if (strcmp(arch.GetArchitectureName(), "hiipu64") == 0 && disasm_sp) {
+      return disasm_sp;
+    }
+#endif
     if (disasm_sp && disasm_sp->IsValid())
       return disasm_sp;
   }
@@ -1632,10 +1723,14 @@ size_t DisassemblerLLVMC::DecodeInstructions(const Address &base_addr,
                                              bool append, bool data_from_file) {
   if (!append)
     m_instruction_list.Clear();
-
+#ifdef MS_DEBUGGER
+  std::string archs = GetArchitecture().GetArchitectureName();
+  if (archs != "hiipu64" && !IsValid())
+    return 0;
+#else
   if (!IsValid())
     return 0;
-
+#endif
   m_data_from_file = data_from_file;
   uint32_t data_cursor = data_offset;
   const size_t data_byte_size = data.GetByteSize();

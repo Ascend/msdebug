@@ -1,6 +1,6 @@
 //===-- SectionLoadList.cpp -----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -16,6 +16,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Target/ProcessStatus.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -25,6 +28,10 @@ SectionLoadList::SectionLoadList(const SectionLoadList &rhs)
   std::lock_guard<std::recursive_mutex> guard(rhs.m_mutex);
   m_addr_to_sect = rhs.m_addr_to_sect;
   m_sect_to_addr = rhs.m_sect_to_addr;
+#ifdef MS_DEBUGGER
+  m_device_section_list = rhs.m_device_section_list;
+  m_is_child = rhs.m_is_child;
+#endif
 }
 
 void SectionLoadList::operator=(const SectionLoadList &rhs) {
@@ -33,10 +40,19 @@ void SectionLoadList::operator=(const SectionLoadList &rhs) {
   std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex, std::adopt_lock);
   m_addr_to_sect = rhs.m_addr_to_sect;
   m_sect_to_addr = rhs.m_sect_to_addr;
+#ifdef MS_DEBUGGER
+  m_device_section_list = rhs.m_device_section_list;
+  m_is_child = rhs.m_is_child;
+#endif
 }
 
 bool SectionLoadList::IsEmpty() const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+#ifdef MS_DEBUGGER
+  if (ProcessStatus::Instance().IsStopInDevice() && m_device_section_list) {
+    return m_device_section_list->IsEmpty();
+  }
+#endif
   return m_addr_to_sect.empty();
 }
 
@@ -44,6 +60,10 @@ void SectionLoadList::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_addr_to_sect.clear();
   m_sect_to_addr.clear();
+#ifdef MS_DEBUGGER
+  m_device_section_list.reset();
+  m_is_child = false;
+#endif
 }
 
 addr_t
@@ -52,6 +72,13 @@ SectionLoadList::GetSectionLoadAddress(const lldb::SectionSP &section) const {
   addr_t section_load_addr = LLDB_INVALID_ADDRESS;
   if (section) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
+#ifdef MS_DEBUGGER
+    auto module = section->GetModule();
+    if (m_device_section_list && module &&
+        module->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) {
+      return m_device_section_list->GetSectionLoadAddress(section);
+    }
+#endif
     sect_to_addr_collection::const_iterator pos =
         m_sect_to_addr.find(section.get());
 
@@ -74,6 +101,14 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
 
     if (section->GetByteSize() == 0)
       return false; // No change
+#ifdef MS_DEBUGGER
+    if (!m_device_section_list && !m_is_child) {
+      m_device_section_list.reset(new SectionLoadList(true));
+    }
+    if (m_device_section_list && module_sp->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) {
+      return m_device_section_list->SetSectionLoadAddress(section, load_addr, warn_multiple);
+    }
+#endif
 
     // Fill in the section -> load_addr map
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -147,6 +182,16 @@ size_t SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp) {
   size_t unload_count = 0;
 
   if (section_sp) {
+#ifdef MS_DEBUGGER
+    ModuleSP module_sp(section_sp->GetModule());
+    if (!m_device_section_list && !m_is_child) {
+      m_device_section_list.reset(new SectionLoadList(true));
+    }
+    if (m_device_section_list && module_sp &&
+        module_sp->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) {
+      return m_device_section_list->SetSectionUnloaded(section_sp);
+    }
+#endif
     Log *log = GetLog(LLDBLog::DynamicLoader);
 
     if (log && log->GetVerbose()) {
@@ -183,6 +228,20 @@ size_t SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp) {
 bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
                                          addr_t load_addr) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
+#ifdef MS_DEBUGGER
+  if (!section_sp) {
+    LLDB_LOG(log, "SectionLoadList::{0}: empty section", __FUNCTION__);
+    return false;
+  }
+  ModuleSP module_sp(section_sp->GetModule());
+  if (!m_device_section_list && !m_is_child) {
+    m_device_section_list.reset(new SectionLoadList(true));
+  }
+  if (m_device_section_list && module_sp &&
+      module_sp->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) {
+    return m_device_section_list->SetSectionUnloaded(section_sp, load_addr);
+  }
+#endif
 
   if (log && log->GetVerbose()) {
     ModuleSP module_sp = section_sp->GetModule();
@@ -218,6 +277,12 @@ bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
 
 bool SectionLoadList::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
                                          bool allow_section_end) const {
+#ifdef MS_DEBUGGER
+  if (m_device_section_list && ProcessStatus::Instance().IsStopInDevice()) {
+    LLDB_LOG(GetLog(LLDBLog::DynamicLoader), "ResolveLoadAddress with Device, load_addr={0:x}", load_addr);
+    return m_device_section_list->ResolveLoadAddress(load_addr, so_addr, allow_section_end);
+  }
+#endif
   // First find the top level section that this load address exists in
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_addr_to_sect.empty()) {
@@ -266,4 +331,9 @@ void SectionLoadList::Dump(Stream &s, Target *target) {
              static_cast<void *>(pos->second.get()));
     pos->second->Dump(s.AsRawOstream(), s.GetIndentLevel(), target, 0);
   }
+#ifdef MS_DEBUGGER
+  if (m_device_section_list) {
+      m_device_section_list->Dump(s, target);
+  }
+#endif
 }

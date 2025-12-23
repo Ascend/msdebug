@@ -1,6 +1,6 @@
 //===-- CommandInterpreter.cpp --------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,6 +13,10 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#ifdef MS_DEBUGGER
+#include "Commands/CommandObjectAscend.h"
+#endif
 
 #include "Commands/CommandObjectApropos.h"
 #include "Commands/CommandObjectBreakpoint.h"
@@ -561,6 +565,9 @@ const char *CommandInterpreter::ProcessEmbeddedScriptCommands(const char *arg) {
 void CommandInterpreter::LoadCommandDictionary() {
   LLDB_SCOPED_TIMER();
 
+#ifdef MS_DEBUGGER
+  REGISTER_COMMAND_OBJECT("ascend", CommandObjectMultiwordAscend);
+#endif
   REGISTER_COMMAND_OBJECT("apropos", CommandObjectApropos);
   REGISTER_COMMAND_OBJECT("breakpoint", CommandObjectMultiwordBreakpoint);
   REGISTER_COMMAND_OBJECT("command", CommandObjectMultiwordCommands);
@@ -569,7 +576,9 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("dwim-print", CommandObjectDWIMPrint);
   REGISTER_COMMAND_OBJECT("expression", CommandObjectExpression);
   REGISTER_COMMAND_OBJECT("frame", CommandObjectMultiwordFrame);
+#ifndef MS_DEBUGGER
   REGISTER_COMMAND_OBJECT("gui", CommandObjectGUI);
+#endif
   REGISTER_COMMAND_OBJECT("help", CommandObjectHelp);
   REGISTER_COMMAND_OBJECT("log", CommandObjectLog);
   REGISTER_COMMAND_OBJECT("memory", CommandObjectMemory);
@@ -797,6 +806,7 @@ void CommandInterpreter::LoadCommandDictionary() {
     }
   }
 
+#ifndef MS_DEBUGGER
   std::unique_ptr<CommandObjectRegexCommand> connect_gdb_remote_cmd_up(
       new CommandObjectRegexCommand(
           *this, "gdb-remote",
@@ -835,6 +845,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       m_command_dict[std::string(command_sp->GetCommandName())] = command_sp;
     }
   }
+#endif
 
   std::unique_ptr<CommandObjectRegexCommand> bt_regex_cmd_up(
       new CommandObjectRegexCommand(

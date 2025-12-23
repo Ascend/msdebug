@@ -1,6 +1,6 @@
 //===-- RemoteAwarePlatform.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -33,19 +33,37 @@ Status RemoteAwarePlatform::ResolveExecutable(
     const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
     const FileSpecList *module_search_paths_ptr) {
   ModuleSpec resolved_module_spec(module_spec);
-
+  
   // The host platform can resolve the path more aggressively.
   if (IsHost()) {
     FileSpec &resolved_file_spec = resolved_module_spec.GetFileSpec();
-
     if (!FileSystem::Instance().Exists(resolved_file_spec)) {
       resolved_module_spec.GetFileSpec().SetFile(resolved_file_spec.GetPath(),
                                                  FileSpec::Style::native);
       FileSystem::Instance().Resolve(resolved_file_spec);
     }
-
     if (!FileSystem::Instance().Exists(resolved_file_spec))
       FileSystem::Instance().ResolveExecutableLocation(resolved_file_spec);
+#ifdef MS_DEBUGGER
+    if (FileSystem::Instance().Exists(resolved_file_spec)) {
+      CheckInputValidClass flags =
+        static_cast<CheckInputValidClass>(
+          CheckInputValidClass::eCheckPathExists |
+          CheckInputValidClass::eCheckOwnerAndWritablePermission |
+          CheckInputValidClass::eCheckReadablePermission |
+          CheckInputValidClass::eCheckIsDir |
+          CheckInputValidClass::eCheckFileSize
+        );
+      // In device coredump mode, user will provide kernel object file instead of executable file.
+      if (resolved_module_spec.GetArchitecture().GetMachine() != llvm::Triple::hiipu64) {
+        flags |= CheckInputValidClass::eCheckExecutablePermission;
+      }
+      Status error = resolved_module_spec.CheckInputFileValid(flags);
+      if (error.Fail()) {
+        return error;
+      }
+    }
+#endif
   } else if (m_remote_platform_sp) {
     return GetCachedExecutable(resolved_module_spec, exe_module_sp,
                                module_search_paths_ptr);

@@ -1,6 +1,6 @@
 //===-- DumpDataExtractor.cpp ---------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -49,6 +49,35 @@ using namespace lldb_private;
 using namespace lldb;
 
 #define NON_PRINTABLE_CHAR '.'
+#ifdef MS_DEBUGGER
+union IntFloatUnion {
+    uint32_t i;
+    float f;
+};
+
+float int2float(uint32_t i) {
+    IntFloatUnion u;
+   u.i = i;
+    return u.f;
+}
+
+static constexpr size_t BFLOAT_SIZE = 2;
+static float base2float(uint32_t base) {
+  static constexpr uint8_t INDEX_NUM = 8;
+  static constexpr uint8_t DECIMAL_NUM = 7;
+  uint32_t sign_bit = base >> (DECIMAL_NUM + INDEX_NUM);
+  uint32_t index_bit = (base >> DECIMAL_NUM) & ((1ull << INDEX_NUM) - 1);
+  uint32_t decimal_bit = base & ((1ull << DECIMAL_NUM) -1);
+  uint32_t offset_bit = (1ull << (INDEX_NUM -1)) - 1;
+
+  static constexpr uint32_t FLOAT_OFFSET_BIT = 127;
+  index_bit = index_bit + FLOAT_OFFSET_BIT - offset_bit ;
+  decimal_bit = decimal_bit << (23ull - DECIMAL_NUM);
+  
+  uint32_t value = (sign_bit << 31) | (index_bit << 23) | decimal_bit;
+  return int2float(value);
+}
+#endif
 
 static std::optional<llvm::APInt> GetAPInt(const DataExtractor &data,
                                            lldb::offset_t *offset_ptr,
@@ -693,6 +722,25 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       s->Printf("U+%4.4x", DE.GetU16(&offset));
       break;
 
+#ifdef MS_DEBUGGER
+    case eFormatBFloat16: {
+      std::ostringstream ss;
+      if (item_byte_size == BFLOAT_SIZE) {
+          uint32_t bfloat16 = DE.GetU16(&offset);
+          float f = base2float(bfloat16);
+          ss.precision(std::numeric_limits<float>::digits10);
+          DumpFloatingPoint(ss, f);
+      } else {
+          s->Printf("error: unsupported byte size (%" PRIu64
+                  ") for bfloat format",
+                  (uint64_t)item_byte_size);
+          return offset;
+      }
+      ss.flush();
+      s->Printf("%s", ss.str().c_str());
+    } break;
+#endif
+
     case eFormatUnicode32:
       s->Printf("U+0x%8.8x", DE.GetU32(&offset));
       break;
@@ -838,6 +886,16 @@ lldb::offset_t lldb_private::DumpDataExtractor(
                                  LLDB_INVALID_ADDRESS, 0, 0);
       s->PutChar('}');
       break;
+
+#ifdef MS_DEBUGGER
+    case eFormatVectorOfBFloat16:
+      s->PutChar('{');
+      offset =
+          DumpDataExtractor(DE, s, offset, eFormatBFloat16, BFLOAT_SIZE, item_byte_size / BFLOAT_SIZE,
+                            item_byte_size / BFLOAT_SIZE, LLDB_INVALID_ADDRESS, 0, 0);
+      s->PutChar('}');
+      break;
+#endif
 
     case eFormatVectorOfFloat16:
       s->PutChar('{');

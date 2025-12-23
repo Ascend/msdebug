@@ -1,6 +1,6 @@
 //===-- NativeProcessLinux.cpp --------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -20,6 +20,11 @@
 #include <string>
 #include <unordered_map>
 
+#ifdef MS_DEBUGGER
+#include "AscendProcessLinux.h"
+#include "AscendThreadLinux.h"
+#include <linux/auxvec.h>
+#endif
 #include "NativeThreadLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
@@ -260,14 +265,93 @@ NativeProcessLinux::Manager::Manager(MainLoop &mainloop)
   assert(m_sigchld_handle && status.Success());
 }
 
+#ifdef MS_DEBUGGER
+ 
+static std::string GetRuntimeStubPath() {
+  Log *log = GetLog(POSIXLog::Process);
+  char exec_path[PATH_MAX] = {0};
+  std::string stub_path;
+  ssize_t ret = readlink("/proc/self/exe", exec_path, PATH_MAX - 1);
+
+  // 添加终止符处理：确保exec_path以'\0'结束
+  if (ret >= PATH_MAX - 1) {
+    exec_path[PATH_MAX - 1] = '\0'; // 路径截断，在缓冲区末尾强制添加终止符
+  }
+
+  if (ret != -1) {
+    FileSpec exec_file(exec_path);
+    exec_file.RemoveLastPathComponent();
+    exec_file.RemoveLastPathComponent();
+    exec_file.AppendPathComponent("lib/libruntime_stub.so");
+    LLDB_LOG(log, "relative lib path {0}", exec_file.GetPath());
+    if (FileSystem::Instance().Exists(exec_file)) {
+      stub_path.append(exec_file.GetPath());
+    }
+  }
+  if (stub_path.empty()) {
+    const std::string toolkit_home  = Host::GetEnvironment().lookup("ASCEND_TOOLKIT_HOME");
+    if (toolkit_home.empty()) {
+      LLDB_LOG(log, "toolkit_home empty");
+    } else {
+      stub_path.append(toolkit_home);
+      stub_path.append("/tools/msdebug/lib/libruntime_stub.so");
+    }
+  }
+  return stub_path;
+}
+#endif
+
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
                                     NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
 
+#ifdef MS_DEBUGGER
+  Status status;
+
+  // Don't let any child processes inherit our communication socket
+  std::string stub_path = GetRuntimeStubPath();
+  if (FileSystem::Instance().Exists(stub_path.c_str())) {
+    StreamString pre_load_env;
+    auto &environment = launch_info.GetEnvironment();
+
+    // force ops to be launched sequnetially in PyTorch scenario
+    environment["TASK_QUEUE_ENABLE"] = "0";
+    LLDB_LOG(log, "set TASK_QUEUE_ENABLE={0}", environment["TASK_QUEUE_ENABLE"]);
+    auto value = environment.lookup("LD_PRELOAD");
+    if (!value.empty()) {
+      if (!StringRef(value).contains("msdebug/lib/libruntime_stub.so")) {
+        pre_load_env.Printf("%s:%s", stub_path.c_str(), value.c_str());
+      }
+    } else {
+      pre_load_env.Printf("%s", stub_path.c_str());
+    }
+    if (!pre_load_env.Empty()) {
+      environment["LD_PRELOAD"] = std::string(pre_load_env.GetString());
+    }
+    LLDB_LOG(log, "final LD_PRELOAD={0}", environment["LD_PRELOAD"]);
+  } else {
+    LLDB_LOG(log, "Stub path {0} not exist", stub_path.c_str());
+  }
+
+  auto current_pid = getpid();
+
+  auto now = std::chrono::system_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+  std::string socket_path(llvm::formatv("/tmp/msop_connect.{0}.{1}.sock",
+              std::to_string(current_pid), duration.count()));
+  LLDB_LOG(log, "socket path is: {0}", socket_path.c_str());
+  StreamString temp;
+  temp.Printf("MSOP_SOCKET_PATH=%s", socket_path.c_str());
+  launch_info.GetEnvironment().insert(temp.GetString());
+
+#endif
+
   MaybeLogLaunchInfo(launch_info);
 
+#ifndef MS_DEBUGGER
   Status status;
+#endif
   ::pid_t pid = ProcessLauncherPosixFork()
                     .LaunchProcess(launch_info, status)
                     .GetProcessId();
@@ -276,7 +360,6 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
     LLDB_LOG(log, "failed to launch process: {0}", status);
     return status.ToError();
   }
-
   // Wait for the child process to trap on its call to execve.
   int wstatus = 0;
   ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
@@ -301,6 +384,11 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!arch_or)
     return arch_or.takeError();
 
+#ifdef MS_DEBUGGER
+  return std::unique_ptr<NativeProcessLinux>(new AscendProcessLinux(
+      pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
+      *arch_or, *this, {pid}, socket_path));
+#endif
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
       *arch_or, *this, {pid}));
@@ -434,6 +522,7 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
     assert(status.Success());
   }
 
+#ifndef MS_DEBUGGER
   for (const auto &tid : tids) {
     NativeThreadLinux &thread = AddThread(tid, /*resume*/ false);
     ThreadWasCreated(thread);
@@ -442,6 +531,7 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
   // Let our process instance know the thread has stopped.
   SetCurrentThreadID(tids[0]);
   SetState(StateType::eStateStopped, false);
+#endif
 }
 
 llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
@@ -709,6 +799,10 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
       // inferior is resumed and exits normally.
       state = eStateRunning;
     }
+#ifdef MS_DEBUGGER
+    thread.Resume(LLDB_INVALID_SIGNAL_NUMBER);
+    break;
+#endif
     ResumeThread(thread, state, LLDB_INVALID_SIGNAL_NUMBER);
 
     if (is_main_thread) {
@@ -943,7 +1037,13 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "parent_tid={0}, child_pid={1}, event={2}", parent.GetID(),
            child_pid, event);
-
+  // FIXME: maybe no need this in new version lldb? 
+#ifdef MS_DEBUGGER
+  if (parent.GetStopInfo().still_break_in_device) {
+     LLDB_LOG(log, "parent thread is still break in device, can not clone child thread");
+     return false;
+  }
+#endif
   m_manager.CollectThread(child_pid);
 
   switch (event) {
@@ -969,7 +1069,11 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
   case PTRACE_EVENT_FORK:
   case PTRACE_EVENT_VFORK: {
     bool is_vfork = event == PTRACE_EVENT_VFORK;
+#ifdef MS_DEBUGGER
+    std::unique_ptr<NativeProcessLinux> child_process{new AscendProcessLinux(
+#else
     std::unique_ptr<NativeProcessLinux> child_process{new NativeProcessLinux(
+#endif
         static_cast<::pid_t>(child_pid), m_terminal_fd, m_delegate, m_arch,
         m_manager, {static_cast<::pid_t>(child_pid)})};
     if (!is_vfork)
@@ -1047,6 +1151,9 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
     case eStateStepping: {
       // Run the thread, possibly feeding it the signal.
       const int signo = action->signal;
+#ifdef MS_DEBUGGER
+      ResumeThread(static_cast<NativeThreadLinux &>(*thread), action->state, signo);
+#else
       Status error = ResumeThread(static_cast<NativeThreadLinux &>(*thread),
                                   action->state, signo);
       if (error.Fail())
@@ -1055,6 +1162,7 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
                       __FUNCTION__, GetID(), thread->GetID(),
                       error.AsCString());
 
+#endif
       break;
     }
 

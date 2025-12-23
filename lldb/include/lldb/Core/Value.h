@@ -1,6 +1,6 @@
 //===-- Value.h -------------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -13,6 +13,9 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Utility/ArchSpec.h"
+#endif
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-types.h"
@@ -145,6 +148,32 @@ public:
 
   void Clear();
 
+#ifdef MS_DEBUGGER
+  DeviceAddressClass GetAddressClass() const {
+    return m_address_class;
+  }
+
+  void SetAddressClass(const DeviceAddressClass address_class) {
+    m_address_class = address_class;
+  }
+
+  DeviceAddressClass GetPointeeAddressClass() const {
+    return m_pointee_address_class;
+  }
+
+  void SetPointeeAddressClass(const DeviceAddressClass address_class) {
+    m_pointee_address_class = address_class;
+  }
+
+  const ArchSpec &GetArchSpec() {
+    return m_arch_spec;
+  }
+
+  void SetArchSpec(const ArchSpec &arch_spec) {
+    m_arch_spec = arch_spec;
+  }
+
+#endif
   static ValueType GetValueTypeFromAddressType(AddressType address_type);
 
 protected:
@@ -154,6 +183,13 @@ protected:
   ValueType m_value_type = ValueType::Scalar;
   ContextType m_context_type = ContextType::Invalid;
   DataBufferHeap m_data_buffer;
+
+#ifdef MS_DEBUGGER
+private:
+    DeviceAddressClass m_address_class = DeviceAddressClass::NONE;
+    DeviceAddressClass m_pointee_address_class = DeviceAddressClass::NONE;
+    ArchSpec m_arch_spec = ArchSpec();
+#endif
 };
 
 class ValueList {

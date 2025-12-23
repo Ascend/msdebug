@@ -1,6 +1,6 @@
 //===-- RegisterContext.h ---------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -51,6 +51,14 @@ public:
     return false;
   }
 
+#ifdef MS_DEBUGGER
+  virtual bool ReadDeviceRegister(uint32_t register_id, uint64_t &value) {
+    return false;
+  }
+
+  bool IsStopInDevice() const;
+
+#endif
   virtual bool RegisterWriteCausesReconfigure(const llvm::StringRef name) {
     return false;
   }

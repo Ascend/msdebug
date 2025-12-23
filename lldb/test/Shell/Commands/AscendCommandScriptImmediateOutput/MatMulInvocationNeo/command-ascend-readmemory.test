@@ -1,0 +1,126 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
+# RUN: cd ~/samples/operator/MatMulCustomSample/KernelLaunch/MatMulInvocationNeo/
+# RUN: LD_LIBRARY_PATH=$(pwd)/out/lib:$LD_LIBRARY_PATH msdebug ascendc_kernels_bbit -s %s | FileCheck %s -dump-input=always
+
+b matmul_custom.cpp:31
+# CHECK-LABEL: b matmul_custom.cpp:31
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[1-9]+}}:
+
+run
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[1-9]+}}.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_custom.cpp:31:{{[1-9]+}}
+
+var
+# CHECK-LABEL: var
+# CHECK: (int) blockIdx = {{[0-9]+}}
+# CHECK-NEXT: (int) usedCoreNum = {{[0-9]+}}
+# CHECK-NEXT: (const TCubeTiling &__stack__) param = 0x{{[0-9a-z]+}}: {
+# CHECK-NEXT:   usedCoreNum = {{[0-9]+}}
+# CHECK-NEXT:   M = {{[0-9]+}}
+# CHECK-NEXT:   N = {{[0-9]+}}
+# CHECK-NEXT:   Ka = {{[0-9]+}}
+# CHECK-NEXT:   Kb = {{[0-9]+}}
+# CHECK-NEXT:   singleCoreM = {{[0-9]+}}
+# CHECK-NEXT:   singleCoreN = {{[0-9]+}}
+# CHECK-NEXT:   singleCoreK = {{[0-9]+}}
+# CHECK-NEXT:   baseM = {{[0-9]+}}
+# CHECK-NEXT:   baseN = {{[0-9]+}}
+# CHECK-NEXT:   baseK = {{[0-9]+}}
+# CHECK-NEXT:   depthA1 = {{[0-9]+}}
+# CHECK-NEXT:   depthB1 = {{[0-9]+}}
+# CHECK-NEXT:   stepM = {{[0-9]+}}
+# CHECK-NEXT:   stepN = {{[0-9]+}}
+# CHECK-NEXT:   isBias = {{[0-9]+}}
+# CHECK-NEXT:   transLength = {{[0-9]+}}
+# CHECK-NEXT:   iterateOrder = {{[0-9]+}}
+# CHECK-NEXT:   shareMode = {{[0-9]+}}
+# CHECK-NEXT:   shareL1Size = {{[0-9]+}}
+# CHECK-NEXT:   shareL0CSize = {{[0-9]+}}
+# CHECK-NEXT:   shareUbSize = {{[0-9]+}}
+# CHECK-NEXT:   batchM = {{[0-9]+}}
+# CHECK-NEXT:   batchN = {{[0-9]+}}
+# CHECK-NEXT:   singleBatchM = {{[0-9]+}}
+# CHECK-NEXT:   singleBatchN = {{[0-9]+}}
+# CHECK-NEXT:   stepKa = {{[0-9]+}}
+# CHECK-NEXT:   stepKb = {{[0-9]+}}
+# CHECK-NEXT:   depthAL1CacheUB = {{[0-9]+}}
+# CHECK-NEXT:   depthBL1CacheUB = {{[0-9]+}}
+# CHECK-NEXT:   dbL0A = {{[0-9]+}}
+# CHECK-NEXT:   dbL0B = {{[0-9]+}}
+# CHECK-NEXT:   dbL0C = {{[0-9]+}}
+# CHECK-NEXT:   ALayoutInfoB = {{[0-9]+}}
+# CHECK-NEXT:   ALayoutInfoS = {{[0-9]+}}
+# CHECK-NEXT:   ALayoutInfoN = {{[0-9]+}}
+# CHECK-NEXT:   ALayoutInfoG = {{[0-9]+}}
+# CHECK-NEXT:   ALayoutInfoD = {{[0-9]+}}
+# CHECK-NEXT:   BLayoutInfoB = {{[0-9]+}}
+# CHECK-NEXT:   BLayoutInfoS = {{[0-9]+}}
+# CHECK-NEXT:   BLayoutInfoN = {{[0-9]+}}
+# CHECK-NEXT:   BLayoutInfoG = {{[0-9]+}}
+# CHECK-NEXT:   BLayoutInfoD = {{[0-9]+}}
+# CHECK-NEXT:   CLayoutInfoB = {{[0-9]+}}
+# CHECK-NEXT:   CLayoutInfoS1 = {{[0-9]+}}
+# CHECK-NEXT:   CLayoutInfoN = {{[0-9]+}}
+# CHECK-NEXT:   CLayoutInfoG = {{[0-9]+}}
+# CHECK-NEXT:   CLayoutInfoS2 = {{[0-9]+}}
+# CHECK-NEXT:   BatchNum = {{[0-9]+}}
+# CHECK: }
+# CHECK-NEXT: (int &__stack__) offsetA = 0x{{[0-9a-z]+}} (&offsetA = {{[0-9]+}})
+# CHECK-NEXT: (int &__stack__) offsetB = 0x{{[0-9a-z]+}} (&offsetB = {{[0-9]+}})
+# CHECK-NEXT: (int &__stack__) offsetC = 0x{{[0-9a-z]+}} (&offsetC = {{[0-9]+}})
+# CHECK-NEXT: (int &__stack__) curSingleCoreM = 0x{{[0-9a-z]+}} (&curSingleCoreM = {{[0-9]+}})
+# CHECK-NEXT: (int &__stack__) curSingleCoreN = 0x{{[0-9a-z]+}} (&curSingleCoreN = {{[0-9]+}})
+# CHECK-NEXT: (int &__stack__) curSingleCoreK = 0x{{[0-9a-z]+}} (&curSingleCoreK = {{[0-9]+}})
+# CHECK-NEXT: (uint32_t) mIterSize = {{[0-9]+}}
+# CHECK-NEXT: (uint32_t) mCoreIndx = {{[0-9]+}}
+# CHECK-NEXT: (uint32_t) nCoreIndx = {{[0-9]+}}
+# CHECK-NEXT: (int) gmUseM = {{[0-9]+}}
+# CHECK-NEXT: (int) gmUseN = {{[0-9]+}}
+# CHECK-NEXT: (int) gmUseK = {{[0-9]+}}
+
+br delete
+y
+
+b 65
+# CHECK-LABEL: b 65
+# CHECK-NOT: no locations
+# CHECK-NEXT: Breakpoint {{[1-9]+}}:
+
+run
+y
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[1-9]+}}.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_custom.cpp:65:{{[1-9]+}}
+
+p aGlobal
+# CHEKC-LABEL: p aGlobal
+# CHECK: (AscendC::GlobalTensor<__fp16>) ${{[0-9]+}} = {
+# CHECK-NEXT:   AscendC::BaseGlobalTensor<__fp16> = {
+# CHECK-NEXT:     address_ = 0x{{[0-9a-z]+}}
+# CHECK-NEXT:     oriAddress_ = 0x{{[0-9a-z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   bufferSize_ = {{[0-9]+}}
+# CHECK-NEXT:   shapeInfo_ = {
+# CHECK-NEXT:     shapeDim = '{{.*}}'
+# CHECK-NEXT:     originalShapeDim = '{{.*}}'
+# CHECK-NEXT:     shape = ({{.*}})
+# CHECK-NEXT:     originalShape = ({{.*}})
+# CHECK-NEXT:     dataFormat = {{[0-9a-zA-Z]+}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   cacheMode_ = {{.*}}
+# CHECK-NEXT: }
+
+x -m GM -f float16[] 0x000012c0c0015000 -s 256 -c 1
+# CHECK-LABEL: x -m GM -f float16[] 0x000012c0c0015000 -s 256 -c 1
+# CHECK: 0x000012c0c0015000: {
+
+quit

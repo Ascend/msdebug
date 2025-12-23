@@ -1,6 +1,14 @@
-lldb_tablegen(CommandOptions.inc -gen-lldb-option-defs
+if(MS_DEBUGGER)
+  lldb_tablegen(CommandOptions.inc -gen-lldb-option-defs
+  SOURCE AscendDebuggerOptions.td
+  TARGET LLDBOptionsGen)
+  set(ASCEND_COMMAND_SRC 
+    CommandObjectAscend.cpp)
+else()
+  lldb_tablegen(CommandOptions.inc -gen-lldb-option-defs
   SOURCE Options.td
   TARGET LLDBOptionsGen)
+endif()
 
 add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandCompletions.cpp
@@ -42,6 +50,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandOptionArgumentTable.cpp
   CommandOptionsProcessAttach.cpp
   CommandOptionsProcessLaunch.cpp
+  ${ASCEND_COMMAND_SRC}
 
   LINK_LIBS
     lldbBreakpoint

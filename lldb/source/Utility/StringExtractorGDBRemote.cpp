@@ -1,6 +1,6 @@
 //===-- StringExtractorGDBRemote.cpp --------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -188,7 +188,24 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       if (packet_size == 2)
         return eServerPacketType_qC;
       break;
-
+#ifdef MS_DEBUGGER
+    case 'D':
+      if (PACKET_STARTS_WITH("qDeviceRegisterValue"))
+        return eServerPacketType_qDeviceRegisterValue;
+      if (PACKET_STARTS_WITH("qDeviceRegisterList"))
+        return eServerPacketType_qDeviceRegisterList;
+      if (PACKET_STARTS_WITH("qDeviceAic"))
+        return eServerPacketType_qDeviceAic;
+      if (PACKET_STARTS_WITH("qDeviceAiv"))
+        return eServerPacketType_qDeviceAiv;
+      if (PACKET_STARTS_WITH("qDeviceInfo"))
+        return eServerPacketType_qDeviceInfo;
+      if (PACKET_STARTS_WITH("qDeviceCoresInfo"))
+        return eServerPacketType_qDeviceCoresInfo;
+      if (PACKET_STARTS_WITH("qDeviceKernelInfo"))
+        return eServerPacketType_qDeviceKernelInfo;
+      break;
+#endif
     case 'E':
       if (PACKET_STARTS_WITH("qEcho:"))
         return eServerPacketType_qEcho;
@@ -361,6 +378,14 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_vFile_unlink;
 
     } else {
+#ifdef MS_DEBUGGER
+      if (PACKET_STARTS_WITH("vDeviceSingleCoreRun"))
+        return eServerPacketType_vDeviceSingleCoreRun;
+      if (PACKET_STARTS_WITH("vKernelHash"))
+        return eServerPacketType_vKernelHash;
+      if (PACKET_STARTS_WITH("vDeviceId"))
+        return eServerPacketType_vDeviceId;
+#endif
       if (PACKET_STARTS_WITH("vAttach;"))
         return eServerPacketType_vAttach;
       if (PACKET_STARTS_WITH("vAttachWait;"))

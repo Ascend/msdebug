@@ -1,6 +1,6 @@
 //===-- ProcessElfCore.h ----------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -111,6 +111,11 @@ protected:
 
   bool SupportsMemoryTagging() override { return !m_core_tag_ranges.IsEmpty(); }
 
+#ifdef MS_DEBUGGER
+  lldb::ModuleSP m_core_module_sp;
+  bool m_thread_data_valid = false;
+  std::vector<ThreadData> m_thread_data;
+#endif
 private:
   struct NT_FILE_Entry {
     lldb::addr_t start;
@@ -130,14 +135,18 @@ private:
   typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
       VMRangeToPermissions;
 
+#ifndef MS_DEBUGGER
   lldb::ModuleSP m_core_module_sp;
+#endif
   std::string m_dyld_plugin_name;
 
+#ifndef MS_DEBUGGER
   // True if m_thread_contexts contains valid entries
   bool m_thread_data_valid = false;
 
   // Contain thread data read from NOTE segments
   std::vector<ThreadData> m_thread_data;
+#endif
 
   // AUXV structure found from the NOTE segment
   lldb_private::DataExtractor m_auxv;

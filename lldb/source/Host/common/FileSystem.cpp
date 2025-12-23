@@ -1,6 +1,6 @@
 //===-- FileSystem.cpp ----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -158,6 +158,28 @@ bool FileSystem::IsDirectory(const Twine &path) const {
 bool FileSystem::IsDirectory(const FileSpec &file_spec) const {
   return file_spec && IsDirectory(file_spec.GetPath());
 }
+
+#ifdef MS_DEBUGGER
+bool FileSystem::IsSymlink(const llvm::Twine &path) const {
+  ErrorOr<vfs::Status> status = m_fs->status(path);
+  if (!status)
+    return false;
+  // m_fs will always go through to the sub-class RealFileSystem
+  // as in the vfs::RealFileSystem,
+  // the status funciton will return the resolved file's status with the path we passed in,
+  // if we use status->isSymlink() directly here,
+  // it will give us the resolved file's result, which is always false;
+  // we can use m_fs->getRealPath by passing a SmallString and compare it with the original path;
+  // obviously, use llvm::sys::fs::is_symlink_file(path) here will work more conveniently.
+  return llvm::sys::fs::is_symlink_file(path);
+}
+
+bool FileSystem::IsSymlink(const FileSpec &file_spec) const {
+  return file_spec && IsSymlink(file_spec.GetPath());
+}
+
+#endif
+
 
 bool FileSystem::IsLocal(const Twine &path) const {
   bool b = false;

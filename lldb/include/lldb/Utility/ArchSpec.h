@@ -1,6 +1,6 @@
 //===-- ArchSpec.h ----------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -15,6 +15,9 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
+#ifdef MS_DEBUGGER
+#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#endif
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -222,7 +225,9 @@ public:
     eCore_avr,
 
     eCore_wasm32,
-
+#ifdef MS_DEBUGGER
+    eCore_Ascend, // Ascend
+#endif
     kNumCores,
 
     kCore_invalid,
@@ -308,6 +313,11 @@ public:
   /// \return A static string corresponding to the current
   ///         architecture.
   const char *GetArchitectureName() const;
+
+#ifdef MS_DEBUGGER
+  CoreType GetAicoreType() const;
+  void SetAicoreType(CoreType core_type);
+#endif
 
   /// if MIPS architecture return true.
   ///
@@ -530,6 +540,9 @@ protected:
   llvm::Triple m_triple;
   Core m_core = kCore_invalid;
   lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
+#ifdef MS_DEBUGGER
+  CoreType m_aicore_type {CoreType::UNKNOWN_CORE_TYPE};
+#endif
 
   // Additional arch flags which we cannot get from triple and core For MIPS
   // these are application specific extensions like micromips, mips16 etc.

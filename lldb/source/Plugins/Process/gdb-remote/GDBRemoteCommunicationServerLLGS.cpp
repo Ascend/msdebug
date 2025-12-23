@@ -1,6 +1,6 @@
 //===-- GDBRemoteCommunicationServerLLGS.cpp ------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -251,6 +251,38 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vCtrlC,
       &GDBRemoteCommunicationServerLLGS::Handle_vCtrlC);
+#ifdef MS_DEBUGGER
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceRegisterValue,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceRegisterValue);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceRegisterList,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceRegisterList);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceAic,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceAic);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vDeviceSingleCoreRun,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceSingleCoreRun);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceAiv,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceAiv);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceInfo);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceCoresInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceCoresInfo);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceKernelInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceKernelInfo);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vKernelHash,
+      &GDBRemoteCommunicationServerLLGS::Handle_vKernelHash);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vDeviceId,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceId);
+#endif
 }
 
 void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(const ProcessLaunchInfo &info) {
@@ -698,6 +730,10 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "trace";
   case eStopReasonBreakpoint:
     return "breakpoint";
+#ifdef MS_DEBUGGER
+  case eStopReasonDeviceBreakpoint:
+    return "device_breakpoint";
+#endif
   case eStopReasonWatchpoint:
     return "watchpoint";
   case eStopReasonSignal:
@@ -846,6 +882,18 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     }
     response.PutChar(';');
   }
+#ifdef MS_DEBUGGER
+  bool break_in_device = false;
+  ThreadStopInfo stop_info;
+  for (NativeThreadProtocol &thread : process.Threads()) {
+    if (thread.GetStopReason(stop_info, description)) {
+      if (stop_info.still_break_in_device) {
+        break_in_device = true;
+        break;
+      }
+    }
+  }
+#endif
 
   // If a 'QListThreadsInStopReply' was sent to enable this feature, we will
   // send all thread IDs back in the "threads" key whose value is a list of hex
@@ -860,6 +908,12 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
 
     uint32_t thread_num = 0;
     for (NativeThreadProtocol &listed_thread : process.Threads()) {
+#ifdef MS_DEBUGGER
+      // currentlly only support for single thread in device.
+      if (break_in_device && listed_thread.GetID() != process.GetID()) {
+        continue;
+      }
+#endif
       if (thread_num > 0)
         response.PutChar(',');
       response.Printf("%" PRIx64, listed_thread.GetID());
@@ -888,10 +942,23 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
                        process.GetID());
       }
     }
-
     response.PutCString("thread-pcs");
     char delimiter = ':';
     for (NativeThreadProtocol &thread : process.Threads()) {
+#ifdef MS_DEBUGGER
+      ThreadStopInfo stop_info;
+      if (thread.GetStopReason(stop_info, description)) {
+        if (stop_info.still_break_in_device && thread.GetID() == process.GetID()) {
+          response.PutChar(delimiter);
+          delimiter = ',';
+          response.PutHex64(stop_info.details.device.break_addr, lldb::eByteOrderBig);
+          continue;
+        }
+      }
+      if (break_in_device && thread.GetID() != process.GetID()) {
+        continue;
+      }
+#endif
       NativeRegisterContext &reg_ctx = thread.GetRegisterContext();
 
       uint32_t reg_to_read = reg_ctx.ConvertRegisterKindToRegisterNumber(
@@ -916,6 +983,47 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     }
 
     response.PutChar(';');
+#ifdef MS_DEBUGGER
+    if (break_in_device) {
+      response.PutCString("core_id:");
+      response.PutHex32(stop_info.details.device.core_id);
+      response.PutChar(';');
+      response.PutCString("core_type:");
+      response.PutHex8(stop_info.details.device.core_type);
+      response.PutChar(';');
+      response.PutCString("pos_type:");
+      response.PutHex8(stop_info.details.device.pos_type);
+      response.PutChar(';');
+      response.PutCString("thread_x:");
+      response.PutHex16(stop_info.details.device.thread_x);
+      response.PutChar(';');
+      response.PutCString("thread_y:");
+      response.PutHex16(stop_info.details.device.thread_y);
+      response.PutChar(';');
+      response.PutCString("thread_z:");
+      response.PutHex16(stop_info.details.device.thread_z);
+      response.PutChar(';');
+      response.PutCString("kernel_name:");
+      KernelInfo info;
+      Status status = m_current_process->GetKernelInfo(info);
+      if (status.Fail()) {
+        response.PutCString("unknown");
+        LLDB_LOGF(log,
+          "GDBRemoteCommunicationServerLLGS::%s GetKernelInfo failed",
+          __FUNCTION__);
+      } else {
+        const std::string kernel_name = std::string(info.name);
+        response.PutCString(kernel_name);
+      }
+      response.PutChar(';');
+      response.PutCString("base_pc:");
+      response.PutHex64(process.GetBasePC());
+      response.PutChar(';');
+      response.PutCString("soc_type:");
+      response.PutHex64(int(process.GetSocType()));
+      response.PutChar(';');
+    }
+#endif
   }
 
   //
@@ -928,6 +1036,11 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
       reg_ctx.GetExpeditedRegisters(ExpeditedRegs::Full);
 
   for (auto &reg_num : expedited_regs) {
+#ifdef MS_DEBUGGER
+    if (break_in_device) {
+      continue;
+    }
+#endif
     const RegisterInfo *const reg_info_p =
         reg_ctx.GetRegisterInfoAtIndex(reg_num);
     // Only expediate registers that are not contained in other registers.
@@ -1997,16 +2110,16 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   const uint32_t reg_index =
       packet.GetHexMaxU32(false, std::numeric_limits<uint32_t>::max());
   if (reg_index == std::numeric_limits<uint32_t>::max())
-    return SendErrorResponse(69);
+    return SendErrorResponse(70);
 
   // Return the end of registers response if we've iterated one past the end of
   // the register set.
   if (reg_index >= reg_context.GetUserRegisterCount())
-    return SendErrorResponse(69);
+    return SendErrorResponse(71);
 
   const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_index);
   if (!reg_info)
-    return SendErrorResponse(69);
+    return SendErrorResponse(72);
 
   // Build the reginfos response.
   StreamGDBRemote response;
@@ -2513,6 +2626,18 @@ GDBRemoteCommunicationServerLLGS::Handle_memory_read(
               __FUNCTION__);
     return SendOKResponse();
   }
+#ifdef MS_DEBUGGER
+  MemoryReaderParamForServer param{};
+  if (packet.GetBytesLeft() >= 1 && packet.GetChar() == ',') {
+    param.arch_type = llvm::Triple::ArchType(packet.GetS32(0));
+  }
+  if (packet.GetBytesLeft() >= 1 && packet.GetChar() == ',') {
+    param.address_class = DeviceAddressClass(packet.GetS32(0));
+  }
+  if (packet.GetBytesLeft() >= 1 && packet.GetChar() == ',') {
+    param.element_size = static_cast<uint8_t>(packet.GetS32(0));
+  }
+#endif
 
   // Allocate the response buffer.
   std::string buf(byte_count, '\0');
@@ -2521,8 +2646,13 @@ GDBRemoteCommunicationServerLLGS::Handle_memory_read(
 
   // Retrieve the process memory.
   size_t bytes_read = 0;
+#ifdef MS_DEBUGGER
+  Status error = m_current_process->ReadMemoryWithoutTrap(
+      read_addr, &buf[0], byte_count, bytes_read, param);
+#else
   Status error = m_current_process->ReadMemoryWithoutTrap(
       read_addr, &buf[0], byte_count, bytes_read);
+#endif
   if (error.Fail()) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
@@ -2730,7 +2860,16 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfoSupported(
         __FUNCTION__);
     return SendErrorResponse(0x15);
   }
-
+#ifdef MS_DEBUGGER
+  ThreadStopInfo stop_info;
+  std::string description;
+  auto main_thread = m_current_process->GetThreadByID(m_current_process->GetID());
+  if (main_thread && main_thread->GetStopReason(stop_info, description)) {
+    if (stop_info.reason == lldb::eStopReasonDeviceBreakpoint) {
+      return SendErrorResponse(0x15);
+    }
+  }
+#endif
   // Test if we can get any region back when asking for the region around NULL.
   MemoryRegionInfo region_info;
   const Status error = m_current_process->GetMemoryRegionInfo(0, region_info);
@@ -2757,7 +2896,16 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
         __FUNCTION__);
     return SendErrorResponse(0x15);
   }
-
+#ifdef MS_DEBUGGER
+  ThreadStopInfo stop_info;
+  std::string description;
+  auto main_thread = m_current_process->GetThreadByID(m_current_process->GetID());
+  if (main_thread && main_thread->GetStopReason(stop_info, description)) {
+    if (stop_info.still_break_in_device) {
+      return SendErrorResponse(0x15);
+    }
+  }
+#endif
   // Parse out the memory address.
   packet.SetFilePos(strlen("qMemoryRegionInfo:"));
   if (packet.GetBytesLeft() < 1)
@@ -2893,11 +3041,24 @@ GDBRemoteCommunicationServerLLGS::Handle_Z(StringExtractorGDBRemote &packet) {
   if (size == std::numeric_limits<uint32_t>::max())
     return SendIllFormedResponse(
         packet, "Malformed Z packet, failed to parse size argument");
+#ifdef MS_DEBUGGER
+  if ((packet.GetBytesLeft() < 1) || packet.GetChar() != ',')
+    return SendIllFormedResponse(packet, "Malformed Z packet, expecting comma after length");
 
+  const int arch_type_value = packet.GetS32(-1);
+  if (arch_type_value == -1)
+    return SendIllFormedResponse(packet, "Malformed Z packet, failed to parse arch type argument");
+  llvm::Triple::ArchType arch_type = llvm::Triple::ArchType(arch_type_value);
+#endif
   if (want_breakpoint) {
     // Try to set the breakpoint.
+#ifdef MS_DEBUGGER
+    const Status error =
+            m_current_process->SetBreakpoint(addr, size, arch_type, want_hardware);
+#else
     const Status error =
         m_current_process->SetBreakpoint(addr, size, want_hardware);
+#endif
     if (error.Success())
       return SendOKResponse();
     Log *log = GetLog(LLDBLog::Breakpoints);
@@ -2972,7 +3133,16 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
   if ((packet.GetBytesLeft() < 1) || packet.GetChar() != ',')
     return SendIllFormedResponse(
         packet, "Malformed z packet, expecting comma after address");
+#ifdef MS_DEBUGGER
+  packet.GetHexMaxU32(false, std::numeric_limits<uint32_t>::max());
+  if ((packet.GetBytesLeft() < 1) || packet.GetChar() != ',')
+    return SendIllFormedResponse(packet, "Malformed z packet, expecting comma after length");
 
+  const int arch_type_value = packet.GetS32(-1);
+  if (arch_type_value == -1)
+    return SendIllFormedResponse(packet, "Malformed z packet, failed to parse arch type argument");
+  llvm::Triple::ArchType arch_type = llvm::Triple::ArchType(arch_type_value);
+#endif
   /*
   // Parse out the stoppoint size (i.e. size hint for opcode size).
   const uint32_t size = packet.GetHexMaxU32 (false,
@@ -2984,8 +3154,13 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
 
   if (want_breakpoint) {
     // Try to clear the breakpoint.
+#ifdef MS_DEBUGGER
     const Status error =
-        m_current_process->RemoveBreakpoint(addr, want_hardware);
+            m_current_process->RemoveBreakpoint(addr, arch_type, want_hardware);
+#else
+    const Status error =
+            m_current_process->RemoveBreakpoint(addr, want_hardware);
+#endif
     if (error.Success())
       return SendOKResponse();
     Log *log = GetLog(LLDBLog::Breakpoints);
@@ -3632,6 +3807,16 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo(
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
     return SendErrorResponse(50);
+#ifdef MS_DEBUGGER
+  ThreadStopInfo stop_info;
+  std::string description;
+  auto main_thread = m_current_process->GetThreadByID(m_current_process->GetID());
+  if (main_thread && main_thread->GetStopReason(stop_info, description)) {
+    if (stop_info.reason == lldb::eStopReasonDeviceBreakpoint) {
+      return SendErrorResponse(50);
+    }
+  }
+#endif
   LLDB_LOG(log, "preparing packet for pid {0}", m_current_process->GetID());
 
   StreamString response;
@@ -4063,6 +4248,211 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   return SendOKResponse();
 }
 
+#ifdef MS_DEBUGGER
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vDeviceSingleCoreRun(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+  packet.SetFilePos(strlen("vDeviceSingleCoreRun"));
+  char isSingleCoreRunningC = packet.GetChar('Y');
+  if (!m_current_process) {
+    return SendErrorResponse(68);
+  }
+  bool isSingleCoreRunning = (isSingleCoreRunningC == 'Y') ? true : false;
+  m_current_process->SetSingleCoreRunFlag(isSingleCoreRunning);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s isSingleCoreRunning=%d parsed out",
+    __FUNCTION__, packet.GetStringRef().data(), isSingleCoreRunning);
+  return SendOKResponse();
+}
+
+template<typename T>
+std::string StringJoin(const T &ids) {
+  std::stringstream ss;
+  for (size_t i = 0; i < ids.size(); i++) {
+    ss << std::hex << ids[i];
+    if (i + 1 < ids.size()) {
+      ss << ",";
+    }
+  }
+  ss << ";";
+  return ss.str();
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceAic(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+
+  // Parse core id on focus
+  packet.SetFilePos(strlen("qDeviceAic"));
+  uint32_t core_id = packet.GetU32(UINT32_MAX, 0);
+  if (core_id == UINT32_MAX || !m_current_process) {
+    return SendErrorResponse(68);
+  }
+  m_current_process->SetAicOnFocus(core_id);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s coreid=%d parsed out",
+    __FUNCTION__, packet.GetStringRef().data(), core_id);
+  StreamGDBRemote response;
+  response.PutHex64(core_id);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceAiv(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+
+  // Parse core id on focus
+  packet.SetFilePos(strlen("qDeviceAiv"));
+  uint32_t core_id = packet.GetU32(UINT32_MAX, 0);
+  if (core_id == UINT32_MAX || !m_current_process) {
+    return SendErrorResponse(68);
+  }
+  m_current_process->SetAivOnFocus(core_id);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s coreid=%d parsed out",
+    __FUNCTION__, packet.GetStringRef().data(), core_id);
+  StreamGDBRemote response;
+  response.PutHex64(core_id);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceInfo(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+
+  DeviceInfo info;
+  if (!m_current_process) {
+    return SendErrorResponse(68);
+  }
+  Status status = m_current_process->GetDeviceInfo(info);
+  if (status.Fail()) {
+    return SendErrorResponse(status);
+  }
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s",
+    __FUNCTION__, packet.GetStringRef().data());
+
+  StreamGDBRemote response;
+  std::string key = "aic_bitmaps";
+  response.PutCString("aic_bitmaps:");
+  response.PutCString(StringJoin(info.aic_bitmaps));
+  response.PutCString("aiv_bitmaps:");
+  response.PutCString(StringJoin(info.aiv_bitmaps));
+ 
+  response.PutCString("device_id:");
+  response.PutHex32(info.device_id);
+  response.PutChar(';');
+  response.PutCString("device_ids:");
+  std::vector<uint16_t> device_ids(info.device_ids.begin(), info.device_ids.end());
+  response.PutCString(StringJoin(device_ids));
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s response=%s",
+    __FUNCTION__, response.GetString().data());
+
+  return SendPacketNoLock(response.GetString());
+}
+
+inline void AddCoresInfoToResponse(const CoreInfo &info, StreamGDBRemote &response) {
+  response.PutChar('c');
+  response.PutCString("core_id:");
+  response.PutHex8(info.core_id);
+  response.PutCString(";pos_type:");
+  response.PutHex8(static_cast<uint8_t>(info.pos_type));
+  response.PutCString(";total_num:");
+  response.PutHex16(info.total_num);
+  response.PutCString(";core_type:");
+  response.PutHex8((uint8_t)info.core_type);
+  response.PutCString(";stream_id:");
+  response.PutHex32(info.stream_id);
+  response.PutCString(";task_id:");
+  response.PutHex32(info.task_id);
+  response.PutCString(";block_id:");
+  response.PutHex32(info.block_id);
+  response.PutCString(";status:");
+  response.PutHex32(info.status);
+  response.PutCString(";pc:");
+  response.PutHex64(info.pc);
+  response.PutCString(";thread_dim_x:");
+  response.PutHex16(info.thread_dim_x);
+  response.PutCString(";thread_dim_y:");
+  response.PutHex16(info.thread_dim_y);
+  response.PutCString(";thread_dim_z:");
+  response.PutHex16(info.thread_dim_z);
+  response.PutChar(';');
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceCoresInfo(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s",
+    __FUNCTION__, packet.GetStringRef().data());
+
+  packet.SetFilePos(packet.GetFilePos() + strlen("qDeviceCoresInfo:"));
+  uint32_t info_idx = packet.GetU32(std::numeric_limits<uint32_t>::max(), 10);
+  if (info_idx == std::numeric_limits<uint32_t>::max()) {
+    LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s Malformed info_idx", __FUNCTION__);
+    return SendErrorResponse(llvm::make_error<StringError>(inconvertibleErrorCode(),
+      "Malformed info_idx"));
+  }
+  CoreInfo info;
+  if (!m_current_process) {
+    return SendErrorResponse(68);
+  }
+  Status status = m_current_process->GetCoreInfo(info_idx, info, info_idx == 0);
+  if (status.Fail()) {
+    LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s GetCoresInfo failed", __FUNCTION__);
+    return SendErrorResponse(status);
+  }
+
+  StreamGDBRemote response;
+  AddCoresInfoToResponse(info, response);
+
+  PacketResult result;
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s response=%s size=%lu",
+    __FUNCTION__, response.GetString().data(), response.GetSize());
+  result = SendPacketNoLock(response.GetString());
+  return result;
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceKernelInfo(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s",
+    __FUNCTION__, packet.GetStringRef().data());
+
+  KernelInfo info;
+  if (!m_current_process) {
+    return SendErrorResponse(68);
+  }
+  Status status = m_current_process->GetKernelInfo(info);
+  if (status.Fail()) {
+    LLDB_LOGF(log,
+      "GDBRemoteCommunicationServerLLGS::%s GetKernelInfo failed",
+      __FUNCTION__);
+    return SendErrorResponse(status);
+  }
+
+  std::string info_str = info.name;
+  StreamGDBRemote response;
+  response.PutCString(info_str);
+  PacketResult result;
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s response=%s size=%lu",
+    __FUNCTION__, response.GetString().data(), response.GetSize());
+  result = SendPacketNoLock(response.GetString());
+  return result;
+}
+#endif
+
 void GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection() {
   Log *log = GetLog(LLDBLog::Process);
 
@@ -4319,3 +4709,140 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   return (reverse_connect ? "unix-connect://" : "unix-accept://") +
          url_arg.str();
 }
+
+#ifdef MS_DEBUGGER
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceRegisterValue(
+        StringExtractorGDBRemote &packet) {
+  // Fail if we don't have a current process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  // Ensure we have a thread.
+  NativeThreadProtocol *thread = m_current_process->GetThreadAtIndex(0);
+  if (!thread)
+    return SendErrorResponse(69);
+
+  // Parse out the register number from the request.
+  uint64_t reg_value = 0;
+  Status status;
+  llvm::StringRef key;
+  llvm::StringRef value;
+  if (packet.GetNameColonValue(key, value) && key.compare("qDeviceRegisterValue") == 0) {
+    if (std::isalpha(value[0])) {
+      status = m_current_process->ReadDeviceRegisterValue(value, reg_value);
+    } else if (std::isdigit(value[0])) {
+      uint32_t reg_num;
+      if (value.getAsInteger(10, reg_num)) {
+        return SendIllFormedResponse(packet, "qDeviceRegisterValue failed, register value is invalid.");
+      }
+      ThreadStopInfo stop_info;
+      std::string description;
+      auto *main_thread = m_current_process->GetThreadByID(m_current_process->GetID());
+      // make special judgement to obtain the PC when ctrl-c in the device
+      if (main_thread && main_thread->GetStopReason(stop_info, description)) {
+        static constexpr uint32_t PC_REG_NUM = 64;
+        if (stop_info.still_break_in_device && stop_info.reason == StopReason::eStopReasonSignal &&
+            reg_num == PC_REG_NUM) {
+          status = m_current_process->GetStoppedCorePC(reg_value);
+        } else {
+          status = m_current_process->ReadDeviceRegisterValue(reg_num, reg_value);
+        }
+      } else {
+        return SendIllFormedResponse(packet,
+                                   "qDeviceRegisterValue failed, thread is not exist or get stop reason failed");
+      }
+    } else {
+      return SendIllFormedResponse(packet, "qDeviceRegisterValue failed to parse the register type.");
+    }
+  } else {
+    return SendIllFormedResponse(packet, "qDeviceRegisterValue failed to parse the register value.");
+  }
+  if (status.Fail()) {
+    LLDB_LOG(GetLog(LLDBLog::Thread), "qDeviceRegisterValue error: {0}", status.AsCString());
+    return SendErrorResponse(status);
+  }
+  StreamGDBRemote response;
+  response.PutCString("reg_value:");
+  response.PutHex64(reg_value);
+  response.PutCString(";");
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceRegisterList(
+        StringExtractorGDBRemote &packet) {
+  // Fail if we don't have a current process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  // Ensure we have a thread.
+  NativeThreadProtocol *thread = m_current_process->GetThreadAtIndex(0);
+  if (!thread) 
+    return SendErrorResponse(69);
+  std::vector<std::string> reg_list;
+  Status status = m_current_process->ReadDeviceRegisterList(reg_list);
+  
+  if (status.Fail()) {
+    return SendErrorResponse(status);
+  }
+  StreamGDBRemote response;
+  std::string temp = "reg_list:";
+  for (size_t i = 0; i < reg_list.size(); i++) {
+    temp += reg_list[i] + ",";
+  }
+  if (temp.back() == ',') {
+    temp[temp.size()-1] = ';';
+  }
+  response.PutCString(temp);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vKernelHash(StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+  LLDB_LOGF(log, "Handle_vKernelHash");
+  if (!m_current_process) {
+    LLDB_LOGF(log, "process do not exist");
+    return SendErrorResponse(68);
+  }
+
+  std::string kernel_hash;
+  constexpr llvm::StringRef KERNEL_HASH_HEADER{llvm::StringRef("vKernelHash:")};
+  const size_t pos = packet.GetStringRef().find(':');
+  if (pos != std::string::npos) {
+    kernel_hash = packet.GetStringRef().substr(pos + 1).data();
+    m_current_process->SetLoadedKernelHash(kernel_hash);
+  } else {
+    LLDB_LOG(log, "get kernel hash failed");
+    return SendErrorResponse(68);
+  }
+
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s packet=%s kernel hash=%s parsed out",
+            __FUNCTION__, packet.GetStringRef().data(), kernel_hash.data());
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vDeviceId(StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+  LLDB_LOGF(log, "Handle_vDeviceId");
+  if (!m_current_process) {
+    LLDB_LOGF(log, "process do not exist");
+    return SendErrorResponse(68);
+  }
+
+  int32_t device_id;
+  packet.SetFilePos(strlen("vDeviceId:"));
+  device_id = packet.GetS32(-1);
+  m_current_process->SetClientDeviceId(device_id);
+
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s packet=%s device_id=%d parsed out",
+            __FUNCTION__, packet.GetStringRef().data(), device_id);
+  return SendOKResponse();
+}
+#endif

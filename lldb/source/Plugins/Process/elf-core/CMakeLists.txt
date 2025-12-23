@@ -21,4 +21,5 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
   LINK_COMPONENTS
     BinaryFormat
     Support
-  )
+)
+add_subdirectory(device-core)

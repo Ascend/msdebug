@@ -1,6 +1,6 @@
 //===-- Target.h ------------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -36,6 +36,10 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+
+#ifdef MS_DEBUGGER
+#include "lldb/Interpreter/OptionValueMemoryType.h"
+#endif
 
 namespace lldb_private {
 
@@ -950,9 +954,24 @@ public:
   ///
   /// \see ObjectFile::GetDependentModules (FileSpecList&)
   /// \see Process::GetImages()
+#ifdef MS_DEBUGGER
+  void SetExecutableModule(
+      lldb::ModuleSP &module_sp,
+      LoadDependentFiles load_dependent_files = eLoadDependentsDefault,
+      Status *error = nullptr);
+
+  void SetDeviceId(const int32_t device_id) {
+    m_device_id = device_id;
+  }
+
+  int32_t GetDeviceId() const {
+    return m_device_id;
+  }
+#else
   void SetExecutableModule(
       lldb::ModuleSP &module_sp,
       LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
+#endif
 
   bool LoadScriptingResources(std::list<Status> &errors,
                               Stream &feedback_stream,
@@ -1081,7 +1100,11 @@ public:
   // The method is virtual for mocking in the unit tests.
   virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
                             Status &error, bool force_live_memory = false,
+#ifdef MS_DEBUGGER
+                            lldb::addr_t *load_addr_ptr = nullptr, MemoryReaderParamClient param={});
+#else
                             lldb::addr_t *load_addr_ptr = nullptr);
+#endif
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
@@ -1601,7 +1624,9 @@ protected:
 private:
   // Target metrics storage.
   TargetStats m_stats;
-
+#ifdef MS_DEBUGGER
+  int32_t m_device_id {-1};
+#endif
 public:
   /// Get metrics associated with this target in JSON format.
   ///

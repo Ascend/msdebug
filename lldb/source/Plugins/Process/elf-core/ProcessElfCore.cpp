@@ -1,6 +1,6 @@
 //===-- ProcessElfCore.cpp ------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -68,6 +68,10 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
       if (elf_header.Parse(data, &data_offset)) {
         // Check whether we're dealing with a raw FreeBSD "full memory dump"
         // ELF vmcore that needs to be handled via FreeBSDKernel plugin instead.
+#ifdef MS_DEBUGGER
+        if (elf_header.e_machine == llvm::ELF::EM_ASCEND)
+          return process_sp;
+#endif
         if (elf_header.e_ident[7] == 0xFF && elf_header.e_version == 0)
           return process_sp;
         if (elf_header.e_type == llvm::ELF::ET_CORE)

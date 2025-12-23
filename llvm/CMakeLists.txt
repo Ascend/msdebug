@@ -56,6 +56,25 @@ set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name 
 
 # Must go after `project(..)`.
 include(GNUInstallDirs)
+# compiler security option
+if (MS_DEBUGGER)
+  add_compile_options("-Wall")
+  add_compile_options("-fPIC")
+  add_compile_options("-fstack-protector-all")
+  add_link_options("-Wl,-z,relro")
+  add_link_options("-Wl,-z,now")
+  add_link_options("-Wl,-z,noexecstack")
+  add_link_options("-s")
+  add_link_options("-pie")
+  add_compile_options("-D_FORTIFY_SOURCE=2")
+  add_compile_options("-ftrapv")
+  set(CMAKE_SKIP_RPATH TRUE)
+endif()
+
+if (MS_DEBUGGER AND MS_DEBUGGER_LIBEDIT)
+  add_link_options("-Wl,-rpath-link,${MS_DEBUGGER_LIBEDIT}")
+  add_link_options("-Wl,-rpath-link,${MS_DEBUGGER_NCURSES}")
+endif()
 
 # This C++ standard is required to build LLVM.
 set(LLVM_REQUIRED_CXX_STANDARD 17)
@@ -1423,3 +1442,4 @@ endif()
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
 endif()
+

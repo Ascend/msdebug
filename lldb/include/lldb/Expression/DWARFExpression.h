@@ -1,6 +1,6 @@
 //===-- DWARFExpression.h ---------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -137,7 +137,11 @@ public:
            lldb::ModuleSP module_sp, const DataExtractor &opcodes,
            const plugin::dwarf::DWARFUnit *dwarf_cu,
            const lldb::RegisterKind reg_set, const Value *initial_value_ptr,
+#ifdef MS_DEBUGGER
+           const Value *object_address_ptr, const DWARFExpressionList *expr_list = nullptr);
+#else
            const Value *object_address_ptr);
+#endif
 
   static bool ParseDWARFLocationList(const plugin::dwarf::DWARFUnit *dwarf_cu,
                                      const DataExtractor &data,

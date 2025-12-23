@@ -1,0 +1,154 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
+# RUN: cd ~/samples/operator/AddCustomSample/KernelLaunch/AddKernelInvocationNeo/
+# msdebug -v
+# RUN: LD_LIBRARY_PATH=$(pwd)/out/lib:$LD_LIBRARY_PATH msdebug ascendc_kernels_bbit -s %s | FileCheck %s -dump-input=always
+
+b add_custom.cpp:77
+# CHECK-LABEL: b add_custom.cpp:77
+# CHECK-NEXT: Breakpoint {{[1-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:77:{{[1-9]+}}
+br delete
+y
+
+ascend info devices
+# CHECK-LABEL: ascend info devices
+# CHECK-NEXT:  Device Aic_Num Aiv_Num Aic_Mask Aiv_Mask
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}}
+
+ascend info cores
+# CHECK-LABEL: ascend info cores
+# CHECK-NEXT:  CoreId  Type  Device Stream Task Block         PC               stop reason
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+
+ascend info tasks
+# CHECK-LABEL: ascend info tasks
+# CHECK-NEXT:  Device Stream Task Invocation
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9a-zA-Z_]+}}
+
+ascend info stream
+# CHECK-LABEL: ascend info stream
+# CHECK-NEXT:  Device Stream Type
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} aiv
+
+ascend info blocks
+# CHECK-LABEL: ascend info blocks
+# CHECK-NEXT:  Device Stream Task Block
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+
+ascend info blocks -d
+# CHECK-LABEL: ascend info blocks -d
+# CHECK-NEXT: Current stop state of all blocks:
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'ascendc_kernels', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} device_debugdata`add_custom_origin.vector(x="{{.*}}", y="{{.*}}", z="{{.*}}") at add_custom.cpp:77:{{[1-9]+}}
+# CHECK-NEXT:    74
+# CHECK-NEXT:    75   extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
+# CHECK-NEXT:    76   {
+# CHECK-NEXT: -> 77       KernelAdd op;
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    78       op.Init(x, y, z);
+# CHECK-NEXT:    79       op.Process();
+# CHECK-NEXT:    80   }
+
+
+quit
+y

@@ -1,6 +1,6 @@
 //===-- UserExpression.h ----------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -269,6 +269,15 @@ public:
            lldb::ValueObjectSP &result_valobj_sp, Status &error,
            std::string *fixed_expression = nullptr,
            ValueObject *ctx_obj = nullptr);
+
+#ifdef MS_DEBUGGER
+  static lldb::ExpressionResults
+  DeviceExpressionEvaluate(StackFrame *frame,
+                           llvm::StringRef expr,
+                           const EvaluateExpressionOptions &options,
+                           lldb::ValueObjectSP &result_valobj_sp,
+                           lldb::LanguageType language, Status &error);
+#endif
 
   static const Status::ValueType kNoResult =
       0x1001; ///< ValueObject::GetError() returns this if there is no result

@@ -1,6 +1,6 @@
 //===-- ArchSpec.cpp ------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -240,6 +240,10 @@ static const CoreDefinition g_core_definitions[] = {
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
+#ifdef MS_DEBUGGER
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::hiipu64,
+     ArchSpec::eCore_Ascend, "hiipu64"},
+#endif
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -424,6 +428,10 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_loongarch64, llvm::ELF::EM_LOONGARCH,
      ArchSpec::eLoongArchSubType_loongarch64, 0xFFFFFFFFu,
      0xFFFFFFFFu}, // loongarch64
+#ifdef MS_DEBUGGER
+    {ArchSpec::eCore_Ascend, llvm::ELF::EM_ASCEND, LLDB_INVALID_CPUTYPE,
+     0xFFFFFFFFu, 0xFFFFFFFFu}, // Ascend
+#endif
 };
 
 static const ArchDefinition g_elf_arch_def = {
@@ -548,6 +556,17 @@ void ArchSpec::Clear() {
 
 //===----------------------------------------------------------------------===//
 // Predicates.
+#ifdef MS_DEBUGGER
+CoreType ArchSpec::GetAicoreType() const
+{
+  return m_aicore_type;
+}
+
+void ArchSpec::SetAicoreType(CoreType core_type)
+{
+  m_aicore_type = core_type;
+}
+#endif
 
 const char *ArchSpec::GetArchitectureName() const {
   const CoreDefinition *core_def = FindCoreDefinition(m_core);

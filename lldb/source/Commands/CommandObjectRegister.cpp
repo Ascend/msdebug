@@ -1,6 +1,6 @@
 //===-- CommandObjectRegister.cpp -----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -45,6 +45,9 @@ public:
             "frame.  If no register is specified, dumps them all.",
             nullptr,
             eCommandRequiresFrame | eCommandRequiresRegContext |
+#ifdef MS_DEBUGGER
+            eCommandProcessMustNotBeTaskKilled |
+#endif
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
         m_format_options(eFormatDefault, UINT64_MAX, UINT64_MAX,
                          {{CommandArgumentType::eArgTypeFormat,
@@ -85,7 +88,11 @@ public:
     bool prefix_with_altname = (bool)m_command_options.alternate_name;
     bool prefix_with_name = !prefix_with_altname;
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
+#ifdef MS_DEBUGGER
+                      prefix_with_altname, m_format_options.GetFormat(), 30,
+#else
                       prefix_with_altname, m_format_options.GetFormat(), 8,
+#endif
                       exe_ctx.GetBestExecutionContextScope(), print_flags,
                       exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
@@ -107,6 +114,51 @@ public:
     strm.EOL();
     return true;
   }
+#ifdef MS_DEBUGGER 
+  bool DumpRegister(Process *process, Stream &strm,
+                    llvm::StringRef reg_name) {
+    strm.Indent();
+    if (!process) {
+      return false;
+    }
+    uint64_t reg_value;
+    Status error = process->GetDeviceRegisterInfo(reg_name, reg_value);
+    if (!error.Success()) {
+      strm.Printf("Invalid register name '%s'.", reg_name.str().c_str());
+      strm.EOL();
+      return false;
+    }
+    strm.Printf("%20s = 0x%lX", reg_name.str().c_str(), reg_value);
+    strm.EOL();
+    return true;
+  }
+
+  bool DumpRegisterSet(Process *process, Stream &strm) {
+    strm.Indent();
+    if (!process) {
+      return false;
+    }
+    std::vector<std::string> reg_list;
+    Status error = process->GetDeviceRegisterList(reg_list);
+    if (!error.Success()) {
+      strm.Printf("error: unavailable");
+      strm.EOL();
+      return false;
+    }
+    std::sort(reg_list.begin(), reg_list.end(),
+              [](const std::string &a, const std::string &b) {
+                  if (a.length() == b.length()) {
+                    return a < b;
+                  }
+                  return a.length() < b.length();
+              });
+    for (const auto &reg_name : reg_list) {
+      DumpRegister(process, strm, llvm::StringRef(reg_name));
+    }
+    strm.EOL();
+    return true;
+  }
+#endif
 
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
                        RegisterContext *reg_ctx, size_t set_idx,
@@ -150,6 +202,13 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+#ifdef MS_DEBUGGER
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (!process) {
+      result.AppendError("can not get process.\n");
+      return;
+    }
+#endif
 
     if (command.GetArgumentCount() == 0) {
       size_t set_idx;
@@ -157,6 +216,12 @@ protected:
       size_t num_register_sets = 1;
       const size_t set_array_size = m_command_options.set_indexes.GetSize();
       if (set_array_size > 0) {
+#ifdef MS_DEBUGGER
+        if (process->DeviceCoredumpEnable() || process->IsStopInDevice()) {
+          result.AppendError("Ascend device does not support setting register index.");
+          return;
+        }
+#endif
         for (size_t i = 0; i < set_array_size; ++i) {
           set_idx =
               m_command_options.set_indexes[i]->GetValueAs<uint64_t>().value_or(
@@ -177,6 +242,17 @@ protected:
           }
         }
       } else {
+#ifdef MS_DEBUGGER
+        if (process->IsStopInDevice() && !process->DeviceCoredumpEnable()) {
+          if (m_command_options.alternate_name) {
+            result.AppendError("Ascend device dose not support setting register alternate name.");
+          }
+          if (m_command_options.dump_all_sets) {
+            DumpRegisterSet(process, strm);
+          }
+          return;
+        }
+#endif
         if (m_command_options.dump_all_sets)
           num_register_sets = reg_ctx->GetRegisterSetCount();
 
@@ -195,6 +271,16 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
+#ifdef MS_DEBUGGER
+        if (process->IsStopInDevice() && !process->DeviceCoredumpEnable()) {
+          for (const auto &entry : command) {
+            auto arg_str = entry.ref();
+            arg_str.consume_front("$");
+            DumpRegister(process, strm, arg_str);
+          }
+          return;
+        } 
+#endif 
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
@@ -336,6 +422,13 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     DataExtractor reg_data;
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+#ifdef MS_DEBUGGER
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (process && (process->DeviceCoredumpEnable() || process->IsStopInDevice())) {
+      result.AppendError("Ascend device dose not support writing register.");
+      return;
+    }
+#endif
 
     if (command.GetArgumentCount() != 2) {
       result.AppendError(

@@ -1,6 +1,6 @@
 //===-- GDBRemoteRegisterContext.h ------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -71,7 +71,12 @@ public:
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
   bool ReadAllRegisterValues(RegisterCheckpoint &reg_checkpoint) override;
+#ifdef MS_DEBUGGER
+  bool ReadDeviceRegister(uint32_t register_id, uint64_t &value) override;
 
+  bool ReadDeviceRegister(const RegisterInfo *reg_info,
+                          RegisterValue &value);
+#endif
   bool
   WriteAllRegisterValues(const RegisterCheckpoint &reg_checkpoint) override;
 
@@ -114,6 +119,12 @@ protected:
     if (reg < m_reg_valid.size())
       m_reg_valid[reg] = valid;
   }
+
+#ifdef MS_DEBUGGER
+  void UpdateDeviceRegIfNeeded();
+
+  std::vector<RegisterInfo> m_device_reg_info;
+#endif
 
   GDBRemoteDynamicRegisterInfoSP m_reg_info_sp;
   std::vector<bool> m_reg_valid;

@@ -1,6 +1,6 @@
 //===-- DWARFExpressionList.h -----------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -119,6 +119,24 @@ public:
                                  lldb::addr_t func_load_addr,
                                  const Value *initial_value_ptr,
                                  const Value *object_address_ptr) const;
+#ifdef MS_DEBUGGER
+
+  DeviceAddressClass GetAddressClass() const {
+    return m_address_class;
+  }
+
+  void SetAddressClass(DeviceAddressClass address_class) {
+    m_address_class = address_class;
+  }
+
+  DeviceAddressClass GetPointeeAddressClass() const {
+    return m_pointee_address_class;
+  }
+
+  void SetPointeeAddressClass(DeviceAddressClass address_class) {
+    m_pointee_address_class = address_class;
+  }
+#endif
 
 private:
   // RangeDataVector requires a comparator for DWARFExpression, but it doesn't
@@ -151,6 +169,12 @@ private:
   using const_iterator = ExprVec::Collection::const_iterator;
   const_iterator begin() const { return m_exprs.begin(); }
   const_iterator end() const { return m_exprs.end(); }
+
+#ifdef MS_DEBUGGER
+  DeviceAddressClass m_address_class = DeviceAddressClass::NONE;
+
+  DeviceAddressClass m_pointee_address_class = DeviceAddressClass::NONE;
+#endif
 };
 } // namespace lldb_private
 

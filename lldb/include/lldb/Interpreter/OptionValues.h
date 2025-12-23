@@ -1,6 +1,6 @@
 //===-- OptionValues.h ------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -30,5 +30,8 @@
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/OptionValueUUID.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Interpreter/OptionValueMemoryType.h"
+#endif
 
 #endif // LLDB_INTERPRETER_OPTIONVALUES_H

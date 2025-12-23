@@ -1,6 +1,6 @@
 //===-- GDBRemoteCommunicationServerLLGS.h ----------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -271,11 +271,34 @@ protected:
 
   PacketResult Handle_T(StringExtractorGDBRemote &packet);
 
+#ifdef MS_DEBUGGER
+  PacketResult Handle_vDeviceSingleCoreRun(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_qDeviceAic(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_qDeviceAiv(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_qDeviceInfo(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_qDeviceCoresInfo(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_qDeviceKernelInfo(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_vKernelHash(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_vDeviceId(StringExtractorGDBRemote &packet);
+#endif
+
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;
 
   void SetContinueThreadID(lldb::tid_t tid);
+#ifdef MS_DEBUGGER
+  PacketResult Handle_qDeviceRegisterValue(StringExtractorGDBRemote &packet);
+  
+  PacketResult Handle_qDeviceRegisterList(StringExtractorGDBRemote &packet);
+#endif
 
   lldb::tid_t GetContinueThreadID() const { return m_continue_tid; }
 

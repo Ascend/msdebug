@@ -1,0 +1,88 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh; bash ~/test/test_case_matmul_leakyrelu_framework_aclnn.sh
+# RUN: cd ~/samples/operator/MatMulLeakyReluCustomSample/FrameworkLaunch/AclNNInvocation/output/
+# RUN: LAUNCH_KERNEL_PATH=../../MatmulLeakyReluCustom/build_out/op_kernel/binary/ascend910b/bin/matmul_leakyrelu_custom/MatmulLeakyreluCustom_0a4ecf73240c8db04ac5059db7c787a7.o msdebug execute_matmul_leakyrelu_op -s %s | FileCheck %s -dump-input=always
+
+b matmul_leakyrelu_custom.cpp:10
+# CHECK-LABEL: b matmul_leakyrelu_custom.cpp:10
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint 1.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at matmul_leakyrelu_custom.cpp:10:{{[0-9]+}}
+br delete
+y
+
+ascend info devices
+# CHECK-LABEL: ascend info devices
+# CHECK-NEXT:  Device Aic_Num Aiv_Num Aic_Mask Aiv_Mask
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}}
+
+ascend info cores
+# CHECK-LABEL: ascend info cores
+# CHECK-NEXT:  CoreId  Type  Device Stream Task Block         PC               stop reason
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aic {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} aiv {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} 0x{{[0-9a-f]+}} breakpoint {{[1-9]+}}.{{[1-9]+}}
+
+ascend info tasks
+# CHECK-LABEL: ascend info tasks
+# CHECK-NEXT:  Device Stream Task Invocation
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9a-zA-Z_]+}}
+
+ascend info stream
+# CHECK-LABEL: ascend info stream
+# CHECK-NEXT:  Device Stream Type
+# CHECK-NEXT:* {{[0-9]+}} {{[0-9]+}} aiv
+
+ascend info blocks
+# CHECK-LABEL: ascend info blocks
+# CHECK-NEXT:  Device Stream Task Block
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+# CHECK-NEXT:{{[\*]?}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}} {{[0-9]+}}
+
+ascend info blocks -d
+# CHECK-LABEL: ascend info blocks -d
+# CHECK-NEXT: Current stop state of all blocks:
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'execute_matmul_', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} MatmulLeakyreluCustom_{{[0-9a-f]+}}.o`MatmulLeakyKernel<half, half, float, float>::MatmulLeakyKernel(this=0x{{[0-9a-f]+}}) (.cube) at matmul_leakyrelu_custom.cpp:10:{{[1-9]+}}
+# CHECK-NEXT:    7    template<typename aType, typename bType, typename cType, typename biasType>
+# CHECK-NEXT:    8    class MatmulLeakyKernel{
+# CHECK-NEXT:    9        public:
+# CHECK-NEXT: -> 10           __aicore__ inline MatmulLeakyKernel(){};
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    11           __aicore__ inline void Init(GM_ADDR a, GM_ADDR b, GM_ADDR bias, GM_ADDR c, GM_ADDR workspace, const TCubeTiling& tiling, float alpha, TPipe* pipe);
+# CHECK-NEXT:    12           template <bool setTmpSpace = false>
+# CHECK-NEXT:    13           __aicore__ inline void Process(TPipe* pipe);
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'execute_matmul_', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} MatmulLeakyreluCustom_{{[0-9a-f]+}}.o`MatmulLeakyKernel<half, half, float, float>::MatmulLeakyKernel(this=0x{{[0-9a-f]+}}) (.vector) at matmul_leakyrelu_custom.cpp:10:{{[1-9]+}}
+# CHECK-NEXT:    7    template<typename aType, typename bType, typename cType, typename biasType>
+# CHECK-NEXT:    8    class MatmulLeakyKernel{
+# CHECK-NEXT:    9        public:
+# CHECK-NEXT: -> 10           __aicore__ inline MatmulLeakyKernel(){};
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    11           __aicore__ inline void Init(GM_ADDR a, GM_ADDR b, GM_ADDR bias, GM_ADDR c, GM_ADDR workspace, const TCubeTiling& tiling, float alpha, TPipe* pipe);
+# CHECK-NEXT:    12           template <bool setTmpSpace = false>
+# CHECK-NEXT:    13           __aicore__ inline void Process(TPipe* pipe);
+# CHECK: [{{[\*]?[' ']?}}CoreId {{[0-9]+}}, Block {{[0-9]+}}]
+# CHECK-NEXT: * thread #1, name = 'execute_matmul_', stop reason = breakpoint {{[1-9]+}}.{{[1-9]+}}
+# CHECK-NEXT:     frame #0: 0x{{[0-9a-f]+}} MatmulLeakyreluCustom_{{[0-9a-f]+}}.o`MatmulLeakyKernel<half, half, float, float>::MatmulLeakyKernel(this=0x{{[0-9a-f]+}}) (.vector) at matmul_leakyrelu_custom.cpp:10:{{[1-9]+}}
+# CHECK-NEXT:    7    template<typename aType, typename bType, typename cType, typename biasType>
+# CHECK-NEXT:    8    class MatmulLeakyKernel{
+# CHECK-NEXT:    9        public:
+# CHECK-NEXT: -> 10           __aicore__ inline MatmulLeakyKernel(){};
+# CHECK-NEXT:  ^
+# CHECK-NEXT:    11           __aicore__ inline void Init(GM_ADDR a, GM_ADDR b, GM_ADDR bias, GM_ADDR c, GM_ADDR workspace, const TCubeTiling& tiling, float alpha, TPipe* pipe);
+# CHECK-NEXT:    12           template <bool setTmpSpace = false>
+# CHECK-NEXT:    13           __aicore__ inline void Process(TPipe* pipe);
+
+
+quit
+y

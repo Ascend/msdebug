@@ -1,6 +1,6 @@
 //===-- CompilerType.h ------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -351,6 +351,12 @@ public:
   /// type is valid and the type system supports volatile modifiers, else return
   /// an invalid type.
   CompilerType AddVolatileModifier() const;
+
+#ifdef MS_DEBUGGER
+  CompilerType AddAddressClassModifier(uint32_t address_class) const;
+
+  uint32_t GetAddressClass() const;
+#endif
 
   /// Return a new CompilerType that is the atomic type of this type. If this
   /// type is not valid or the type system doesn't support atomic types, this

@@ -1,44 +1,126 @@
-# The LLVM Compiler Infrastructure
+# **MindStudio Debugger**
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+## 最新消息
 
-Welcome to the LLVM project!
+- [2025.12.30]：MindStudio Debugger项目首次上线。
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
+## 简介
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
+MindStudio Debugger（算子调试工具，msDebug）是一款基于LLVM编译器基础架构打造，面向昇腾设备的算子调试工具，用于调试NPU侧运行的算子程序，为算子开发人员提供调试手段。调试手段包括了读取昇腾设备内存与寄存器、暂停与恢复程序运行状态等。用户使用其他拉起算子的方式或msOpST工具在真实的硬件环境中对算子的功能进行测试后，可根据实际测试情况选择是否使用msDebug工具进行功能调试。
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+## 目录结构
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+关键目录如下。
 
-## Getting the Source Code and Building LLVM
+```
+├── *                                  # 继承llvm原本的目录结构
+├── msdebug-mi                         # msDebug-mi代码目录，基于lldb-mi 
+├── build.py                           # 用于构建统一run包
+├── docs                               # 项目文档介绍 
+├── example                            # 项目示例代码
+├── package                            # run包安装、卸载及升级相关脚本 
+├── test                               # UT测试 
+├── thirdparty                         # 三方依赖
+├── output                             # make install输出目录，脚本生成
+```
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
+## 环境部署
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+msDebug工具可通过构建软件包进行安装，具体操作请参见[MindStudio Debugger安装指南](./docs/zh/msdebug_install_guide.md)。  
 
-## Getting in touch
+## 快速入门
 
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
+快速入门是以一个简单样例介绍如何使用msDebug工具调试算子。具体内容请参见[MindStudio Debugger快速入门](https://www.hiascend.com/document/detail/zh/mindstudio/830/msquickstart/atlasopdev_16_0007.html)。
 
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+## 工具限制与注意事项
+
+- 调试通道权限较大，存在安全风险，请谨慎使用，生产环境不推荐使用，使用本调试工具即代表认可并接受该风险。
+
+- 通过键盘输入“CTRL+C”后，算子执行将会被停止，工具会根据当前已有信息生成性能数据文件。若不需要生成该文件，可再次键盘输入“CTRL+C”指令。
+
+- 若未指定--output参数，需确保群组和其他组的用户不具备当前路径的上一级目录的写入权限。
+
+- 用户需自行保证可执行文件或用户程序（*application*）执行的安全性。
+  - 建议限制对可执行文件或用户程序（*application*）的操作权限，避免提权风险。
+  - 不建议进行高危操作（删除文件、删除目录、修改密码及提权命令等），避免安全风险。
+
+- 单个Device仅支持使用单个msDebug工具进行调试，且不推荐同时运行其他算子程序。
+
+- 当被调试程序调用多个算子时，msDebug工具仅支持对指定的单个算子进行调试。
+
+- 调试算子时，溢出检测功能会关闭。
+
+## 功能介绍
+
+msDebug工具支持调试所有的昇腾算子，包含Ascend C算子（Vector、Cube以及Mix融合算子）程序，用户可根据实际情况进行选择，支持的功能如下。具体的功能使用请参见[MindStudio Debugger工具用户指南](https://www.hiascend.com/document/detail/zh/mindstudio/830/ODtools/Operatordevelopmenttools/atlasopdev_16_0062.html)。
+
+|功能|说明|
+|:------|:---------|
+|断点设置|可在算子的运行程序上设置行断点，即在算子代码文件的特定行号上设置断点。|
+|打印变量和内存|根据变量类型和用法，变量可以存储在寄存器中或存储在Local Memory、Global Memory内存中，用户可以打印变量的地址以找出它的存储位置并进一步打印关联的内存。|
+|单步调试|需要了解代码执行具体情况时，可进行单步调试。|
+|中断运行|当算子运行程序卡顿时，手动中断算子运行程序并回显中断位置信息。|
+|核切换|可将当前聚焦的核切换至指定的核，切核后会自动展示指定核代码中断处的位置。|
+|检查程序状态|当调起算子后，可读取当前断点所在设备的寄存器值，检查程序状态。|
+|调试信息展示|查询算子运行的设备信息。|
+|解析Core dump文件|通过对异常算子dump文件的解析，即使在没有主动压测的情况下也能收集到足够的数据用于问题分析。|
+
+## FAQ
+
+FAQ汇总了在使用msDebug工具过程中可能遇到的典型问题及其解决方案，具体内容请参见[FAQ](https://www.hiascend.com/document/detail/zh/mindstudio/830/ODtools/Operatordevelopmenttools/atlasopdev_16_0078.html)。
+
+## 典型案例
+
+msDebug通过一些典型案例帮助用户理解并使用工具，具体案例请参见[典型案例](https://www.hiascend.com/document/detail/zh/mindstudio/830/ODtools/Operatordevelopmenttools/atlasopdev_16_0074.html)。
+
+## 免责声明
+
+### 致msDebug使用者
+
+1. msDebug工具提供的所有内容仅供您用于非商业目的。
+
+2. 对于msDebug测试用例以及示例文件中所涉及的数据，平台仅用于功能测试，华为不提供任何数据。
+
+3. 如您在使用msDebug工具过程中，发现任何问题（包括但不限于功能问题、合规问题），请在Gitcode提交issues，我们将及时审视并解决。
+
+4. msDebug工具依赖的第三方开源软件，均由第三方社区提供和维护，因第三方开源软件导致的问题需依赖相关社区的贡献和反馈进行修复。您应理解，msDebug仓库不保证对第三方开源软件本身的问题进行修复，也不保证会测试、纠正所有第三方开源软件的漏洞和错误。
+
+### 致数据所有者
+
+如果您不希望您的数据集在msDebug中被提及，或希望更新msDebug中有关的描述，请在Gitcode提交issues，我们将根据您的issues要求删除或更新您相关描述。衷心感谢您对msDebug的理解和贡献。
+
+## License
+
+msDebug工具的使用许可证，具体请参见[License](./LICENSE.md)。
+
+msDebug工具docs目录下的文档适用CC-BY 4.0许可证，具体请参见[License](./docs/LICENSE)。
+
+## 贡献声明
+
+1. **提交错误报告**：如果您在msDebug中发现了一个非安全问题的漏洞，请在msDebug仓库中的issues中搜索，以防该漏洞已被提交，如果找不到漏洞可以创建一个新的issues。如果发现了一个安全问题请不要将其公开，请参阅安全问题处理方式。提交错误报告时应该包含完整信息。
+2. **安全问题处理**：本项目中对安全问题处理的形式，请通过邮箱通知项目核心人员确认并编辑。 
+3. **解决现有问题**：通过查看仓库的issues列表可以发现需要处理的问题信息, 可以尝试解决其中的某个问题。
+4. **如何提出新功能**：请使用issues的Feature标签进行标记，我们会定期处理和确认开发。
+5. **开始贡献**：
+   1. Fork本项目的仓库。
+   2. Clone到本地。
+   3. 创建开发分支。
+   4. 本地自测，提交前请通过所有已知的单元测试，以及为您要解决的问题新增单元测试。
+   5. 提交代码。
+   6. 新建Pull Request。
+   7. 代码检视，您需要根据评审意见修改代码，并再次推送更新。此过程可能会有多次。
+   8. 当您的PR获得足够数量的检视者批准后，Committer会进行最终审核。
+   9. 审核和测试通过后，CI会将您的PR合并入项目的主干分支。
+
+## 建议与交流
+
+欢迎大家为社区做贡献。如果有任何疑问或建议，请提交issues，我们会尽快回复。感谢您的支持。
+
+## 致谢
+
+msDebug工具由华为公司的下列部门联合贡献：
+
+- 昇腾计算MindStudio开发部
+- 昇腾计算生态使能部
+
+感谢来自社区的每一个PR，欢迎贡献msDebug。

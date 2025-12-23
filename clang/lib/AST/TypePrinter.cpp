@@ -1,6 +1,6 @@
 //===- TypePrinter.cpp - Pretty-Print Clang Types -------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -2484,6 +2484,24 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
+#ifdef MS_DEBUGGER
+  case LangAS::ascend_gm:
+    return "__gm__";
+  case LangAS::ascend_cbuf:
+    return "__cbuf__";
+  case LangAS::ascend_ca:
+    return "__ca__";
+  case LangAS::ascend_cb:
+    return "__cb__";
+  case LangAS::ascend_cc:
+    return "__cc__";
+  case LangAS::ascend_ubuf:
+    return "__ubuf__";
+  case LangAS::ascend_stack:
+    return "__stack__";
+  case LangAS::ascend_fbuf:
+    return "__fbuf__";
+#endif
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }
@@ -2513,10 +2531,14 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
       OS << ' ';
     addSpace = true;
     // Wrap target address space into an attribute syntax
+#ifdef MS_DEBUGGER
+    OS << ASStr;
+#else
     if (isTargetAddressSpace(getAddressSpace()))
       OS << "__attribute__((address_space(" << ASStr << ")))";
     else
       OS << ASStr;
+#endif
   }
 
   if (Qualifiers::GC gc = getObjCGCAttr()) {

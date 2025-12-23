@@ -1,6 +1,6 @@
 //===-- ThreadElfCore.cpp -------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -39,11 +39,14 @@
 #include "RegisterContextPOSIXCore_s390x.h"
 #include "RegisterContextPOSIXCore_x86_64.h"
 #include "ThreadElfCore.h"
-
+#ifdef MS_DEBUGGER
+#include "device-core/RegisterContextPOSIXCore_ascend.h"
+#endif
 #include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace std;
 
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
@@ -170,6 +173,9 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     if (!reg_interface && arch.GetMachine() != llvm::Triple::aarch64 &&
         arch.GetMachine() != llvm::Triple::arm &&
+#ifdef MS_DEBUGGER
+        arch.GetMachine() != llvm::Triple::hiipu64 &&
+#endif
         arch.GetMachine() != llvm::Triple::riscv64) {
       LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
                 __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
@@ -177,6 +183,13 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     switch (arch.GetMachine()) {
+#ifdef MS_DEBUGGER
+    case llvm::Triple::hiipu64: {
+      m_thread_reg_ctx_sp = RegisterContextPOSIXCore_ascend::Create(*this, arch,
+        device_core::DevdrvChipSocTypeMap[GetProcess()->GetSummaryInfo().chip_type]);
+      break;
+    }
+#endif
     case llvm::Triple::aarch64:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_arm64::Create(
           *this, arch, m_gpregset_data, m_notes);

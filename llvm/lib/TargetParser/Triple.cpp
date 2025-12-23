@@ -1,6 +1,6 @@
 //===--- Triple.cpp - Target triple helper class --------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -86,6 +86,9 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case x86_64:         return "x86_64";
   case xcore:          return "xcore";
   case xtensa:         return "xtensa";
+#ifdef MS_DEBUGGER
+  case hiipu64:         return "hiipu64";
+#endif
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -194,6 +197,9 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case x86_64:      return "x86";
 
   case xcore:       return "xcore";
+#ifdef MS_DEBUGGER
+  case hiipu64:      return "hiipu64";
+#endif
 
   // NVPTX intrinsics are namespaced under nvvm.
   case nvptx:       return "nvvm";
@@ -435,6 +441,9 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("i386", x86)
     .Case("x86-64", x86_64)
     .Case("xcore", xcore)
+#ifdef MS_DEBUGGER
+    .Case("hiipu64", hiipu64)
+#endif
     .Case("nvptx", nvptx)
     .Case("nvptx64", nvptx64)
     .Case("le32", le32)
@@ -577,6 +586,9 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("tce", Triple::tce)
           .Case("tcele", Triple::tcele)
           .Case("xcore", Triple::xcore)
+#ifdef MS_DEBUGGER
+          .Case("hiipu64", Triple::hiipu64)
+#endif
           .Case("nvptx", Triple::nvptx)
           .Case("nvptx64", Triple::nvptx64)
           .Case("le32", Triple::le32)
@@ -892,6 +904,9 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::thumb:
   case Triple::x86:
   case Triple::x86_64:
+#ifdef MS_DEBUGGER
+  case Triple::hiipu64:
+#endif
     switch (T.getOS()) {
     case Triple::Win32:
     case Triple::UEFI:
@@ -1662,6 +1677,9 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::ve:
   case llvm::Triple::wasm64:
   case llvm::Triple::x86_64:
+#ifdef MS_DEBUGGER
+  case llvm::Triple::hiipu64:
+#endif
     return 64;
   }
   llvm_unreachable("Invalid architecture value");
@@ -1727,6 +1745,9 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::wasm32:
   case Triple::x86:
   case Triple::xcore:
+#ifdef MS_DEBUGGER
+  case Triple::hiipu64:
+#endif
   case Triple::xtensa:
     // Already 32-bit.
     break;
@@ -1806,6 +1827,9 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::ve:
   case Triple::wasm64:
   case Triple::x86_64:
+#ifdef MS_DEBUGGER
+  case Triple::hiipu64:
+#endif
     // Already 64-bit.
     break;
 

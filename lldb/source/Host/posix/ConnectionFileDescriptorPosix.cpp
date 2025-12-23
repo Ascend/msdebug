@@ -1,6 +1,6 @@
 //===-- ConnectionFileDescriptorPosix.cpp ---------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -151,6 +151,7 @@ ConnectionFileDescriptor::Connect(llvm::StringRef path,
     auto method =
         llvm::StringSwitch<ConnectionStatus (ConnectionFileDescriptor::*)(
             llvm::StringRef, socket_id_callback_type, Status *)>(scheme)
+#ifndef MS_DEBUGGER
             .Case("listen", &ConnectionFileDescriptor::AcceptTCP)
             .Cases("accept", "unix-accept",
                    &ConnectionFileDescriptor::AcceptNamedSocket)
@@ -162,10 +163,13 @@ ConnectionFileDescriptor::Connect(llvm::StringRef path,
             .Case("unix-connect", &ConnectionFileDescriptor::ConnectNamedSocket)
             .Case("unix-abstract-connect",
                   &ConnectionFileDescriptor::ConnectAbstractSocket)
+#endif
 #if LLDB_ENABLE_POSIX
             .Case("fd", &ConnectionFileDescriptor::ConnectFD)
+#ifndef MS_DEBUGGER
             .Case("file", &ConnectionFileDescriptor::ConnectFile)
             .Case("serial", &ConnectionFileDescriptor::ConnectSerialPort)
+#endif
 #endif
             .Default(nullptr);
 

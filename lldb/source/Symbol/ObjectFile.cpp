@@ -1,6 +1,6 @@
 //===-- ObjectFile.cpp ----------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -25,6 +25,10 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/DJB.h"
+#ifdef MS_DEBUGGER
+#include "llvm/Support/SHA256.h"
+#include <iomanip>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -772,6 +776,18 @@ uint32_t ObjectFile::GetCacheHash() {
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
 }
+
+#ifdef MS_DEBUGGER
+void ObjectFile::SetKernelHash(const llvm::ArrayRef<uint8_t>& data) {
+  llvm::SHA256 hasher;
+  std::array<uint8_t, 32> result = hasher.hash(data);
+  std::stringstream ss;
+  for (const uint8_t byte : result) {
+    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(byte);
+  }
+  m_kernel_hash_loaded = ss.str();
+}
+#endif
 
 namespace llvm {
 namespace json {

@@ -313,6 +313,10 @@ private:
 
 } // namespace
 
+#ifdef ASCNED_DEBUGGER
+// if there is no error_code after sys::fs::status(adjustPath(Path, Storage), RealStatus)
+// the return status(except for the path) will be the resolved file's status instead of the symbolic file's.
+#endif
 ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
   SmallString<256> Storage;
   sys::fs::file_status RealStatus;

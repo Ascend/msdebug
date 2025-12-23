@@ -1,6 +1,6 @@
 //===-- lldb-enumerations.h -------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -129,7 +129,11 @@ FLAGS_ENUM(LaunchFlags){
     eLaunchFlagCloseTTYOnExit = (1u << 11), ///< Close the open TTY on exit
     eLaunchFlagInheritTCCFromParent =
         (1u << 12), ///< Don't make the inferior responsible for its own TCC
-                    ///< permissions but instead inherit them from its parent.
+                    ///< permissions but instead inherit them from its pa
+                    ///
+#ifdef MS_DEBUGGER
+    eLaunchDevice = (1u << 13), /// launch ascend process
+#endif
 };
 
 /// Thread Run Modes.
@@ -170,6 +174,9 @@ enum Format {
   eFormatHex,
   eFormatHexUppercase,
   eFormatFloat,
+#ifdef MS_DEBUGGER
+  eFormatBFloat16,
+#endif
   eFormatOctal,
   eFormatOSType, ///< OS character codes encoded into an integer 'PICT' 'text'
                  ///< etc...
@@ -186,6 +193,9 @@ enum Format {
   eFormatVectorOfUInt32,
   eFormatVectorOfSInt64,
   eFormatVectorOfUInt64,
+#ifdef MS_DEBUGGER
+  eFormatVectorOfBFloat16,
+#endif
   eFormatVectorOfFloat16,
   eFormatVectorOfFloat32,
   eFormatVectorOfFloat64,
@@ -253,6 +263,9 @@ enum StopReason {
   eStopReasonFork,
   eStopReasonVFork,
   eStopReasonVForkDone,
+#ifdef MS_DEBUGGER
+  eStopReasonDeviceBreakpoint,
+#endif
 };
 
 /// Command Return Status Types.
@@ -310,7 +323,12 @@ enum ErrorType {
   eErrorTypeMachKernel, ///< Mach kernel error codes.
   eErrorTypePOSIX,      ///< POSIX error codes.
   eErrorTypeExpression, ///< These are from the ExpressionResults enum.
+#ifdef MS_DEBUGGER
+  eErrorTypeWin32,      ///< Standard Win32 error codes.
+  eErrorTypeAscend      ///< Ascend customized error codes
+#else
   eErrorTypeWin32       ///< Standard Win32 error codes.
+#endif
 };
 
 enum ValueType {
@@ -654,6 +672,10 @@ enum CommandArgumentType {
   eArgTypeRemotePath,
   eArgTypeRemoteFilename,
   eArgTypeModule,
+#ifdef MS_DEBUGGER
+  eArgTypeMemoryType,
+  eArgTypeAscendCoreIndex,
+#endif
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1193,7 +1215,20 @@ FLAGS_ENUM(CommandFlags){
     ///
     /// Verifies that the process is being traced by a Trace plug-in, if it
     /// isn't the command will fail with an appropriate error message.
+#ifdef MS_DEBUGGER
+    eCommandProcessMustBeTraced = (1u << 8),
+    /// eCommandProcessMustBePausedInDevice
+    ///
+    /// Verifies that there is a paused-in-device process in m_exe_ctx, if there isn't,
+    /// the command will fail with an appropriate error message.
+    eCommandProcessMustBePausedInDevice = (1u << 9),
+    eCommandProcessMustNotBeTaskKilled = (1u << 10),
+    eCommandProcessMustBeCoredump = (1u << 11),
+    eCommandProcessMustBePausedInDeviceOrCoredump = (1u << 12)
+};
+#else
     eCommandProcessMustBeTraced = (1u << 8)};
+#endif
 
 /// Whether a summary should cap how much data it returns to users or not.
 enum TypeSummaryCapping {
@@ -1310,7 +1345,12 @@ enum CompletionType {
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
+#ifdef MS_DEBUGGER
+  eTerminatorCompletion = (1ul << 27),
+  eTypeMemoryTypeCompletion = (1u << 28)
+#else
   eTerminatorCompletion = (1ul << 27)
+#endif
 };
 
 /// Specifies if children need to be re-computed

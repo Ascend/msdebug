@@ -1,6 +1,6 @@
 //===-- CommandCompletions.cpp --------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -87,6 +87,9 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {lldb::eTypeCategoryNameCompletion,
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
+#ifdef MS_DEBUGGER
+      {lldb::eTypeMemoryTypeCompletion, CommandCompletions::TypeMemoryTypes},
+#endif
       {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
@@ -737,6 +740,15 @@ void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,
         Language::GetNameForLanguageType(static_cast<lldb::LanguageType>(bit)));
   }
 }
+#ifdef MS_DEBUGGER
+void CommandCompletions::TypeMemoryTypes(CommandInterpreter &interpreter,
+                                         CompletionRequest &request,
+                                         SearchFilter *searcher) {
+  for (auto address_class : MemoryType::GetAllMemoryTypes()) {
+    request.TryCompleteCurrentArg(MemoryType::GetNameForMemoryType(static_cast<DeviceAddressClass>(address_class)));
+  }
+}
+#endif
 
 void CommandCompletions::FrameIndexes(CommandInterpreter &interpreter,
                                       CompletionRequest &request,

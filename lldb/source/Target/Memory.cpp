@@ -1,6 +1,6 @@
 //===-- Memory.cpp --------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -19,6 +19,29 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+#ifdef MS_DEBUGGER
+struct memory_type_name_pair {
+  const char *name;
+  DeviceAddressClass type;
+};
+
+const struct memory_type_name_pair g_memory_type_names[] = {
+  {"GM", DeviceAddressClass::GM},
+  {"L1", DeviceAddressClass::CBUF},
+  {"L0A", DeviceAddressClass::CA},
+  {"L0B", DeviceAddressClass::CB},
+  {"L0C", DeviceAddressClass::CC},
+  {"UB", DeviceAddressClass::UBUF},
+  {"FB", DeviceAddressClass::FBUF},
+  {"STACK", DeviceAddressClass::STACK},
+  {"DCACHE", DeviceAddressClass::DCACHE},
+  {"ICACHE", DeviceAddressClass::ICACHE},
+};
+
+static uint32_t num_memory_types =
+        sizeof(g_memory_type_names) / sizeof(struct memory_type_name_pair);
+#endif
 
 // MemoryCache constructor
 MemoryCache::MemoryCache(Process &process)
@@ -432,3 +455,37 @@ bool AllocatedMemoryCache::DeallocateMemory(lldb::addr_t addr) {
             (uint64_t)addr, success);
   return success;
 }
+
+#ifdef MS_DEBUGGER
+const char *MemoryType::GetNameForMemoryType(DeviceAddressClass mem_type) {
+  for (const auto &mem_type_pair : g_memory_type_names) {
+    if (mem_type == mem_type_pair.type) {
+      return mem_type_pair.name;
+    }
+  }
+  return "unknown";
+}
+
+DeviceAddressClass MemoryType::GetMemoryTypeFromString(llvm::StringRef string) {
+  for (const auto &mem_type_pair : g_memory_type_names) {
+    if (string.equals_insensitive(mem_type_pair.name))
+      return static_cast<DeviceAddressClass>(mem_type_pair.type);
+  }
+  return DeviceAddressClass::NONE;
+}
+
+void MemoryType::PrintAllMemoryTypes(Stream &s, const char *prefix,
+                                     const char *suffix) {
+  for (uint32_t i = 0; i < num_memory_types; i++) {
+    s.Printf("%s%s%s", prefix, g_memory_type_names[i].name, suffix);
+  }
+}
+
+std::vector<DeviceAddressClass> MemoryType::GetAllMemoryTypes() {
+  std::vector<DeviceAddressClass> mem_type_vec;
+  for (const auto &mem_type_pair : g_memory_type_names) {
+    mem_type_vec.push_back(mem_type_pair.type);
+  }
+  return mem_type_vec;
+}
+#endif

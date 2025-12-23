@@ -1,6 +1,6 @@
 //===-- DWARFCompileUnit.cpp ----------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -43,9 +43,23 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   if (die) {
     DWARFRangeList ranges =
         die->GetAttributeAddressRanges(this, /*check_hi_lo_pc=*/true);
+
+#ifdef MS_DEBUGGER
+    if (!ranges.IsEmpty()) {
+      auto last_range_end = ranges.GetEntryRef(0).GetRangeBase();
+      for (const DWARFRangeList::Entry &range : ranges) {
+        if (range.GetRangeBase() >= last_range_end) {
+          debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
+                                     range.GetRangeEnd());
+          last_range_end = range.GetRangeEnd();
+        }
+      }
+    }
+#else
     for (const DWARFRangeList::Entry &range : ranges)
       debug_aranges->AppendRange(cu_offset, range.GetRangeBase(),
                                  range.GetRangeEnd());
+#endif
 
     if (!ranges.IsEmpty())
       return;

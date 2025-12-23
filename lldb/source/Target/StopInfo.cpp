@@ -1,6 +1,6 @@
 //===-- StopInfo.cpp ------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -102,6 +102,16 @@ public:
     StoreBPInfo();
   }
 
+#ifdef MS_DEBUGGER
+  StopInfoBreakpoint(Thread &thread, break_id_t break_id, const ArchSpec& arch_spec)
+      : StopInfo(thread, break_id), m_should_stop(false),
+        m_should_stop_is_valid(false), m_should_perform_action(true),
+        m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
+        m_was_all_internal(false), m_was_one_shot(false), m_arch_spec(arch_spec) {
+    StoreBPInfo();
+  }
+#endif
+
   ~StopInfoBreakpoint() override = default;
 
   void StoreBPInfo() {
@@ -146,7 +156,16 @@ public:
     return false;
   }
 
+#ifdef MS_DEBUGGER
+  StopReason GetStopReason() const override {
+    if (m_arch_spec.GetMachine() == llvm::Triple::hiipu64) {
+      return eStopReasonDeviceBreakpoint;
+    }
+    return eStopReasonBreakpoint;
+  }
+#else
   StopReason GetStopReason() const override { return eStopReasonBreakpoint; }
+#endif
 
   bool ShouldStopSynchronous(Event *event_ptr) override {
     ThreadSP thread_sp(m_thread_wp.lock());
@@ -621,6 +640,9 @@ private:
   lldb::break_id_t m_break_id;
   bool m_was_all_internal;
   bool m_was_one_shot;
+#ifdef MS_DEBUGGER
+  ArchSpec m_arch_spec = ArchSpec();
+#endif
 };
 
 // StopInfoWatchpoint
@@ -1367,6 +1389,12 @@ StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
                                                           break_id_t break_id) {
   return StopInfoSP(new StopInfoBreakpoint(thread, break_id));
 }
+
+#ifdef MS_DEBUGGER
+StopInfoSP StopInfo::CreateStopReasonWithBreakpointSite(Thread &thread, lldb::BreakpointSiteSP break_site) {
+  return StopInfoSP(new StopInfoBreakpoint(thread, break_site->GetID(), break_site->GetArchSpec()));
+}
+#endif
 
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
                                                           break_id_t break_id,

@@ -1,6 +1,6 @@
 //===-- DWARFASTParserClang.cpp -------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -605,6 +605,9 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   TypeSP type_sp;
   CompilerType clang_type;
 
+#ifdef MS_DEBUGGER
+  uint32_t address_class = die.GetAttributeValueAsUnsigned(DW_AT_address_class, 0);
+#endif
   if (tag == DW_TAG_typedef) {
     // DeclContext will be populated when the clang type is materialized in
     // Type::ResolveCompilerType.
@@ -647,8 +650,12 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
       if (encoding_die &&
           encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
         type_sp = ParseTypeFromClangModule(sc, die, log);
-        if (type_sp)
+        if (type_sp) {
+#ifdef MS_DEBUGGER
+          type_sp->GetAddressClass() = address_class;
+#endif
           return type_sp;
+        }
       }
     }
   }
@@ -813,6 +820,13 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     }
   }
 
+#ifdef MS_DEBUGGER
+  type_sp = dwarf->MakeType(die.GetID(), attrs.name, attrs.byte_size, nullptr,
+                                 attrs.type.Reference().GetID(), encoding_data_type,
+                                 &attrs.decl, clang_type, resolve_state, payload);
+  type_sp->GetAddressClass() = address_class;
+  return type_sp;
+#endif
   return dwarf->MakeType(die.GetID(), attrs.name, attrs.byte_size, nullptr,
                          attrs.type.Reference().GetID(), encoding_data_type,
                          &attrs.decl, clang_type, resolve_state, payload);

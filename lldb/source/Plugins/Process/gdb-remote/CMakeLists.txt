@@ -1,10 +1,22 @@
+if(MS_DEBUGGER)
+  lldb_tablegen(ProcessGDBRemoteProperties.inc -gen-lldb-property-defs
+  SOURCE AscendProcessGDBRemoteProperties.td
+  TARGET LLDBPluginProcessGDBRemotePropertiesGen)
+else()
 lldb_tablegen(ProcessGDBRemoteProperties.inc -gen-lldb-property-defs
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesGen)
+endif()
 
+if(MS_DEBUGGER)
+  lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE AscendProcessGDBRemoteProperties.td
+  TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
+else()
 lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
+endif()
 
 set(LLDB_PLUGINS
   lldbPluginProcessUtility

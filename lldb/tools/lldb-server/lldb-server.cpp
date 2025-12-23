@@ -1,6 +1,6 @@
 //===-- lldb-server.cpp -----------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -28,9 +28,14 @@ static void display_usage(const char *progname) {
   fprintf(stderr, "Usage:\n"
                   "  %s v[ersion]\n"
                   "  %s g[dbserver] [options]\n"
+#ifdef MS_DEBUGGER
+                  "Invoke subcommand for additional help\n",
+          progname, progname);
+#else
                   "  %s p[latform] [options]\n"
                   "Invoke subcommand for additional help\n",
           progname, progname, progname);
+#endif
   exit(0);
 }
 
@@ -67,11 +72,13 @@ int main(int argc, char *argv[]) {
     main_gdbserver(argc, argv);
     llgs::terminate_debugger();
     break;
+#ifndef MS_DEBUGGER
   case 'p':
     llgs::initialize();
     main_platform(argc, argv);
     llgs::terminate_debugger();
     break;
+#endif
   case 'v':
     fprintf(stderr, "%s\n", lldb_private::GetVersion());
     break;

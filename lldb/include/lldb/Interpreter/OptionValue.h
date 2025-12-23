@@ -1,6 +1,6 @@
 //===-- OptionValue.h -------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -44,6 +44,9 @@ public:
     eTypeFileSpecList,
     eTypeFormat,
     eTypeLanguage,
+#ifdef MS_DEBUGGER
+    eTypeMemoryType,
+#endif
     eTypePathMap,
     eTypeProperties,
     eTypeRegex,
@@ -168,6 +171,10 @@ public:
       return eTypeFormat;
     case 1u << eTypeLanguage:
       return eTypeLanguage;
+#ifdef MS_DEBUGGER
+    case 1u << eTypeMemoryType:
+      return eTypeMemoryType;
+#endif
     case 1u << eTypePathMap:
       return eTypePathMap;
     case 1u << eTypeProperties:

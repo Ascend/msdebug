@@ -1,6 +1,6 @@
 //===-- ObjectFile.h --------------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -732,6 +732,11 @@ public:
     return false;
   }
 
+#ifdef MS_DEBUGGER
+  virtual std::shared_ptr<ModuleSpec> GetChildModuleSpec() {return nullptr;}
+  std::string GetKernelHash() const { return m_kernel_hash_loaded; }
+  void SetKernelHash(const llvm::ArrayRef<uint8_t>& data);
+#endif
   /// Get a hash that can be used for caching object file releated information.
   ///
   /// Data for object files can be cached between runs of debug sessions and
@@ -745,6 +750,9 @@ public:
 
 protected:
   // Member variables.
+#ifdef MS_DEBUGGER
+  std::string m_kernel_hash_loaded {};
+#endif
   FileSpec m_file;
   Type m_type;
   Strata m_strata;

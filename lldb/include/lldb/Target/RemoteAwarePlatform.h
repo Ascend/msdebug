@@ -1,6 +1,6 @@
 //===-- RemoteAwarePlatform.h -----------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -104,6 +104,11 @@ public:
 
 protected:
   lldb::PlatformSP m_remote_platform_sp;
+
+#ifdef MS_DEBUGGER
+private:
+  Status CheckOwnerOfExecutable(const ModuleSpec &resolved_module_spec);
+#endif
 };
 
 } // namespace lldb_private

@@ -1,0 +1,110 @@
+# REQUIRES: ascend-debugger
+# RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
+# RUN: cd ~/samples/operator/AddCustomSample/KernelLaunch/AddKernelInvocation/
+# msdebug -v
+# RUN:  msdebug add_npu -s %s | FileCheck %s -dump-input=always
+
+b add_custom.cpp:44
+# CHECK-LABEL: b add_custom.cpp:44
+# CHECK-NEXT: Breakpoint {{[0-9]+}}:
+
+run 
+# CHECK-LABEL: run
+# CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
+# CHECK: Process {{[0-9]+}} stopped
+# CHECK-NEXT: [Switching to focus on Kernel {{[0-9a-zA-Z_]+}}, CoreId {{[0-9]+}}, Type {{[aivc]+}}]
+# CHECK-NEXT: * thread #1, name = '{{.*}}', stop reason = breakpoint 1.{{[1-9]}}
+# CHECK-NEXT:    frame #0: 0x{{[0-9a-f]+}} {{[^(]+\(.*\)}} at add_custom.cpp:44:{{[0-9]+}}
+
+register read -a
+# CHECK-LABEL: register read -a
+# CHECK: PC = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:COND = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:CTRL = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR0 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR1 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR2 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR3 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR4 = 0x{{[0-9A-F]+}} 
+# CHECK-NEXT:GPR5 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR6 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR7 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR8 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR9 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:MASK = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR10 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR11 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR12 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR13 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR14 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR15 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR16 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR17 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR18 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR19 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR20 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR21 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR22 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR23 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR24 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR25 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR26 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR27 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR28 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR29 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR30 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:GPR31 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:LPCNT = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF0 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF1 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF2 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF3 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF4 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF5 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF6 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VARF7 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:STATUS = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:ACC_VAL = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:CMPMASK = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:PNT_COE = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:SYS_CNT = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VMS4_SR = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:DEQSCALE = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:RSVD_CNT = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:DATA_EXP0 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:DATA_EXP1 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:DATA_EXP2 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:DATA_EXP3 = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:MAXMIN_CNT = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:RPN_COR_IR = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:RPN_OFFSET = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:LRELU_ALPHA = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:ICACHE_PRL_ST = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:SAFETY_CRC_EN = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:ST_ATOMIC_CFG = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:CALL_DEPTH_CNT = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:CONDITION_FLAG = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:FFTS_BASE_ADDR = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:VEC_EVENT_TABLE = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:MTE2_EVENT_TABLE = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:MTE3_EVENT_TABLE = 0x{{[0-9A-F]+}}
+# CHECK-NEXT:SCALAR_EVENT_TABLE = 0x{{[0-9A-F]+}}
+
+register read $PC
+# CHECK-LABEL: register read $PC
+# CHECK:                   PC = 0x{{[0-9A-F]+}}
+
+register read $CMPMASK
+# CHECK-LABEL: register read $CMPMASK
+# CHECK:              CMPMASK = 0x{{[0-9A-F]+}}
+
+register read $FFTS_BASE_ADDR
+# CHECK-LABEL: register read $FFTS_BASE_ADDR
+# CHECK:       FFTS_BASE_ADDR = 0x{{[0-9A-F]+}}
+
+register read $SYS_CNT
+# CHECK-LABEL: register read $SYS_CNT
+# CHECK:              SYS_CNT = 0x{{[0-9A-F]+}}
+
+quit
+y
