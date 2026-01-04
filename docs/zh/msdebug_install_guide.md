@@ -9,13 +9,9 @@ MindStudio Debugger（算子调试工具，msDebug）工具用于调试NPU侧运
 
 **配置用户名和密钥**
 
-为了确保代码能够下载成功，需提前在环境中配置git仓库的用户名和密码。
-
-执行以下命令，配置git存储用户密码，并通过git submodule下载.gitmodules中的子仓库，在下载过程中可能会提示需要输入用户名和密码，输入后git会记住授权信息，后续就不会再需要输入用户名和密码了。
-
-```shell
+为了避免依赖下载过程中反复输入密码，可通过如下命令配置git保存用户密码：
+```
 git config --global credential.helper store
-git submodule update --init --recursive --depth=1
 ```
 
 **准备工具**
@@ -29,7 +25,11 @@ git submodule update --init --recursive --depth=1
 
 ### 软件包构建
 
-- 命令行方式  
+- 命令行方式
+  执行如下命令下载项目构建依赖的子仓库，并更新依赖到最新代码：
+  ```
+  python download_dependencies.py
+  ```
   执行如下命令，构建软件包。
 
     ```shell

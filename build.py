@@ -32,17 +32,6 @@ def exec_cmd(cmd, env=None, shell=False):
         sys.exit(1)       
 
 
-def update_submodle(args):
-        logging.info("============ start download thirdparty code using git submodule ============")
-        if 'test' not in args.command and 'fuzz' not in args.command:
-            # 只构建打包时，只需下载构建所需子仓即可
-            exec_cmd(["git", "submodule", "update", "--init", "--depth=1", "--jobs=4",
-                   "third-party/libedit", "third-party/ncurses", "third-party/makeself"])
-        else:
-            exec_cmd(["git", "submodule", "update", "--init", "--recursive", "--depth=1", "--jobs=4"])      
-        logging.info("============ download thirdparty code success ============")
-
-
 def execute_build(build_path):
     try:
         if not os.path.exists(build_path):
@@ -99,7 +88,9 @@ if __name__ == "__main__":
 
     # 解析入参是否为local，非local场景时按需更新代码；local场景不更新代码只使用本地代码
     if 'local' not in args.command:
-        update_submodle(args)
+        from download_dependencies import update_submodule
+        update_submodule(args)
+
     # 执行构建并打run包
     execute_compile(args)
     execute_build(build_path)
