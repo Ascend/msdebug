@@ -34,6 +34,8 @@ public:
 
   Status DoLoadCore() override;
 
+  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size, Status &error) override;
+
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       const MemoryReaderParamClient &param, Status &error) override;
   bool CanDebug(lldb::TargetSP target_sp,

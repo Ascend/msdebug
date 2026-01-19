@@ -2189,8 +2189,15 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
           lldb_regnum, regloc, m_frame_number - 1, pc_register)) {
     return false;
   }
+#ifdef MS_DEBUGGER
+  Log *log = GetLog(LLDBLog::Unwind);
+  LLDB_LOG(log, "Start ReadRegisterValueFromRegisterLocation.");
+#endif
   if (ReadRegisterValueFromRegisterLocation(regloc, reg_info, reg_value)) {
     value = reg_value.GetAsUInt64();
+#ifdef MS_DEBUGGER
+    LLDB_LOG(log, "Got register value={0:x} from ReadRegisterValueFromRegisterLocation.", value);
+#endif
     if (pc_register) {
       if (ABISP abi_sp = m_thread.GetProcess()->GetABI()) {
         value = abi_sp->FixCodeAddress(value);
