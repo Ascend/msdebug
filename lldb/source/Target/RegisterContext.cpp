@@ -19,6 +19,9 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Utility/LLDBLog.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -349,6 +352,11 @@ Status RegisterContext::ReadRegisterValueFromMemory(
     // Read the memory
     const uint32_t bytes_read =
         process_sp->ReadMemory(src_addr, src.data(), src_len, error);
+#ifdef MS_DEBUGGER
+    Log *log = GetLog(LLDBLog::Process);
+    LLDB_LOG(log, "Got {0} bytes with src_addr={1:x}, src_len={2}, through ReadMemory",
+             bytes_read, src_addr, src_len);
+#endif
 
     // Make sure the memory read succeeded...
     if (bytes_read != src_len) {

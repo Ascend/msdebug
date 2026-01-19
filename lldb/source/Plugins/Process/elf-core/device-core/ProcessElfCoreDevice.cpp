@@ -514,8 +514,40 @@ Status ProcessElfCoreDevice::ParseRegData(const SectionSP& section, uint64_t cor
   return error;
 }
 
+// for A2/3
+static uint64_t TranslateStackVaToDmaAddr(CoreIDType core_id, CoreType core_type, uint64_t stack_va) {
+  Log *log = GetLog(LLDBLog::Process);
+  // 1. read SYS_VA_BASE, STACK_PHY_BASE
+  uint64_t sys_va_base = 0; // when start securely, base is 0
+  uint64_t stack_phy_base = 0xff000000000; // read from register will be more accurate
+  // 2. transform
+  uint64_t new_stack_va = stack_va;
+  uint64_t dma_addr = stack_va;
+  constexpr uint64_t va_begin_offset = 0x100000;
+  constexpr uint64_t va_end_offset = 0x1000000;
+  constexpr uint64_t valid_stack_addr_mask = 0xfffffffffe000000;
+  if (stack_va > sys_va_base + va_begin_offset && stack_va < sys_va_base + va_end_offset) {
+    if ((stack_phy_base & valid_stack_addr_mask) == (sys_va_base & valid_stack_addr_mask)) {
+      // stack is mapped in UB case. basically we want match if the upper 39bits are the same
+      LLDB_LOG(log, "stack should be accessed from UB");
+    } else {
+      LLDB_LOG(log, "stack is mapped at GM");
+      dma_addr = new_stack_va - (sys_va_base + va_begin_offset) + stack_phy_base;
+    }
+  }
+  LLDB_LOG(log, "stack_va={0:x}, dma_addr={1:x}", new_stack_va, dma_addr);
+  return dma_addr;
+}
+
 const SummaryInfo& ProcessElfCoreDevice::GetSummaryInfo() {
   return m_summary_info;
+}
+
+size_t ProcessElfCoreDevice::ReadMemory(lldb::addr_t addr, void *buf, size_t size, Status &error) {
+  MemoryReaderParamClient param{};
+  param.arch_spec = ArchSpec("hiipu64");
+  param.address_class = DeviceAddressClass::STACK;
+  return DoReadMemory(addr, buf, size, param, error);
 }
 
 size_t ProcessElfCoreDevice::DoReadMemory(addr_t addr, void *buf, size_t size,
@@ -524,15 +556,25 @@ size_t ProcessElfCoreDevice::DoReadMemory(addr_t addr, void *buf, size_t size,
   LLDB_LOG(log, "Read memory: addr={0:x}, size={1}, core_id={2}, core_type={3}, address_class={4}",
            addr, size, m_summary_info.focus_core_id, static_cast<uint8_t>(m_summary_info.focus_core_type),
            static_cast<uint32_t>(param.address_class));
-  if (AddressClassGlobalDataTypeMap.find(param.address_class) != AddressClassGlobalDataTypeMap.end()) {
-    return ReadGlobalMemory(param.address_class, addr, size, buf, error);
+  MemoryReaderParamClient newParam = param;
+  if (param.address_class == DeviceAddressClass::STACK) {
+    addr = TranslateStackVaToDmaAddr(m_summary_info.focus_core_id, m_summary_info.focus_core_type, addr);
+    newParam.address_class = DeviceAddressClass::DCACHE;
+    LLDB_LOG(log, "After translate stack addr, Read stack memory from dcache.");
   }
-  if (AddressClassLocalDataTypeMap.find(param.address_class) != AddressClassLocalDataTypeMap.end()) {
-    return ReadLocalMemory(AddressClassLocalDataTypeMap[param.address_class], addr, size, buf, error);
+  size_t readSize = 0;
+  if (AddressClassGlobalDataTypeMap.find(newParam.address_class) != AddressClassGlobalDataTypeMap.end()) {
+    readSize = ReadGlobalMemory(newParam.address_class, addr, size, buf, error);
+  } else if (AddressClassLocalDataTypeMap.find(newParam.address_class) != AddressClassLocalDataTypeMap.end()) {
+    readSize = ReadLocalMemory(AddressClassLocalDataTypeMap[newParam.address_class], addr, size, buf, error);
+  } else {
+    error.SetErrorStringWithFormat(
+        "Memory type is unknown, read memory from coredump file failed, please check command: ascend info summary");
   }
-  error.SetErrorStringWithFormat(
-      "Memory type is unknown, read memory from coredump file failed, please check command: ascend info summary");
-  return 0;
+  LLDB_LOG(log, "Read memory: addr={0:x}, size={1}, core_id={2}, core_type={3}, address_class={4}, readSize={5}",
+           addr, size, m_summary_info.focus_core_id, static_cast<uint8_t>(m_summary_info.focus_core_type),
+           static_cast<uint8_t>(newParam.address_class), readSize);
+  return readSize;
 }
 
 size_t ProcessElfCoreDevice::ReadGlobalMemory(DeviceAddressClass address_class,
