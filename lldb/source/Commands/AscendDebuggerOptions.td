@@ -494,7 +494,7 @@ let Command = "memory read" in {
     Required, Desc<"The name of a type to view memory as.">;
   def memory_read_language : Option<"language", "x">, Group<4>, Arg<"Language">,
     Desc<"The language of the type to view memory as.">;
-  def memory_read_offset : Option<"offset", "E">, Group<3>, Arg<"Count">,
+  def memory_read_offset : Option<"offset", "E">, Groups<[1,3]>, Arg<"Count">,
     Desc<"How many elements of the specified type to skip before starting to "
     "display data.">;
   def memory_read_force : Option<"force", "r">, Groups<[1,2,3]>,

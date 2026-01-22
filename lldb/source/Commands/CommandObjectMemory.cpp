@@ -730,15 +730,18 @@ protected:
         return;
       }
 
-      Address address(addr, nullptr);
 #ifdef MS_DEBUGGER
+      uint8_t element_size = OptionGroupReadMemory::GetElementSize(m_format_options.GetFormat());
+      addr = addr + (element_size * m_memory_options.m_offset.GetCurrentValue());
+      Address address(addr, nullptr);
       MemoryReaderParamClient param{};
-      param.element_size = OptionGroupReadMemory::GetElementSize(m_format_options.GetFormat());
+      param.element_size = element_size;
       param.address_class = m_memory_options.m_mem_type.GetCurrentValue();
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true,
                                       nullptr, param);
 #else
+      Address address(addr, nullptr);
       bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
                                       data_sp->GetByteSize(), error, true);
 #endif
