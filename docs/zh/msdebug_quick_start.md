@@ -10,7 +10,12 @@ MindStudio Debugger（算子调试工具，msDebug）支持调试所有昇腾算
 
 **环境准备**
 
-请参考[MindStudio Debugger安装指南](./msdebug_install_guide.md)安装msDebug工具。
+- 请参考[MindStudio Debugger安装指南](./msdebug_install_guide.md)安装msDebug工具。
+- 单击[链接](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom)，获取算子核函数开发和Tiling实现的代码样例。下载样例时，需指定分支版本。
+
+    ```shell
+    git clone https://gitee.com/ascend/samples.git -b r0.2
+    ```
 
 ## 操作步骤
 
