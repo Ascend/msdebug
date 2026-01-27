@@ -2882,7 +2882,6 @@ protected:
             return;
           }
           auto *objfile = temp_module->GetObjectFile();
-          objfile->SetKernelHash(FileSystem::Instance().CreateDataBuffer(file_spec)->GetData());
           if (objfile && (objfile->GetEntryPointAddress().GetOffset() == 0U) &&
             (objfile->GetType() == ObjectFile::eTypeExecutable)) {
             module_spec.GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);

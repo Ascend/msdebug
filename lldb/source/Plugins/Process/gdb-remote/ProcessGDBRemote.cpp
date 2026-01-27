@@ -91,9 +91,6 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
-#ifdef MS_DEBUGGER
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
-#endif
 
 #define DEBUGSERVER_BASENAME "debugserver"
 using namespace lldb;
@@ -3181,9 +3178,6 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) &&
       (!bp_site->HardwareRequired())) {
 #ifdef MS_DEBUGGER
-    if (bp_site->GetArchSpec().GetMachine() == llvm::Triple::hiipu64) {
-      SendKernelHash();
-    }
     uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, true, addr, bp_op_size,
                                                              GetInterruptTimeout(), bp_site->GetArchSpec());
 #else
@@ -6227,19 +6221,12 @@ bool ProcessGDBRemote::ReadDeviceRegister(uint32_t register_id, uint64_t &value)
   return false;
 }
 
-Status ProcessGDBRemote::SendKernelHash() {
-  auto module_size = GetTarget().GetImages().GetSize();
-  LLDB_LOGF(GetLog(GDBRLog::Process), "module size: %zu", module_size);
-  std::string kernel_hash {};
-  for (size_t i = 0; i < module_size; ++i) {
-    std::string tmp_kernel_hash = GetTarget().GetImages().GetModuleAtIndex(i)->GetObjectFile()->GetKernelHash();
-    kernel_hash = tmp_kernel_hash.empty() ? kernel_hash : tmp_kernel_hash;
-  }
-  LLDB_LOGF(GetLog(GDBRLog::Process), "send kernel hash: %s", kernel_hash.c_str());
+Status ProcessGDBRemote::GetDeviceBinaryInfo(DeviceBinaryInfo &device_binary_info) {
+  constexpr auto timeout = std::chrono::seconds(20);
   Status error;
-  uint8_t error_no = m_gdb_comm.SendKernelHashPacket(kernel_hash);
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBDeviceBinaryPacket(device_binary_info, timeout);
   if (error_no != 0) {
-    error.SetErrorStringWithFormat("error: %d send kernel hash failed", error_no);
+    error.SetErrorStringWithFormat("error: %d Get device binary failed.", error_no);
   }
   return error;
 }
@@ -6248,7 +6235,7 @@ Status ProcessGDBRemote::SendDeviceId(const int32_t device_id) {
   Status error;
   uint8_t error_no = m_gdb_comm.SendDeviceIdPacket(device_id);
   if (error_no != 0) {
-    error.SetErrorStringWithFormat("error: %d send kernel hash failed", error_no);
+    error.SetErrorStringWithFormatv("error: {0} send device id {1} failed", error_no, device_id);
   }
   return error;
 }

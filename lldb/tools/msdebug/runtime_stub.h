@@ -31,19 +31,20 @@ struct rtDevBinary_t {
 
 class MapManager : public Singleton<MapManager, false> {
 public:
-  KernelInfo GetKernelInfo(const void *handle)
+  const KernelInfo &GetKernelInfo(const void *handle) const
   {
     if (handleKernelInfoMap_.find(handle) != handleKernelInfoMap_.end()) {
-      return handleKernelInfoMap_[handle];
+      return handleKernelInfoMap_.at(handle);
     }
     ThrowErrorCode(GET_KERNEL_INFO_ERROR);
-    return KernelInfo();
+    static KernelInfo empty;
+    return empty;
   }
 
-  const void* GetHandle(const void *stubFunc)
+  const void* GetHandle(const void *stubFunc) const
   {
     if (funcHandleMap_.find(stubFunc) != funcHandleMap_.end()) {
-      return funcHandleMap_[stubFunc];
+      return funcHandleMap_.at(stubFunc);
     }
     return nullptr;
   }
@@ -71,7 +72,8 @@ private:
 int32_t SendInfoAndWaitForReply(const std::string &buf);
 int32_t SendStreamId(uint32_t stream_id);
 int32_t SendDeviceInfo(int32_t device, const std::string &socVersion, pid_t tgid);
-int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash, uint64_t pcAddr);
+int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash,
+                       const std::vector<char> &elf, uint64_t pcAddr);
 void ShowKernelLaunchInfo(const std::string &kernelName, int32_t deviceId);
 void EnvCheck();
 bool BinaryRegisterPost(const rtDevBinary_t *bin, void *hdl, const std::string &hash, std::string &err);
@@ -112,6 +114,7 @@ VISIBILITY_EXPORT rtError_t rtDevBinaryRegister(const rtDevBinary_t *bin, void *
 VISIBILITY_EXPORT rtError_t rtRegisterAllKernel(const rtDevBinary_t *bin, void **handle);
 VISIBILITY_EXPORT rtError_t rtGetTaskIdAndStreamID(uint32_t *taskId, uint32_t *streamId);
 VISIBILITY_EXPORT rtError_t rtStreamSynchronizeWithTimeout(rtStream_t stream, int32_t timeout);
+VISIBILITY_EXPORT __attribute__((noinline)) void MSBreakOnLaunch();
 }
 
 #endif

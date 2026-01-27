@@ -32,7 +32,7 @@
 
 #include "llvm/Support/VersionTuple.h"
 #ifdef MS_DEBUGGER
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility//MessageDefines.h"
 #endif
 
 namespace lldb_private {
@@ -327,7 +327,10 @@ public:
   uint8_t SendAndWaitGDBAscendInfoRegisterListPacket( //ascend register list
       std::vector<std::string> &reg_list, //ascend register list
       std::chrono::seconds timeout); // Time to wait for an interrup);
-  uint8_t SendKernelHashPacket(const std::string &kernel_hash);
+
+  uint8_t SendAndWaitGDBDeviceBinaryPacket(
+      DeviceBinaryInfo &device_binary_info, std::chrono::seconds timeout);
+
   uint8_t SendDeviceIdPacket(const int32_t device_id);
 #endif
   void TestPacketSpeed(const uint32_t num_packets, uint32_t max_send,

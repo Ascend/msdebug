@@ -10,7 +10,6 @@
 #include "AscendThreadLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
-#include "lldb/Utility/AscendVerification.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -19,14 +18,14 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 using namespace llvm;
-const std::string DEVICE_INFO_HEADER{"$device_id:"};
-const std::string KERNEL_INFO_HEADER{"$kernel_name:"};
-const std::string STREAM_ID_HEADER{"$stream_id:"};
+const std::string DEVICE_INFO_HEADER{"device_id:"};
+const std::string KERNEL_INFO_HEADER{"kernel_name:"};
+const std::string STREAM_ID_HEADER{"stream_id:"};
 constexpr uint32_t VEC_SIZE = 4;
-constexpr uint32_t RADIX_DEC = 10;
-std::condition_variable g_pause_cv;
-std::mutex g_pause_mutex;
-bool g_paused = false;
+
+static std::condition_variable g_pause_cv;
+static std::mutex g_pause_mutex;
+static bool g_paused = false;
 
 enum ASCEND_PROCESS_ERROR_CODE {
     OPEN_KO_ERR = 0x20200,
@@ -49,13 +48,11 @@ AscendProcessLinux::AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDeleg
     m_server->SetMsgHandlerHook(func);
     m_server->Start();
   }
-  m_base_pc = 0;
   m_pos_info.core_type = CoreType::UNKNOWN_CORE_TYPE;
   m_pos_info.core_id = 0;
   m_device_context.reset();
 
   m_cores_info.clear();
-  m_lazy_calls.clear();
   m_kernel_name.clear();
 
   for (const auto &tid : tids) {
@@ -69,8 +66,6 @@ AscendProcessLinux::AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDeleg
   // Proccess any signals we received before installing our handler
   /* SigchldHandler(); */
 }
-
-AscendProcessLinux::~AscendProcessLinux() = default;
 
 Status AscendProcessLinux::InitDeviceContext(const int device_id, const std::string &soc_version, const ::pid_t tgid) {
   Log *log = GetLog(POSIXLog::Process);
@@ -140,33 +135,13 @@ Status AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kernel_info
       LLDB_LOG(log, "client is not matched");
       break;
     }
-    LLDB_LOG(log, "Process kernel info");
-    if (kernel_info_msg.kernel_hash != m_kernel_hash_loaded) {
-      LLDB_LOG(log, "kernel name: {0}, kernel hash is not matched, stub kernel "
-                    "hash: {1}, loaded kernel hash: {2}, do not process pc",
-                    m_kernel_name, m_kernel_hash_stub, m_kernel_hash_loaded);
-      break;
-    }
-    if (m_is_handle_pc) {
-      LLDB_LOG(log, "has already processed pc");
-      break;
-    }
     m_kernel_name = kernel_info_msg.kernel_name;
-    m_base_pc = kernel_info_msg.pc_base_addr;
-    LLDB_LOGF(log, "success get base_pc=%#lx", m_base_pc);
-    m_device_context->SetCanRun(false);
-    for (const auto &func: m_lazy_calls) {
-      final_error = func();
-      if (final_error.Fail()) {
-        LLDB_LOG(log, "Lazy call failed: reason: {0}", final_error);
-      }
+    LLDB_LOG(log, "update kernel_name to {0}", m_kernel_name);
+    if (!kernel_info_msg.elf.empty()) {
+      m_device_binary_info_que.push({kernel_info_msg.pc_base_addr, kernel_info_msg.elf});
+      LLDB_LOG(log, "success get base_pc={0:x}, kernel_hash={1}", kernel_info_msg.pc_base_addr,
+               kernel_info_msg.kernel_hash);
     }
-    // the lazy calls functions run only once, need to clear
-    if (!final_error.Fail()) {
-      m_lazy_calls.clear();
-      m_is_handle_pc = true;
-    }
-    m_device_context->SetCanRun(true);
   } while (0);
 
   return final_error;
@@ -190,7 +165,6 @@ Status AscendProcessLinux::HandleStreamId(uint32_t stream_id) {
 void AscendProcessLinux::RegisterParsers() {
   m_parser.Register(
     DEVICE_INFO_HEADER,
-    "\\$device_id:(\\d+);tgid:(\\d+);soc_version:([^;]+);",
     std::make_shared<DeviceHandler>([this](const DeviceInfoMsg& msg) {
         return HandleStubDeviceInfo(msg);
     })
@@ -198,7 +172,6 @@ void AscendProcessLinux::RegisterParsers() {
 
   m_parser.Register(
     KERNEL_INFO_HEADER,
-    "\\$kernel_name:([^;]+);kernel_hash:([^;]+);pc_base_addr:([\\d;]+);",
     std::make_shared<KernelHandler>([this](const KernelInfoMsg& msg) {
         return HandleStubKernelInfo(msg);
     })
@@ -206,7 +179,6 @@ void AscendProcessLinux::RegisterParsers() {
 
   m_parser.Register(
     STREAM_ID_HEADER,
-    "\\$stream_id:(\\d+);",
     std::make_shared<StreamHandler>([this](uint32_t stream_id) {
         return HandleStreamId(stream_id);
     })
@@ -215,11 +187,18 @@ void AscendProcessLinux::RegisterParsers() {
 
 void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg) {
   Log *log = GetLog(POSIXLog::Process);
-  if (m_socket_device_pid.find(client_socket) == m_socket_device_pid.end()) {
-    LLDB_LOG(log, "receive this device id for the fisrt time, message is: {0}", msg);
+  constexpr int display_length = 1024;
+  llvm::StringRef display_msg(msg.data(), msg.length());
+  if (display_msg.size() > display_length) {
+    display_msg = display_msg.slice(0, display_length);
+  }
+  auto it = m_socket_device_pid.find(client_socket);
+  if (it == m_socket_device_pid.end()) {
+    LLDB_LOG(log, "receive this device id for the fisrt time, message is: {0}, original length is {1}",
+             display_msg, msg.length());
   } else {
     LLDB_LOG(log, "receive message for device id: {0}, pid: {1}, message is: {2}",
-      m_socket_device_pid[client_socket].first, m_socket_device_pid[client_socket].second, msg);
+             it->second.first, it->second.second, display_msg, msg.length());
   }
   // 让这个处理函数变成串行, 因为很多地方用到了m_client_socket，并行逻辑会乱
   std::lock_guard<std::mutex> guard(m_socket_mutex);
@@ -293,13 +272,6 @@ Status AscendProcessLinux::RemoveBreakpoint(
 }
 
 Status AscendProcessLinux::RemoveDeviceHardwareBreakpoint(lldb::addr_t addr) {
-  Log *log = GetLog(LLDBLog::Breakpoints);
-  if (m_base_pc == 0) {
-    LLDB_LOG(log, "save lazy call for {0} with addr = {1:x}", __FUNCTION__, addr);
-    auto func = [this, addr]() -> Status { return RemoveDeviceHardwareBreakpoint(addr); };
-    m_lazy_calls.push_back(func);
-    return Status();
-  }
   Status error = m_device_context->RemoveHardwareBreakpoint(addr, m_stream_id, m_pos_info);
   if (error.Fail()) {
     return error;
@@ -313,17 +285,7 @@ Status AscendProcessLinux::RemoveDeviceHardwareBreakpoint(lldb::addr_t addr) {
 
 Status AscendProcessLinux::RemoveDeviceSoftwareBreakpoint(lldb::addr_t addr) {
   Log *log = GetLog(LLDBLog::Breakpoints);
-  if (m_base_pc == 0) {
-    LLDB_LOG(log, "save lazy call for {0} with addr = {1:x}", __FUNCTION__, addr);
-    auto func = [this, addr]() -> Status { return RemoveDeviceSoftwareBreakpoint(addr); };
-    m_lazy_calls.push_back(func);
-    return Status();
-  }
   Status error;
-  if (m_base_pc == 0) {
-    error.SetErrorString("base_pc=0");
-    return error;
-  }
   LLDB_LOG(log, "addr = {0:x}", addr);
   auto it = m_software_breakpoints.find(addr);
   if (it == m_software_breakpoints.end())
@@ -346,6 +308,14 @@ Status AscendProcessLinux::RemoveDeviceSoftwareBreakpoint(lldb::addr_t addr) {
 
 
 Status AscendProcessLinux::Resume(const ResumeActionList &resume_actions) {
+  std::lock_guard<std::mutex> guard(m_status_mtx);
+  std::shared_ptr<void> defer(nullptr, [this](std::nullptr_t &) {
+    if (m_state == lldb::eStateRunning) {
+      // when resume host, device may invocate a breakpoint then change all thread status to stop more quickly
+      // make sure we finished resume thread response then start receive event from driver
+      m_device_context->SetCanRun(true);
+    }
+  });
   if (!IsDeviceBreak()) {
     return NativeProcessLinux::Resume(resume_actions);
   }
@@ -369,8 +339,6 @@ Status AscendProcessLinux::Resume(const ResumeActionList &resume_actions) {
       const int signo = action->signal;
       ResumeThread(static_cast<NativeThreadLinux &>(*thread), action->state,
                    signo);
-      // make sure we finished resume thread response then start receive event from driver
-      m_device_context->SetCanRun(true);
       break;
     }
     case eStateSuspended:
@@ -384,14 +352,6 @@ Status AscendProcessLinux::Resume(const ResumeActionList &resume_actions) {
 }
 
 Status AscendProcessLinux::SetDeviceHardwareBreakpoint(lldb::addr_t addr) {
-  Log *log = GetLog(LLDBLog::Breakpoints);
-  if (m_base_pc == 0) {
-    LLDB_LOG(log, "save lazy call for {0} with addr = {1:x}", __FUNCTION__, addr);
-    auto func = [this, addr]() -> Status { return SetDeviceHardwareBreakpoint(addr); };
-    m_lazy_calls.push_back(func);
-    return Status();
-  }
-  addr += m_base_pc;
   return m_device_context->SetHardwareBreakpoint(addr, m_stream_id, m_pos_info);
 }
 
@@ -408,11 +368,6 @@ AscendThreadLinux *AscendProcessLinux::GetCurrentThread() {
 
 Status AscendProcessLinux::SetDeviceSoftwareBreakpoint(lldb::addr_t addr) {
   Log *log = GetLog(LLDBLog::Breakpoints);
-  if (m_base_pc == 0) {
-    auto func = [this, addr]() -> Status { return SetDeviceSoftwareBreakpoint(addr); };
-    m_lazy_calls.push_back(func);
-    return Status();
-  }
   LLDB_LOG(log, "addr = {0:x}", addr);
 
   auto it = m_software_breakpoints.find(addr);
@@ -473,15 +428,10 @@ Status AscendProcessLinux::SetSwBpByMemory(lldb::addr_t addr,
   LLDB_LOG(log, "{0}", __FUNCTION__);
   size_t bytes_read = 0;
   Status error;
-  if (m_base_pc == 0) {
-    error.SetErrorString("base_pc=0");
-    return error;
-  }
   if (m_device_context == nullptr) {
     error.SetErrorString("device context is null!");
     return error;
   }
-  addr += m_base_pc;
   error = ReadDeviceMemory(addr, saved_opcode_bytes.data(), saved_opcode_bytes.size(), bytes_read);
   if (error.Fail()) {
     error.SetErrorStringWithFormat(
@@ -523,15 +473,10 @@ Status AscendProcessLinux::RemoveSwBpByMemory(lldb::addr_t addr, const SoftwareB
   Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOG(log, "{0}", __FUNCTION__);
   Status error;
-  if (m_base_pc == 0) {
-    error.SetErrorString("base_pc=0");
-    return error;
-  }
   if (m_device_context == nullptr) {
     error.SetErrorString("device context is null!");
     return error;
   }
-  addr += m_base_pc;
   llvm::SmallVector<uint8_t, VEC_SIZE> curr_break_op(bp.breakpoint_opcodes.size(), 0);
   size_t bytes_read = 0;
   error = ReadDeviceMemory(addr, curr_break_op.data(), curr_break_op.size(), bytes_read);
@@ -592,9 +537,9 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
               param->pc, param->core_id, int(param->status), param->core_type,
               (uint8_t)param->pos_type, param->thread_dim_x, param->thread_dim_y, param->thread_dim_z);
     InterruptEvent event = *param;
-    event.pc -= m_base_pc;
     LLDB_LOGF(log, "event pc=%#lx, core_id=%u, core_status=%d",
               event.pc, event.core_id, int(event.status));
+    std::lock_guard<std::mutex> guard(m_status_mtx);
     if (param->status == CoreStatus::BRKPT) {
       MonitorBreakpoint(event);
     } else if (param->status == CoreStatus::SINGLE_STEP) {
@@ -602,6 +547,28 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
     } else if (param->status == CoreStatus::TASK_KILLED) {
       MonitorSignal(event);
     }
+  }
+}
+
+void AscendProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
+  LLDB_LOG(log, "received host breakpoint event, pid = {0}", thread.GetID());
+  ThreadStopInfo stop_info;
+  std::string description;
+  // we btter stop host process in future.
+  if (thread.GetStopReason(stop_info, description) && stop_info.still_break_in_device) {
+    LLDB_LOG(log, "warn: current device process is debugging, ignore host breakpoint event.");
+    return;
+  }
+  NativeProcessLinux::MonitorBreakpoint(thread);
+  // We should monitor all host states to detect device context switches.
+  // Currently only breakpoints are handled;
+  // full solution requires handling all interrupts and suspending device listening.
+  if (m_device_context && thread.GetState() == lldb::eStateStopped) {
+    m_device_context->SetCanRun(false);
+  } else {
+    LLDB_LOG(log, "Can not stop device context detect: after host MonitorBreakpoint, "
+             "thread state {0}", thread.GetState());
   }
 }
 
@@ -627,6 +594,7 @@ void AscendProcessLinux::MonitorBreakpoint(const InterruptEvent &param) {
       continue;
     }
     LLDB_LOG(log, "Handle breakpoint process state, pid = {0}", thread->GetID());
+    thread->RequestStop();
     // Mark the thread as stopped at breakpoint.
     thread->SetStoppedByDeviceBreakpoint(param);
     m_pending_notification_tid = thread->GetID();
@@ -693,8 +661,13 @@ void AscendProcessLinux::SetSingleCoreRunFlag(bool isSingleCoreRun) {
   m_pos_info.single_core_run = isSingleCoreRun;
 }
 
-void AscendProcessLinux::SetLoadedKernelHash(const std::string &kernel_hash) {
-  m_kernel_hash_loaded = kernel_hash;
+bool AscendProcessLinux::ConsumeKernelBinary(DeviceBinaryInfo &info) {
+  if (m_device_binary_info_que.empty()) {
+    return false;
+  }
+  info = std::move(m_device_binary_info_que.front());
+  m_device_binary_info_que.pop();
+  return true;
 }
 
 void AscendProcessLinux::SetClientDeviceId(const int32_t device_id) {
@@ -749,17 +722,13 @@ Status AscendProcessLinux::GetStoppedCorePC(addr_t &pc) {
   }
   for (const auto &core_info: m_cores_info) {
     if (core_info.core_id == m_pos_info.core_id) {
-      pc = core_info.pc - m_base_pc;
+      pc = core_info.pc;
       return error;
     }
   }
   error.SetErrorStringWithFormatv("get pc failed: core_id={0}, size={1}",
                                   m_pos_info.core_id, m_cores_info.size());
   return error;
-}
-
-addr_t AscendProcessLinux::GetBasePC() {
-  return m_base_pc;
 }
 
 Status AscendProcessLinux::GetKernelInfo(KernelInfo &info) {

@@ -1987,7 +1987,6 @@ std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec() {
     }
     data_buf.reset(new DataBufferHeap(data.GetDataStart() + offset, node.aicore_len));
   }
-  SetKernelHash(data_buf->GetData());
   auto fspec = GetFileSpec().CopyByAppendingPathComponent(llvm::StringRef("device_debugdata"));
   auto module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
   module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);

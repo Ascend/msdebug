@@ -32,7 +32,7 @@
 #include <vector>
 
 #ifdef MS_DEBUGGER
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility/MessageDefines.h"
 #include "lldb/Interpreter/OptionValueMemoryType.h"
 #endif
 
@@ -117,8 +117,7 @@ public:
   virtual Status GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache = false) { return Status(); }
   virtual Status GetStoppedCorePC(lldb::addr_t &pc) { return Status(); }
   virtual Status GetKernelInfo(KernelInfo &info) = 0;
-  virtual lldb::addr_t GetBasePC() { return 0ULL; }
-  virtual void SetLoadedKernelHash(const std::string &kernel_hash) = 0;
+  virtual bool ConsumeKernelBinary(DeviceBinaryInfo &info) { return false; }
   virtual SocType GetSocType() {return SocType::SOC_END;};
   virtual void SetClientDeviceId(const int32_t device_id) = 0;
 #endif

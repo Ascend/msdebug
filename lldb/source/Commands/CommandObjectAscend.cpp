@@ -16,7 +16,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/AscendVerification.h"
 #include "lldb/Core/Debugger.h"
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility//MessageDefines.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Target/StopInfo.h"
@@ -26,6 +26,26 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace device_core;
 using namespace std;
+
+namespace {
+struct TaskInfo {
+  uint32_t stream_id;
+  uint32_t task_id;
+  char invocation[KERNEL_NAME_SIZE];
+};
+
+struct StreamInfo {
+  uint32_t stream_id;
+  CoreType core_type;
+};
+
+struct BlockInfo {
+  uint32_t stream_id;
+  uint32_t task_id;
+  uint32_t block_id;
+};
+
+}
 
 static constexpr uint32_t DEVICE_ID_WIDTH = 4;
 static bool CheckStringValid(const std::string &arg, CommandReturnObject &result) {
@@ -456,7 +476,7 @@ protected:
       }else {
           ss << "*";
       }
-      ss << std::setw(DEVICE_ID_WIDTH) <<commonInfo.m_device_info.device_id << "      "
+      ss << std::setw(DEVICE_ID_WIDTH) << commonInfo.m_device_info.device_id << "      "
          << block_info_vec[i].stream_id << "     "
          << block_info_vec[i].task_id << "     "
          << block_info_vec[i].block_id << std::endl;

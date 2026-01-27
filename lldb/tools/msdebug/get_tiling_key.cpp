@@ -37,7 +37,6 @@ bool ParseSymbolLine(const llvm::object::ObjectFile &objectFile,
       globLoc = global ? 'g' : 'l';
     }
     if (globLoc == 'g' && type == llvm::object::SymbolRef::ST_Function && expectSection.get()->isText()) {
-      std::stringstream ss(name.data());
       std::string msg;
       if (lldb_private::CheckStringValid(name.data(), msg)) {
         RT_STUB_LOG_WARNING("Invalid character: %s get from binary\n", msg.c_str());

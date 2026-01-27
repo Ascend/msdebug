@@ -1515,8 +1515,6 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
         if (!error || error->Success()) {
           module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
           ModuleList::GetSharedModule(*module_spec.get(), child_module, nullptr, nullptr, nullptr);
-          if(child_module)
-            child_module->GetObjectFile()->SetKernelHash(FileSystem::Instance().CreateDataBuffer(file_spec)->GetData());
         }
       }
     }

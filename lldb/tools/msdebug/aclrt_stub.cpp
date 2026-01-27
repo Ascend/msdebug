@@ -66,6 +66,8 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
                 {"aclrtBinaryLoadFromDataImpl", ACLRT_BINARY_LOAD_FROM_DATA_IMPL_NOT_FOUND_ERR, nullptr}},
             {"aclrtStreamGetIdImpl",
                 {"aclrtStreamGetIdImpl", ACLRT_STREAM_GET_ID_IMPL_NOT_FOUND_ERR, nullptr}},
+            {"aclrtSynchronizeStreamImpl",
+                {"aclrtSynchronizeStreamImpl", ACLRT_SYNC_STREAM_IMPL_NOT_FOUND_ERR, nullptr}},
             {"aclrtSynchronizeStreamWithTimeoutImpl",
                 {"aclrtSynchronizeStreamWithTimeoutImpl", ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}}
         };
@@ -119,6 +121,18 @@ aclError aclrtStreamGetIdImpl(aclrtStream stream, int32_t *streamId)
     if (ret != ACL_SUCCESS) {
         RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
         PrintErrorCode(ACLRT_STREAM_GET_ID_IMPL_FAILED_ERR);
+        return ret;
+    }
+    return ret;
+}
+
+aclError aclrtSynchronizeStreamImpl(aclrtStream stream)
+{
+    using FuncType = decltype(&aclrtSynchronizeStreamImpl);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
+    auto ret = func(stream);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
         return ret;
     }
     return ret;
@@ -351,7 +365,8 @@ void LaunchKernelPre(aclrtFuncHandle funcHandle)
       return;
     }
     const auto *binHandle = MapManager::Instance().GetHandle(funcHandle);
-    SendKernelInfo(kernelName, MapManager::Instance().GetKernelInfo(binHandle).kernelHash, pcStartAddr);
+    const auto &kernelInfo = MapManager::Instance().GetKernelInfo(binHandle);
+    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
 }
 
 void LaunchKernelPost(aclrtStream stream)
@@ -362,6 +377,7 @@ void LaunchKernelPost(aclrtStream stream)
       return;
     }
     SendStreamId(streamId);
+    aclrtSynchronizeStreamImpl(stream);
 }
 
 int32_t ConvertToVisibleDeviceIdIfPossible(int32_t devId)

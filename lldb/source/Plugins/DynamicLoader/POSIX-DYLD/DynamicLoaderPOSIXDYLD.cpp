@@ -27,6 +27,10 @@
 
 #include <memory>
 #include <optional>
+#ifdef MS_DEBUGGER
+#include "llvm/Support/SHA256.h"
+#include <iomanip>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -75,6 +79,10 @@ DynamicLoaderPOSIXDYLD::~DynamicLoaderPOSIXDYLD() {
   if (m_dyld_bid != LLDB_INVALID_BREAK_ID) {
     m_process->GetTarget().RemoveBreakpointByID(m_dyld_bid);
     m_dyld_bid = LLDB_INVALID_BREAK_ID;
+  }
+  if (m_kernel_launch_bid != LLDB_INVALID_BREAK_ID) {
+    m_process->GetTarget().RemoveBreakpointByID(m_kernel_launch_bid);
+    m_kernel_launch_bid = LLDB_INVALID_BREAK_ID;
   }
 }
 
@@ -181,12 +189,6 @@ void DynamicLoaderPOSIXDYLD::DidLaunch() {
     ModuleList module_list;
     module_list.Append(executable);
     UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_offset, true);
-#ifdef MS_DEBUGGER
-    auto child_executable = m_process->GetTarget().GetImages().GetModuleAtIndex(1);
-    if (child_executable.get() && child_executable->GetArchitecture().GetMachine() == llvm::Triple::hiipu64) {
-      UpdateLoadedSections(child_executable, LLDB_INVALID_ADDRESS, 0U, true);
-    }
-#endif
     LLDB_LOGF(log, "DynamicLoaderPOSIXDYLD::%s about to call ProbeEntry()",
               __FUNCTION__);
 
@@ -305,6 +307,27 @@ bool DynamicLoaderPOSIXDYLD::EntryBreakpointHit(
   dyld_instance->SetRendezvousBreakpoint();
   return false; // Continue running.
 }
+#ifdef MS_DEBUGGER
+
+bool DynamicLoaderPOSIXDYLD::SetRendezvousKernelLaunchBreakpoint() {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  static std::vector<std::string> launch_kernel_func_names{"MSBreakOnLaunch"};
+  Target &target = m_process->GetTarget();
+  auto launch_break = target.CreateBreakpoint(
+          /*containingModules=*/nullptr,
+          /*containingSourceFiles=*/nullptr, launch_kernel_func_names,
+          lldb::eFunctionNameTypeFull, lldb::eLanguageTypeC,
+          /*m_offset=*/0,
+          /*skip_prologue=*/lldb_private::eLazyBoolNo, 
+          /*internal=*/true,
+          /*request_hardware=*/false);
+  launch_break->SetCallback(RendezvousKernelLaunchBreakpointHit, this, true);
+  launch_break->SetBreakpointKind("internal-kernel-launch-event");
+  m_kernel_launch_bid = launch_break->GetID();
+  LLDB_LOG(log, "m_kernel_launch_bid={0}", m_kernel_launch_bid);
+  return true;
+}
+#endif
 
 bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
@@ -381,8 +404,30 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
   dyld_break->SetCallback(RendezvousBreakpointHit, this, true);
   dyld_break->SetBreakpointKind("shared-library-event");
   m_dyld_bid = dyld_break->GetID();
+#ifdef MS_DEBUGGER
+  SetRendezvousKernelLaunchBreakpoint();
+#endif
   return true;
 }
+#ifdef MS_DEBUGGER
+
+bool DynamicLoaderPOSIXDYLD::RendezvousKernelLaunchBreakpointHit(
+    void *baton, StoppointCallbackContext *context, user_id_t break_id,
+    user_id_t break_loc_id) {
+  if (!baton)
+    return false;
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  DynamicLoaderPOSIXDYLD *const dyld_instance =
+      static_cast<DynamicLoaderPOSIXDYLD *>(baton);
+  LLDB_LOGF(log, "DynamicLoaderPOSIXDYLD::%s called for pid %" PRIu64,
+            __FUNCTION__,
+            dyld_instance->m_process ? dyld_instance->m_process->GetID()
+                                     : LLDB_INVALID_PROCESS_ID);
+  dyld_instance->RefreshDeviceModules();
+  // Don't stop at internal breakpoints; return false to continue execution.
+  return false;
+}
+#endif
 
 bool DynamicLoaderPOSIXDYLD::RendezvousBreakpointHit(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
@@ -412,6 +457,86 @@ bool DynamicLoaderPOSIXDYLD::RendezvousBreakpointHit(
             stop_when_images_change ? "true" : "false");
   return stop_when_images_change;
 }
+
+#ifdef MS_DEBUGGER
+static bool LoadModuleFromDeviceBinary(const DeviceBinaryInfo &info, ModuleSP &device_module)
+{
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  static size_t device_module_num = 0;
+  DataBufferSP data_buf;
+  data_buf.reset(new DataBufferHeap(info.binary.data(), info.binary.size()));
+  llvm::SHA256 hasher;
+  std::array<uint8_t, 32> result = hasher.hash(data_buf->GetData());
+  std::stringstream ss;
+  for (const uint8_t byte : result) {
+    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(byte);
+  }
+  LLDB_LOG(log, "device binary hash={0}", ss.str());
+
+  FileSpec fspec("device_debugdata_" + std::to_string(device_module_num));
+  auto device_module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
+
+  device_module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+  ModuleList::GetSharedModule(*device_module_spec, device_module, nullptr, nullptr, nullptr);
+  if (!device_module) {
+    LLDB_LOG(log, "DynamicLoaderPOSIXDYLD::{0} get device_module file from {1} failed",
+             __FUNCTION__, fspec.GetPath());
+    return false;
+  }
+  ObjectFile *obj = device_module->GetObjectFile();
+  if (!obj) {
+    LLDB_LOG(log, "DynamicLoaderPOSIXDYLD::{0} get object file from {1} failed",
+             __FUNCTION__, device_module->GetFileSpec().GetPath());
+    return false;
+  }
+  obj->SetType(ObjectFile::eTypeSharedLibrary);
+  device_module_num++;
+  return true;
+}
+
+void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
+  DeviceBinaryInfo info;
+  if (!m_process) {
+    return;
+  }
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  Status error = m_process->GetDeviceBinaryInfo(info);
+  if (error.Fail()) {
+    LLDB_LOG(log, "Get device binary failed: {0}", error);
+    return;
+  }
+  if (info.binary.empty()) {
+    LLDB_LOG(log, "Get empty device binary.");
+    return;
+  }
+  ModuleSP device_module;
+  if (!LoadModuleFromDeviceBinary(info, device_module)) {
+    return;
+  }
+  ModuleList new_modules;
+  ModuleList old_modules;
+  ModuleList &loaded_modules = m_process->GetTarget().GetImages();
+
+  // remove repeat modules, such as aicore_binary section or last run section
+  for (size_t i = 0; i < loaded_modules.GetSize(); i++) {
+    const auto module_sp = loaded_modules.GetModuleAtIndex(i);
+    if (module_sp && module_sp->GetUUID() == device_module->GetUUID()) {
+      old_modules.Append(module_sp);
+      UnloadSections(module_sp);
+    }
+  }
+  loaded_modules.Remove(old_modules);
+  m_process->GetTarget().ModulesDidUnload(old_modules, false);
+
+  // added new modules
+  new_modules.Append(device_module);
+  loaded_modules.AppendIfNeeded(device_module);
+  UpdateLoadedSections(device_module, LLDB_INVALID_ADDRESS, info.pc_base_addr, true);
+  m_process->GetTarget().ModulesDidLoad(new_modules);
+  LLDB_LOG(log, "Device module did loaded at {0:x}, size is {1}, device_module_file_spec={2}",
+           info.pc_base_addr, info.binary.size(), device_module->GetFileSpec());
+}
+#endif
 
 void DynamicLoaderPOSIXDYLD::RefreshModules() {
   if (!m_rendezvous.Resolve())
@@ -467,43 +592,6 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
         }
       }
 
-#ifdef MS_DEBUGGER
-      // search the section ".aicore_binary" in all dynamically loaded shared libraries.
-      // extract and append it to module list if we hit it
-      auto images = m_process->GetTarget().GetImages();
-      bool aicore_binary_exist = false;
-      for (size_t i = 0; i < images.GetSize(); ++i) {
-        if (images.GetModuleAtIndex(i)->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) {
-          aicore_binary_exist = true;
-          break;
-        }
-      }
-      ModuleSP child_module;
-      if (!aicore_binary_exist && module_sp->GetObjectFile() && module_sp->GetObjectFile()->GetChildModuleSpec()) {
-        auto child_module_spec = module_sp->GetObjectFile()->GetChildModuleSpec();
-        ModuleList::GetSharedModule(*child_module_spec, child_module, nullptr, nullptr, nullptr);
-        if (!child_module) {
-          LLDB_LOG(GetLog(LLDBLog::DynamicLoader), 
-              "DynamicLoaderPOSIXDYLD::{0} get child module from {1} failed",
-              __FUNCTION__, module_sp->GetFileSpec().GetPath());
-          continue;
-        }
-        UpdateLoadedSections(child_module, LLDB_INVALID_ADDRESS, 0U, true);
-        ObjectFile *obj = child_module->GetObjectFile();
-        if (!obj) {
-          LLDB_LOG(GetLog(LLDBLog::DynamicLoader),
-              "DynamicLoaderPOSIXDYLD::{0} get object file from {1} failed",
-              __FUNCTION__, child_module->GetFileSpec().GetPath());
-          continue;
-        }
-        obj->SetType(ObjectFile::eTypeSharedLibrary);
-        loaded_modules.AppendIfNeeded(child_module);
-        new_modules.Append(child_module);
-        LLDB_LOGF(GetLog(LLDBLog::DynamicLoader), 
-            "DynamicLoaderPOSIXDYLD::{0} added kernel obj module from {1}",
-            __FUNCTION__, module_sp->GetFileSpec().GetPath());
-      }
-#endif
       loaded_modules.AppendIfNeeded(module_sp);
       new_modules.Append(module_sp);
     }

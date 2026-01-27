@@ -168,50 +168,47 @@ public:
   /// memory region pointed to by \p siginfo.
   Status GetSignalInfo(lldb::tid_t tid, void *siginfo) const;
 #ifdef MS_DEBUGGER
-  virtual Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) override {
+  // FIXME: remove all to native proto
+  Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) override {
     return Status();
   }
 
-  virtual Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) override {
+  Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) override {
     return Status();
   }
 
-  virtual Status ReadDeviceRegisterList(std::vector<std::string> &reg_list) override {
+  Status ReadDeviceRegisterList(std::vector<std::string> &reg_list) override {
     return Status();
   }
   std::map<lldb::tid_t, lldb::addr_t>& GetThreadsSteppingWithBreakpoint() {
       return m_threads_stepping_with_breakpoint;
   }
 
-  virtual void SetAicOnFocus(const uint32_t &core_id) override {
+  void SetAicOnFocus(const uint32_t &core_id) override {
     return;
   }
 
-  virtual void SetAivOnFocus(const uint32_t &core_id) override {
+  void SetAivOnFocus(const uint32_t &core_id) override {
     return;
   }
 
-  virtual void SetSingleCoreRunFlag(bool isSingleCoreRun) override {
+  void SetSingleCoreRunFlag(bool isSingleCoreRun) override {
     return;
   }
 
-  virtual Status GetDeviceInfo(DeviceInfo &info) override {
+  Status GetDeviceInfo(DeviceInfo &info) override {
     return Status();
   }
 
-  virtual Status GetCoresInfo(std::vector<CoreInfo> &cores_info) override {
+  Status GetCoresInfo(std::vector<CoreInfo> &cores_info) override {
     return Status();
   }
 
-  virtual Status GetKernelInfo(KernelInfo &info) override {
+  Status GetKernelInfo(KernelInfo &info) override {
     return Status();
   }
 
-  virtual void SetLoadedKernelHash(const std::string &kernel_hash) override {
-    return;
-  }
-
-  virtual void SetClientDeviceId(const int32_t device_id) override {
+  void SetClientDeviceId(const int32_t device_id) override {
     return;
   }
 #endif
@@ -254,7 +251,12 @@ private:
 
   void MonitorTrace(NativeThreadLinux &thread);
 
+#ifdef MS_DEBUGGER
+  // We need stop ts cq when host stopped, so user can set device breakpoint
+  virtual void MonitorBreakpoint(NativeThreadLinux &thread);
+#else
   void MonitorBreakpoint(NativeThreadLinux &thread);
+#endif
 
   void MonitorWatchpoint(NativeThreadLinux &thread, uint32_t wp_index);
 

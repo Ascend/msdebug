@@ -284,7 +284,7 @@ protected:
 
   PacketResult Handle_qDeviceKernelInfo(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_vKernelHash(StringExtractorGDBRemote &packet);
+  PacketResult Handle_qDeviceBinaryInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_vDeviceId(StringExtractorGDBRemote &packet);
 #endif

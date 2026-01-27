@@ -17,6 +17,7 @@ struct KernelInfo {
     std::string kernelHash;
     std::vector<std::string> kernelNames;
     std::vector<uint64_t> kernelOffsets;
+    std::vector<char> elf;
 };
 std::string GetSha256FromKernel(const uint8_t *data, uint64_t len);
 

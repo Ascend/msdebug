@@ -528,12 +528,7 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
         // address that we haven't resolved to a section yet.  So we'll have to
         // look in all the new modules to resolve this location. Otherwise, if
         // it was set in this module, re-resolve it here.
-#ifdef MS_DEBUGGER
-        if (section_sp && (section_sp->GetModule() == module_sp ||
-            section_sp->GetArchSpec().GetMachine() == llvm::Triple::hiipu64)) {
-#else
         if (section_sp && section_sp->GetModule() == module_sp) {
-#endif
           if (!seen)
             seen = true;
 

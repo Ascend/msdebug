@@ -13,10 +13,10 @@ class AscendCommunicationClient {
 public:
   explicit AscendCommunicationClient();
   static AscendCommunicationClient &GetInstance(std::int32_t deviceId);
-  int SendAndWaitResponse(std::string const &sendData, std::string& resp);
+  size_t SendAndWaitResponse(std::string const &sendData, std::string& resp);
 private:
-  int Write(std::string const &msg);
-  int Read(std::string& msg) const;
+  size_t Write(std::string const &msg);
+  size_t Read(std::string& msg) const;
   static std::mutex device_mutex_;
   std::unique_ptr<lldb_private::Socket> domain_client_;
   std::mutex write_mutex_;

@@ -204,6 +204,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qDeviceCoresInfo;
       if (PACKET_STARTS_WITH("qDeviceKernelInfo"))
         return eServerPacketType_qDeviceKernelInfo;
+      if (PACKET_STARTS_WITH("qDeviceBinaryInfo"))
+        return eServerPacketType_qDeviceBinaryInfo;
       break;
 #endif
     case 'E':
@@ -381,8 +383,6 @@ StringExtractorGDBRemote::GetServerPacketType() const {
 #ifdef MS_DEBUGGER
       if (PACKET_STARTS_WITH("vDeviceSingleCoreRun"))
         return eServerPacketType_vDeviceSingleCoreRun;
-      if (PACKET_STARTS_WITH("vKernelHash"))
-        return eServerPacketType_vKernelHash;
       if (PACKET_STARTS_WITH("vDeviceId"))
         return eServerPacketType_vDeviceId;
 #endif

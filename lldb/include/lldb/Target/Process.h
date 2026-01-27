@@ -64,7 +64,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #ifdef MS_DEBUGGER
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility/MessageDefines.h"
 #include "Plugins/Process/elf-core/device-core/ElfCoreDeviceUtilities.h"
 #endif
 
@@ -457,10 +457,10 @@ public:
         "error: {0} does not support get ascend kernel info.", GetPluginName());
     return error;
   }
-  virtual Status SendKernelHash() {
+  virtual Status GetDeviceBinaryInfo(DeviceBinaryInfo &info) {
     Status error;
     error.SetErrorStringWithFormatv(
-        "error: {0} does not support send kernel hash.", GetPluginName());
+        "error: {0} does not support get device binary.", GetPluginName());
     return error;
   }
   virtual Status SendDeviceId(const int32_t device_id) {

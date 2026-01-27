@@ -40,7 +40,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #ifdef MS_DEBUGGER
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility/MessageDefines.h"
 #endif
 
 namespace lldb_private {
@@ -261,7 +261,7 @@ public:
   Status GetDeviceRegisterList(std::vector<std::string> &reg_list) override;
   Status UpdateDeviceRegisterInfo(std::vector<RegisterInfo> &registers, bool force=false);
   void ParseDeviceRegisterInfo(StringExtractorGDBRemote &response, RegisterInfo &reg_info);
-  Status SendKernelHash() override;
+  Status GetDeviceBinaryInfo(DeviceBinaryInfo &info) override;
   Status SendDeviceId(const int32_t device_id) override;
 #endif
 

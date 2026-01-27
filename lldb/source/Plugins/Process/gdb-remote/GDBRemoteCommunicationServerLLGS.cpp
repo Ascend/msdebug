@@ -277,8 +277,8 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_qDeviceKernelInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceKernelInfo);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_vKernelHash,
-      &GDBRemoteCommunicationServerLLGS::Handle_vKernelHash);
+      StringExtractorGDBRemote::eServerPacketType_qDeviceBinaryInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceBinaryInfo);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vDeviceId,
       &GDBRemoteCommunicationServerLLGS::Handle_vDeviceId);
@@ -1016,9 +1016,7 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
         response.PutCString(kernel_name);
       }
       response.PutChar(';');
-      response.PutCString("base_pc:");
-      response.PutHex64(process.GetBasePC());
-      response.PutChar(';');
+      response.PutCString("base_pc:0;");
       response.PutCString("soc_type:");
       response.PutHex64(int(process.GetSocType()));
       response.PutChar(';');
@@ -4801,29 +4799,30 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
 }
 
 GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerLLGS::Handle_vKernelHash(StringExtractorGDBRemote &packet) {
+GDBRemoteCommunicationServerLLGS::Handle_qDeviceBinaryInfo(StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Thread);
-  LLDB_LOGF(log, "Handle_vKernelHash");
+  LLDB_LOG(log, "Handle_qDeviceBinaryInfo");
   if (!m_current_process) {
-    LLDB_LOGF(log, "process do not exist");
+    LLDB_LOG(log, "process do not exist");
     return SendErrorResponse(68);
   }
 
-  std::string kernel_hash;
-  constexpr llvm::StringRef KERNEL_HASH_HEADER{llvm::StringRef("vKernelHash:")};
-  const size_t pos = packet.GetStringRef().find(':');
-  if (pos != std::string::npos) {
-    kernel_hash = packet.GetStringRef().substr(pos + 1).data();
-    m_current_process->SetLoadedKernelHash(kernel_hash);
-  } else {
-    LLDB_LOG(log, "get kernel hash failed");
-    return SendErrorResponse(68);
+  DeviceBinaryInfo binary_info;
+  bool hasBinary = m_current_process->ConsumeKernelBinary(binary_info);
+  if (!hasBinary) {
+    LLDB_LOG(log, "no device binary.");
+    return SendErrorResponse(69);
   }
-
-  LLDB_LOGF(log,
-            "GDBRemoteCommunicationServerLLGS::%s packet=%s kernel hash=%s parsed out",
-            __FUNCTION__, packet.GetStringRef().data(), kernel_hash.data());
-  return SendOKResponse();
+  StreamGDBRemote response;
+  std::stringstream ss;
+  ss << "pc_base_addr:";
+  ss << std::hex << binary_info.pc_base_addr << ";";
+  ss << "binary_size:" << std::hex << binary_info.binary.size() << ";";
+  ss << "device_binary:";
+  std::string payload = ss.str();
+  response.PutCString(payload.data());
+  response.PutEscapedBytes(binary_info.binary.data(), binary_info.binary.size());
+  return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult

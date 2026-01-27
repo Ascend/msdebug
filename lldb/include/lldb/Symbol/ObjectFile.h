@@ -734,8 +734,6 @@ public:
 
 #ifdef MS_DEBUGGER
   virtual std::shared_ptr<ModuleSpec> GetChildModuleSpec() {return nullptr;}
-  std::string GetKernelHash() const { return m_kernel_hash_loaded; }
-  void SetKernelHash(const llvm::ArrayRef<uint8_t>& data);
 #endif
   /// Get a hash that can be used for caching object file releated information.
   ///
@@ -750,9 +748,6 @@ public:
 
 protected:
   // Member variables.
-#ifdef MS_DEBUGGER
-  std::string m_kernel_hash_loaded {};
-#endif
   FileSpec m_file;
   Type m_type;
   Strata m_strata;

@@ -6,10 +6,17 @@
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/posix/AscendDomainSocket.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StringExtractorGDBRemote.h"
+#include "llvm/Support/SHA256.h"
 
 #include <unistd.h>
+#include <iomanip>
+#include <fstream>
+#include <regex>
 
+using namespace llvm;
 using namespace lldb_private;
+using namespace std;
 
 enum MESSAGE_ERROR_CODE {
   INVALID_DEVICE_INFO_ERR = 0x20205,
@@ -77,22 +84,68 @@ bool AscendCommunicationServer::Start() {
   return true;
 }
 
+class PacketExtractor {
+public:
+  void Feed(const void *src, size_t len);
+
+  bool ExtractEscapedPacket(std::string &packet) const;
+
+  void Clear();
+private:
+  std::string m_bytes;
+  size_t m_end_pos;
+};
+
+void PacketExtractor::Feed(const void *src, size_t len) {
+  m_bytes.append(static_cast<const char *>(src), len);
+  m_end_pos = m_bytes.find('#', m_bytes.length() - len);
+}
+
+bool PacketExtractor::ExtractEscapedPacket(string &packet) const {
+  packet.clear();
+  if (m_end_pos >= m_bytes.size()) {
+    return false;
+  }
+  // Skip the dollar sign, and last '#'
+  for (size_t i = 1; i < m_end_pos; i++) {
+    const char ch = m_bytes[i];
+    if (ch == 0x7d) {
+      const char escapee = m_bytes[++i] ^ 0x20;
+      packet.push_back(escapee);
+    } else {
+      packet.push_back(ch);
+    }
+  }
+  return true;
+}
+
+void PacketExtractor::Clear() {
+  m_bytes.clear();
+  m_end_pos = std::string::npos;
+}
+
 void AscendCommunicationServer::Listen(Socket *client_socket) {
   if (!client_socket) {
     return;
   }
-  std::string msg;
+  std::string packet;
+  PacketExtractor extractor;
+  static constexpr std::size_t MAX_SIZE = 8192;
+  std::vector<char> buffer(MAX_SIZE);
+  size_t read_size;
   while (m_is_running) {
-    static constexpr std::size_t MAX_SIZE = 2048ULL;
-    size_t read_size = MAX_SIZE;
-    std::vector<char> buffer(MAX_SIZE);
-    if (client_socket->Read(buffer.data(), read_size).Fail()) {
-      continue;
+    while(client_socket->IsValid()) {
+      read_size = MAX_SIZE;
+      Status status = client_socket->Read(buffer.data(), read_size);
+      if (read_size > 0) {
+        extractor.Feed(buffer.data(), read_size);
+        if (extractor.ExtractEscapedPacket(packet)) {
+          break;
+        }
+      }
     }
-    if (read_size > 0) {
-      msg.assign(buffer.data(), read_size);
-      m_msg_handler_hook(client_socket, msg);
-    }
+    extractor.Clear();
+    m_msg_handler_hook(client_socket, packet);
   }
 }
 
@@ -103,7 +156,7 @@ void AscendCommunicationServer::SetMsgHandlerHook(ClientMsgHandlerHook &&hook) {
 Status DeviceHandler::Parse(const std::string& msg) {
   Status error;
   std::smatch matches;
-  if (std::regex_search(msg, matches, std::regex("\\$device_id:(\\d+);tgid:(\\d+);soc_version:([^;]+);"))) {
+  if (std::regex_search(msg, matches, std::regex("device_id:(\\d+);tgid:(\\d+);soc_version:([^;]+);"))) {
     m_device_info.device_id = std::stoi(matches[1]);
     m_device_info.tgid = std::stoi(matches[2]);
     m_device_info.soc_version = matches[3];
@@ -113,24 +166,76 @@ Status DeviceHandler::Parse(const std::string& msg) {
   return error;
 }
 
-Status KernelHandler::Parse(const std::string& msg) {
-  Status error;
-  std::smatch matches;
-  if (std::regex_search(msg, matches,
-    std::regex("\\$kernel_name:([^;]+);kernel_hash:([^;]+);pc_base_addr:([\\d;]+);"))) {
-    m_kernel_info.kernel_name = matches[1];
-    m_kernel_info.kernel_hash = matches[2];
-    m_kernel_info.pc_base_addr = std::stoul(matches[3]);
-  } else {
-    error.SetError(INVALID_KERNEL_INFO_ERR, lldb::eErrorTypeGeneric);
+static void ShowKernelHashReceived(const void *data, size_t num_bytes) {
+  Log *log = GetLog(POSIXLog::Process);
+  llvm::SHA256 hasher;
+  llvm::ArrayRef<uint8_t> array_data(static_cast<const uint8_t*>(data), num_bytes);
+  std::array<uint8_t, 32> result = hasher.hash(array_data);
+  std::stringstream hash_ss;
+  for (const uint8_t byte : result) {
+    hash_ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(byte);
   }
+  LLDB_LOG(log, "Got device binary {0} bytes from remote, hash={1}", num_bytes, hash_ss.str());
+}
+
+Status KernelHandler::Parse(const std::string& msg) {
+  Log *log = GetLog(POSIXLog::Process);
+  Status error;
+  StringExtractorGDBRemote packet = StringExtractorGDBRemote(msg);
+  StringRef key;
+  StringRef value;
+  m_kernel_info = KernelInfoMsg();
+  // binary can not use key value to parse, binary may contains random char
+  constexpr int max_colon = 3;
+  int num_colon = 0;
+  // we should not change index after max_colon times get from packet
+  while (num_colon < max_colon && packet.GetNameColonValue(key, value) ) {
+    if (key.compare("kernel_name") == 0) {
+      m_kernel_info.kernel_name = value;
+    } else if (key.compare("kernel_hash") == 0) {
+      m_kernel_info.kernel_hash = value;
+    } else if (key.compare("pc_base_addr") == 0) {
+      value.getAsInteger(16, m_kernel_info.pc_base_addr);
+    }
+    num_colon++;
+  }
+  // only kernel name updated
+  if (num_colon == 1) {
+    return error;
+  }
+  if (num_colon != max_colon) {
+    error.SetError(INVALID_KERNEL_INFO_ERR, lldb::eErrorTypeGeneric);
+    return error;
+  }
+  if (!packet.Consume("kernel_binary:")) {
+    LLDB_LOG(log, "packet is invalid: {0}", packet.Peek());
+    error.SetError(INVALID_KERNEL_INFO_ERR, lldb::eErrorTypeGeneric);
+    return error;
+  }
+  size_t num_bytes = packet.GetBytesLeft();
+  // elf binary must large than 10
+  constexpr size_t size_elf_header = 50;
+  if (num_bytes < size_elf_header) {
+    LLDB_LOG(log, "packet remain {0} bytes, is too less than {1}", num_bytes, size_elf_header);
+    error.SetError(INVALID_KERNEL_INFO_ERR, lldb::eErrorTypeGeneric);
+    return error;
+  }
+  // last is ';'
+  num_bytes -= 1;
+  const char *data = packet.Peek();
+  if (data == nullptr) {
+    error.SetError(INVALID_KERNEL_INFO_ERR, lldb::eErrorTypeGeneric);
+    return error;
+  }
+  m_kernel_info.elf.assign(data, data + num_bytes);
+  ShowKernelHashReceived(data, num_bytes);
   return error;
 }
 
 Status StreamHandler::Parse(const std::string& msg) {
   Status error;
   std::smatch matches;
-  if (std::regex_search(msg, matches, std::regex("\\$stream_id:(\\d+);"))) {
+  if (std::regex_search(msg, matches, std::regex("stream_id:(\\d+);"))) {
     m_stream_id = std::stoi(matches[1]);
   } else {
     error.SetError(INVALID_STREAM_ID_ERR, lldb::eErrorTypeGeneric);
@@ -138,11 +243,8 @@ Status StreamHandler::Parse(const std::string& msg) {
   return error;
 }
 
-void MsgParser::Register(const std::string& prefix, const std::string& pattern_str,
-                                  std::shared_ptr<MsgHandler> handler) {
-  std::regex pattern(pattern_str);
+void MsgParser::Register(const std::string& prefix, std::shared_ptr<MsgHandler> handler) {
   m_handlers[prefix] = {
-    pattern,
     handler
   };
 }

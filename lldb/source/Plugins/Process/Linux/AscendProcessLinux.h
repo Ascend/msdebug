@@ -9,9 +9,10 @@
 #include "NativeProcessLinux.h"
 #include "DeviceContext/DeviceContext.h"
 #include "AscendCommunicationServer.h"
+#include "lldb/Utility/MessageDefines.h"
+#include <queue>
 #define VEC_SIZE 4
 namespace lldb_private {
-
 
 namespace process_linux {
 class AscendThreadLinux;
@@ -26,7 +27,6 @@ public:
   explicit AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
           const ArchSpec &arch, Manager &manager,
           llvm::ArrayRef<::pid_t> tids, const std::string& socket_path = "");
-  virtual ~AscendProcessLinux();
   void HandleProcessState(const DebugRecvInfo &info);
   AscendThreadLinux* GetThreadByID(lldb::tid_t tid);
   AscendThreadLinux* GetCurrentThread();
@@ -36,14 +36,21 @@ public:
   void SetAicOnFocus(const uint32_t &core_id) override;
   void SetAivOnFocus(const uint32_t &core_id) override;
   void SetSingleCoreRunFlag(bool isSingleCoreRun) override;
-  void SetLoadedKernelHash(const std::string &kernel_hash) override;
+
+  /* Behavior:
+   * 1. Each client request calls this function, consuming one ELF from the queue
+   * 2. Clients only request during kernel launch operations
+   * 3. The hijacking library sends at most one ELF file per kernel launch
+   * 4. Therefore, the queue should never contain more than one ELF
+   * */
+  bool ConsumeKernelBinary(DeviceBinaryInfo &info) override;
+
   void SetClientDeviceId(const int32_t device_id) override;
   Status GetDeviceInfo(DeviceInfo &info) override;
   Status GetCoresInfo(std::vector<CoreInfo> &info) override;
   Status GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache = false) override;
   Status GetStoppedCorePC(lldb::addr_t &pc) override;
   Status GetKernelInfo(KernelInfo &info) override;
-  lldb::addr_t GetBasePC() override;
 
   Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) override;
   Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) override;
@@ -61,6 +68,9 @@ public:
     }
     return SocType::SOC_END;
   }
+
+protected:
+    void MonitorBreakpoint(NativeThreadLinux &thread) override;
 
 private:
   void MonitorBreakpoint(const InterruptEvent &param);
@@ -92,21 +102,20 @@ private:
   int m_socket_fd;
   InterruptPosInfo m_pos_info{};
   uint16_t m_thread_dim[3]{};
-  lldb::addr_t m_base_pc;
   std::shared_ptr<DeviceContext> m_device_context;
   std::vector<CoreInfo> m_cores_info;
-  std::vector<std::function<Status(void)>> m_lazy_calls;
   std::string m_kernel_name;
   uint32_t m_stream_id {};
   pid_t m_tgid {0};
-  std::string m_kernel_hash_stub;
-  std::string m_kernel_hash_loaded;
   int32_t m_client_device_id {-1};
-  bool m_is_handle_pc {false};
   std::set<uint32_t> m_device_ids;
+  std::queue<DeviceBinaryInfo> m_device_binary_info_que;
   MsgParser m_parser;
   std::mutex m_socket_mutex;
   std::unordered_map<const Socket*, std::pair<int32_t, pid_t>> m_socket_device_pid;
+  // process status changed from stop to running or running to stop
+  // need be one by one
+  std::mutex m_status_mtx;
 };
 
 } // namespace process_linux

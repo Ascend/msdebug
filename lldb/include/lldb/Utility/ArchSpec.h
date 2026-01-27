@@ -16,7 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 #ifdef MS_DEBUGGER
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility/MessageDefines.h"
 #endif
 #include <cstddef>
 #include <cstdint>

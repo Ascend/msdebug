@@ -4597,13 +4597,36 @@ uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoRegisterListPacket
   return UINT8_MAX;
 }
 
-uint8_t GDBRemoteCommunicationClient::SendKernelHashPacket(const std::string &kernel_hash) {
-  StreamString temp;
-  temp.Printf("vKernelHash:%s", kernel_hash.c_str());
-  std::string const packet = temp.GetString().data();
+uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBDeviceBinaryPacket(
+    DeviceBinaryInfo &device_binary_info, std::chrono::seconds timeout) {
   StringExtractorGDBRemote response;
-  PacketResult const packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
-  if (packet_result == PacketResult::Success && response.IsOKResponse()) {
+  PacketResult const packet_result = SendPacketAndWaitForResponseNoLock("qDeviceBinaryInfo", response);
+  Log *log = GetLog(GDBRLog::Packets);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    if (!response.Consume("pc_base_addr:")) {
+      return 1;
+    }
+    device_binary_info.pc_base_addr = response.GetU64(UINT64_MAX, 16);
+    if (device_binary_info.pc_base_addr == UINT64_MAX) {
+      return 2;
+    }
+    if (!response.Consume(";binary_size:")) {
+      return 3;
+    }
+    size_t binary_size = response.GetU64(UINT64_MAX, 16);
+    if (binary_size == UINT64_MAX) {
+      return 4;
+    }
+    if (!response.Consume(";device_binary:")) {
+      return 5;
+    }
+    if (response.GetBytesLeft() != binary_size) {
+      LLDB_LOG(log, "Require remain {0} bytes, but remain {1} bytes", binary_size, response.GetBytesLeft());
+      return 6;
+    }
+    const char *data = response.Peek();
+    device_binary_info.binary.assign(data, data + binary_size);
+    LLDB_LOG(log, "Got {0} bytes success", binary_size);
     return 0;
   }
   return UINT8_MAX;

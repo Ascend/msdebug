@@ -1,6 +1,6 @@
 //===-- DynamicLoaderPOSIXDYLD.h --------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -75,6 +75,10 @@ protected:
 
   /// Rendezvous breakpoint.
   lldb::break_id_t m_dyld_bid;
+#ifdef MS_DEBUGGER
+  /// Rendezvous breakpoint before runtime KernelLaunch StubFunction.
+  lldb::break_id_t m_kernel_launch_bid;
+#endif
 
   /// Contains AT_SYSINFO_EHDR, which means a vDSO has been
   /// mapped to the address space
@@ -97,12 +101,23 @@ protected:
   /// If possible sets a breakpoint on a function called by the runtime
   /// linker each time a module is loaded or unloaded.
   bool SetRendezvousBreakpoint();
+#ifdef MS_DEBUGGER
+  /// If possible sets a breakpoint on a function called by the runtime
+  /// kernel launch stub each time a kernel is launched
+  bool SetRendezvousKernelLaunchBreakpoint();
+#endif
 
   /// Callback routine which updates the current list of loaded modules based
   /// on the information supplied by the runtime linker.
   static bool RendezvousBreakpointHit(
       void *baton, lldb_private::StoppointCallbackContext *context,
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
+#ifdef MS_DEBUGGER
+  /// Callback routine which updates the current list of loaded modules from runtime_stub 
+  static bool RendezvousKernelLaunchBreakpointHit(
+      void *baton, lldb_private::StoppointCallbackContext *context,
+      lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
+#endif
 
   /// Indicates whether the initial set of modules was reported added.
   bool m_initial_modules_added;
@@ -110,6 +125,11 @@ protected:
   /// Helper method for RendezvousBreakpointHit.  Updates LLDB's current set
   /// of loaded modules.
   void RefreshModules();
+#ifdef MS_DEBUGGER
+  /// Helper method for RendezvousKernelLaunchBreakpointHit.
+  /// Updates LLDB's current set of loaded device modules.
+  void RefreshDeviceModules();
+#endif
 
   /// Updates the load address of every allocatable section in \p module.
   ///

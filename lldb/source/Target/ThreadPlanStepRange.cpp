@@ -13,7 +13,7 @@
 #ifdef MS_DEBUGGER
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility/MessageDefines.h"
 #endif
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"

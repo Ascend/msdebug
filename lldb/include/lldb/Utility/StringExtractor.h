@@ -1,6 +1,6 @@
 //===-- StringExtractor.h ---------------------------------------*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -102,6 +102,17 @@ public:
       return m_packet.c_str() + m_index;
     return nullptr;
   }
+
+#ifdef MS_DEBUGGER
+  bool Consume(const llvm::StringRef &str) {
+    llvm::StringRef S = Peek();
+    if (!S.starts_with(str))
+      return false;
+    else
+      m_index += str.size();
+    return true;
+  }
+#endif
 
 protected:
   bool fail() {

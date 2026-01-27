@@ -37,6 +37,7 @@ enum MSDEBUG_ERROR_CODE {
     RT_STREAM_SYNC_WITH_TIMEOUT_NOT_FOUND_ERR = 0x1010F, // rtStreamSynchronizeWithTimeoutFunc
     RT_GET_VISIBLE_DEVID_BY_LOGIC_DEVID_NOT_FOUND_ERR = 0x10110, // rtGetVisibleDeviceIdByLogicDeviceId
     RT_GET_DEVICE_NOT_FOUND_ERR = 0x10111, // rtGetDevice
+    RT_STREAM_SYNC_NOT_FOUND_ERR = 0x10112, // rtStreamSynchronize
 
     LIB_ACL_RUNTIME_IMPL_NOT_FOUND_ERR = 0x1011E, // 打开ascendcl_impl库文件失败
     LIB_ASCEND_HAL_NOT_FOUND_ERR = 0x1011F, // 打开ascend_hal库文件失败
@@ -58,6 +59,7 @@ enum MSDEBUG_ERROR_CODE {
     ACLRT_LAUNCH_KERNEL_WITH_HOST_ARGS_IMPL_NOT_FOUND_ERR = 0x1012F, // aclrtLaunchKernelWithHostArgsImpl
     ACLRT_LAUNCH_KERNEL_V2_IMPL_NOT_FOUND_ERR = 0x10130, // aclrtLaunchKernelV2Impl
     ACLRT_BINARY_LOAD_FROM_DATA_IMPL_NOT_FOUND_ERR = 0x1013A, // aclrtBinaryLoadFromDataImpl
+    ACLRT_SYNC_STREAM_IMPL_NOT_FOUND_ERR = 0x1013B, // aclrtSynchronizeStreamImpl
     // 其他错误
     ALLOC_ALREADY_OCCUPIED_DEVICE_ID_ERR = 0x10200, // 使用的device id已被占用
     RT_SET_DIFFERENT_DEVICE_ID_ERR = 0x10201, // 检测到多次set device，且前后id不一致

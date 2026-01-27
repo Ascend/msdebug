@@ -135,6 +135,7 @@ public:
     eServerPacketType_qDeviceInfo,
     eServerPacketType_qDeviceCoresInfo,
     eServerPacketType_qDeviceKernelInfo,
+    eServerPacketType_qDeviceBinaryInfo,
 #endif
 
     eServerPacketType_jSignalsInfo,
@@ -142,7 +143,6 @@ public:
 
 #ifdef MS_DEBUGGER
     eServerPacketType_vDeviceSingleCoreRun,
-    eServerPacketType_vKernelHash,
     eServerPacketType_vDeviceId,
 #endif
     eServerPacketType_vAttach,

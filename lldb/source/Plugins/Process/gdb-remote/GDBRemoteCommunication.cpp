@@ -1,6 +1,6 @@
 //===-- GDBRemoteCommunication.cpp ----------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Modifications made to adapt for Ascend, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -54,6 +54,10 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
+
+#ifdef MS_DEBUGGER
+constexpr size_t MAX_PACKET_LENGTH_DISPLAY = 2048;
+#endif
 
 // GDBRemoteCommunication constructor
 GDBRemoteCommunication::GDBRemoteCommunication()
@@ -186,12 +190,22 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
         strm.Printf("%*s", (int)3, p);
         log->PutString(strm.GetString());
       } else
+#ifdef MS_DEBUGGER
+        LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %.*s",
+                  (uint64_t)bytes_written, (int)std::min(packet_length, MAX_PACKET_LENGTH_DISPLAY), packet_data);
+#else
         LLDB_LOGF(log, "<%4" PRIu64 "> send packet: %.*s",
                   (uint64_t)bytes_written, (int)packet_length, packet_data);
+#endif
     }
 
+#ifdef MS_DEBUGGER
+    m_history.AddPacket(packet.str(), std::min(packet_length, MAX_PACKET_LENGTH_DISPLAY),
+                        GDBRemotePacket::ePacketTypeSend, bytes_written);
+#else
     m_history.AddPacket(packet.str(), packet_length,
                         GDBRemotePacket::ePacketTypeSend, bytes_written);
+#endif
 
     if (bytes_written == packet_length) {
       if (!skip_ack && GetSendAcks())
@@ -752,7 +766,21 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
           else
             strm.Printf("<%4" PRIu64 "> read packet: %c",
                         (uint64_t)total_length, m_bytes[0]);
+#ifdef MS_DEBUGGER
+          size_t binary_start_offset = 0;
+          // Print binary and non-binary packet different
+          if (strncmp(m_bytes.data(), "$pc_base_addr:", strlen("$pc_base_addr:")) == 0) {
+            auto it = m_bytes.find("device_binary:");
+            if (it != std::string::npos) {
+              binary_start_offset = it + strlen("device_binary:");
+            }
+            // Print non binary data header
+            strm.Printf("%.*s", (int)binary_start_offset, &m_bytes[1]);
+          }
+          for (size_t i = binary_start_offset; i < std::min(content_end, MAX_PACKET_LENGTH_DISPLAY); ++i) {
+#else
           for (size_t i = content_start; i < content_end; ++i) {
+#endif
             // Remove binary escaped bytes when displaying the packet...
             const char ch = m_bytes[i];
             if (ch == 0x7d) {
@@ -774,14 +802,25 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
                       (uint64_t)original_packet_size, (uint64_t)total_length,
                       (int)(total_length), m_bytes.c_str());
           else
+#ifdef MS_DEBUGGER
+            LLDB_LOGF(log, "<%4" PRIu64 "> read packet: %.*s",
+                      (uint64_t)total_length, (int)std::min(total_length, MAX_PACKET_LENGTH_DISPLAY),
+                      m_bytes.c_str());
+#else
             LLDB_LOGF(log, "<%4" PRIu64 "> read packet: %.*s",
                       (uint64_t)total_length, (int)(total_length),
                       m_bytes.c_str());
+#endif
         }
       }
 
+#ifdef MS_DEBUGGER
+      m_history.AddPacket(m_bytes, std::min(total_length, MAX_PACKET_LENGTH_DISPLAY),
+                          GDBRemotePacket::ePacketTypeRecv, total_length);
+#else
       m_history.AddPacket(m_bytes, total_length,
                           GDBRemotePacket::ePacketTypeRecv, total_length);
+#endif
 
       // Copy the packet from m_bytes to packet_str expanding the run-length
       // encoding in the process.

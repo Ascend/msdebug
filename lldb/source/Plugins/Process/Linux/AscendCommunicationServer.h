@@ -4,30 +4,20 @@
 #ifdef MS_DEBUGGER
 #ifndef ASCENDCOMMUNICATIONSERVER_H
 #define ASCENDCOMMUNICATIONSERVER_H
+#include "lldb/Host/Socket.h"
+#include "lldb/Utility/MessageDefines.h"
+
 #include <atomic>
 #include <csignal>
 #include <functional>
-#include <lldb/Host/Socket.h>
 #include <memory>
-#include <regex>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
 using namespace lldb_private;
 using ClientMsgHandlerHook = std::function<void(Socket *, const std::string&)>;
-
-struct DeviceInfoMsg {
-  int32_t device_id;
-  pid_t tgid;
-  std::string soc_version;
-};
-
-struct KernelInfoMsg {
-  std::string kernel_name;
-  std::string kernel_hash;
-  lldb::addr_t pc_base_addr;
-};
 
 class AscendCommunicationServer {
 public:
@@ -95,13 +85,11 @@ private:
 
 class MsgParser {
 public:
-  void Register(const std::string& prefix, const std::string& pattern,
-                      std::shared_ptr<MsgHandler> handler);
+  void Register(const std::string& prefix, std::shared_ptr<MsgHandler> handler);
   Status ParseMessage(const std::string& msg) const;
 
 private:
   struct HandlerEntry {
-    std::regex pattern;
     std::shared_ptr<MsgHandler> handler;
   };
 

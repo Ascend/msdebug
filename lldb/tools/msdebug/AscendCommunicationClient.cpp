@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+using namespace lldb_private;
 std::mutex AscendCommunicationClient::device_mutex_;
 
 AscendCommunicationClient::AscendCommunicationClient()
@@ -56,41 +57,61 @@ AscendCommunicationClient &AscendCommunicationClient::GetInstance(std::int32_t d
 }
 
 // 通信一来一回，避免两边都在写或者单边多线程写导致挂掉
-int AscendCommunicationClient::SendAndWaitResponse(std::string const &sendData, std::string& resp)
+size_t AscendCommunicationClient::SendAndWaitResponse(std::string const &sendData, std::string& resp)
 {
     std::lock_guard<std::mutex> lockGuard(mtx_);
-    int ret = Write(sendData);
-    if (ret <= 0) {
+    size_t ret = Write(sendData);
+    if (ret == 0) {
         RT_STUB_LOG_ERROR("Write error: %s", strerror(errno));
         return ret;
     }
     ret = Read(resp);
-    if (ret <= 0) {
+    if (ret == 0) {
         RT_STUB_LOG_ERROR("Read error: %s", strerror(errno));
     }
     return ret;
 }
 
-int AscendCommunicationClient::Write(const std::string& msg)
+size_t AscendCommunicationClient::Write(const std::string& msg)
 {
-  size_t write_size = msg.size();
-  int32_t sentBytes = -1;
+  size_t src_len = msg.size();
+  size_t num_bytes;
+  size_t total_written = 0;
+  Status status;
   if (domain_client_) {
-    sentBytes = domain_client_->Write(msg.data(), write_size).Success() ? write_size : -1;
+    do {
+      num_bytes = src_len - total_written;
+      status = domain_client_->Write(msg.data() + total_written, num_bytes);
+      total_written += num_bytes;
+    } while (status.Success() && total_written < src_len);
+    if (total_written != src_len) {
+      RT_STUB_LOG_ERROR("total_written=%lu bytes, need write=%lu bytes", total_written, src_len);
+      return 0;
+    }
   }
-  return sentBytes;
+  return total_written;
 }
 
-int AscendCommunicationClient::Read(std::string& msg) const
+size_t AscendCommunicationClient::Read(std::string& msg) const
 {
   static constexpr std::size_t MAX_SIZE = 1024ULL;
   std::vector<char> buffer(MAX_SIZE);
-  size_t read_size = MAX_SIZE;
-  int32_t len = -1;
+  size_t read_size = 0;
+  Status status;
   if (domain_client_) {
-    len = domain_client_->Read(buffer.data(), read_size).Success() ? read_size : -1;
-    msg.assign(buffer.data(), read_size);
+    const size_t max_response_retries = 3;
+    for (size_t i = 0; i < max_response_retries; ++i) {
+      read_size = MAX_SIZE;
+      status = domain_client_->Read(buffer.data(), read_size);
+      if (status.Fail()) {
+        RT_STUB_LOG_WARNING("read failed, error: %s", status.AsCString());
+      }
+      if (read_size > 0) {
+        msg.assign(buffer.data(), read_size);
+        break;
+      }
+    }
   }
-  return len;
+  return read_size;
 }
 #endif
