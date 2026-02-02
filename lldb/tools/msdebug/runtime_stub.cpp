@@ -296,6 +296,7 @@ int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelH
     cutKernelName.resize(KERNEL_NAME_SIZE);
   }
   std::string buf = "$kernel_name:" + cutKernelName + ";";
+  bool needSendBinary = false;
   if (sentBinaries.find(kernelHash) == sentBinaries.end()) {
     buf += "kernel_hash:" + kernelHash + ";";
     std::stringstream ss;
@@ -303,10 +304,13 @@ int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelH
     buf += "pc_base_addr:" + ss.str() + ";";
     buf += "kernel_binary:" + GetEscapedBytes(elf) + ";";
     sentBinaries.insert(kernelHash);
+    needSendBinary = true;
   }
   buf += "#";
   auto ret = SendInfoAndWaitForReply(buf);
-  MSBreakOnLaunch();
+  if (needSendBinary) {
+    MSBreakOnLaunch();
+  }
   return ret;
 }
 

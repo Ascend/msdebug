@@ -733,7 +733,9 @@ public:
   }
 
 #ifdef MS_DEBUGGER
-  virtual std::shared_ptr<ModuleSpec> GetChildModuleSpec() {return nullptr;}
+  virtual std::shared_ptr<ModuleSpec> GetChildModuleSpec(const std::string &kernel_name = "") {return nullptr;}
+
+  virtual std::shared_ptr<ModuleSpec> GetTargetModuleSpec(llvm::StringRef kernel_name) {return nullptr;}
 #endif
   /// Get a hash that can be used for caching object file releated information.
   ///

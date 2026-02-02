@@ -196,6 +196,7 @@ static void UpdateExecutableTarget(TargetSP target_sp, const LoadDependentFiles 
   }
   target_sp->SetExecutableModule(child_module, load_dependent_files);
 }
+
 #endif
 #define LLDB_OPTIONS_target_dependents
 #include "CommandOptions.inc"

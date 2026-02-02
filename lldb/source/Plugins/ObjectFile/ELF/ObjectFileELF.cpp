@@ -44,6 +44,10 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
+#ifdef MS_DEBUGGER
+#include "llvm/Support/SHA256.h"
+#include "llvm/Object/ObjectFile.h"
+#endif
 
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
@@ -1947,7 +1951,125 @@ const std::vector<ConstString> BINARY_NAME = {
   ConstString(".ascend.kernel.ascend310p3vir08.")
 };
 
-std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec() {
+static llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> CreateOBinary(const char* data, size_t size)
+{
+  std::unique_ptr<llvm::MemoryBuffer> buffer =
+      llvm::MemoryBuffer::getMemBufferCopy(llvm::StringRef(data, size), "buffer");
+
+  llvm::Expected<std::unique_ptr<llvm::object::Binary>> binOrErr =
+      llvm::object::createBinary(buffer->getMemBufferRef(), nullptr, true);
+  if (!binOrErr) {
+    return binOrErr.takeError();
+  }
+  std::unique_ptr<llvm::object::Binary> &Bin = binOrErr.get();
+
+  return llvm::object::OwningBinary<llvm::object::Binary>(std::move(Bin), std::move(buffer));
+}
+
+static bool ContainsTargetName(const char* data, size_t size, llvm::StringRef target_name)
+{
+  auto expectOBinary = CreateOBinary(data, size);
+  if (expectOBinary) {
+    auto *objectFile = llvm::dyn_cast<llvm::object::ObjectFile>(expectOBinary->getBinary());
+    if (!objectFile) {
+      return false;
+    }
+    for (auto it = objectFile->symbol_begin(); it != objectFile->symbol_end(); ++it) {
+      const llvm::object::SymbolRef symbol = *it;
+      auto expectType = symbol.getType();
+      auto expectFlags = symbol.getFlags();
+      auto expectSection = symbol.getSection();
+      auto expectName = symbol.getName();
+      auto expectAddress = symbol.getAddress();
+      if (expectType && expectFlags && expectSection && expectName) {
+          llvm::object::SymbolRef::Type type = std::move(*expectType);
+          if (type != llvm::object::SymbolRef::ST_Function) {
+            continue;
+          }
+          llvm::StringRef name = std::move(*expectName);
+          if (name != target_name) {
+            continue;
+          }
+          uint32_t flags = std::move(*expectFlags);
+          llvm::object::section_iterator section = std::move(*expectSection);
+          bool global = flags & llvm::object::SymbolRef::SF_Global;
+          bool weak = flags & llvm::object::SymbolRef::SF_Weak;
+          bool absolute = flags & llvm::object::SymbolRef::SF_Absolute;
+          char globLoc = ' ';
+          if ((section != objectFile->section_end() || absolute) && !weak) {
+              globLoc = global ? 'g' : 'l';
+          }
+          if (globLoc == 'g' && section->isText()) {
+            return true;
+          }
+      }
+    }
+  }
+  return false;
+}
+
+static std::pair<size_t, size_t> GetTargetELFOffset(DataExtractor &data, llvm::StringRef kernel_name) {
+  static const char elf_magic[] = {0x7f, 'E', 'L', 'F'};
+  const size_t num_magic = sizeof(elf_magic);
+  const llvm::StringRef elf_str(elf_magic, num_magic);
+  size_t end_pos = data.GetByteSize();
+  const char *start = reinterpret_cast<const char*>(data.PeekData(0, end_pos));
+  if (start == nullptr) {
+    return {};
+  }
+  size_t last_elf_start_pos = 0;
+  size_t elf_size = 0;
+  for (size_t i = 0; i + num_magic < end_pos; i++) {
+    if (elf_str != llvm::StringRef(start + i, num_magic)) {
+      continue;
+    }
+    if (i == 0) {
+      last_elf_start_pos = i;
+      continue;
+    }
+    elf_size = i - last_elf_start_pos;
+    if (ContainsTargetName(start + last_elf_start_pos, elf_size, kernel_name)) {
+      return {last_elf_start_pos, elf_size};
+    }
+    last_elf_start_pos = i;
+  }
+  elf_size = end_pos - last_elf_start_pos;
+  if (ContainsTargetName(start + last_elf_start_pos, elf_size, kernel_name)) {
+      return {last_elf_start_pos, elf_size};
+  }
+  return {};
+}
+
+static DataBufferSP ParseAiCoreBinarySection(DataExtractor &data, llvm::StringRef kernel_name) {
+  DataBufferSP data_buf;
+  size_t offset = 0;
+  Log *log = GetLog(LLDBLog::Modules);
+  auto num_bytes = data.GetByteSize();
+  if (!kernel_name.empty()) {
+    auto offset_and_size = GetTargetELFOffset(data, kernel_name);
+    if (offset_and_size.second != 0) {
+      offset = offset_and_size.first;
+      num_bytes = offset_and_size.second;
+    } else {
+      LLDB_LOG(log, "Find kernel_name in all all elf failed");
+    }
+  }
+  data_buf.reset(new DataBufferHeap(data.PeekData(offset, num_bytes), num_bytes));
+  LLDB_LOG(log, "Got elf at offset={0}, num_byte={1}, kernel_name={2}", offset, num_bytes, kernel_name);
+  return data_buf;
+}
+
+// current elf object may contains multiple elf object
+std::shared_ptr<ModuleSpec> ObjectFileELF::GetTargetModuleSpec(llvm::StringRef kernel_name) {
+  DataBufferSP data_buf = ParseAiCoreBinarySection(m_data, kernel_name);
+  auto fspec = GetFileSpec();
+  fspec.AppendPathComponent("kernel");
+  auto module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
+  module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+  return module_spec;
+}
+
+std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec(const std::string &kernel_name) {
   SectionSP section;
   uint8_t match_id = UINT8_MAX;
   SectionList *section_list = GetSectionList();
@@ -1971,8 +2093,8 @@ std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec() {
   DataBufferSP data_buf;
   if (match_id == 0) {
     // .aicore_binary 段仅保存了算子.o
-    data_buf.reset(new DataBufferHeap(data.GetDataStart(), data.GetByteSize()));
-  } else if (match_id > 0 && match_id < BINARY_NAME.size()){
+    data_buf = ParseAiCoreBinarySection(data, kernel_name);
+  } else if (match_id > 0 && match_id < BINARY_NAME.size()) {
     // 其他段首放置了20个字节的额外信息
     AclrtLaunchKernelNode node;
     lldb::offset_t offset = 0;

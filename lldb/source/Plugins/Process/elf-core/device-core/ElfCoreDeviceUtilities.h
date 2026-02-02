@@ -5,11 +5,13 @@
 
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_ELFCOREDEVICEUTILITIES_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_ELFCOREDEVICEUTILITIES_H
+
+#include "lldb/Utility/MessageDefines.h"
+
 #include <cstdint>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
 
 using CoreIDType = uint16_t;
 namespace lldb_private {

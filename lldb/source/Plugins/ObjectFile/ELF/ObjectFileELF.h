@@ -406,7 +406,9 @@ private:
   /// section with that name.
   std::shared_ptr<ObjectFileELF> GetGnuDebugDataObjectFile();
 #ifdef MS_DEBUGGER
-  std::shared_ptr<lldb_private::ModuleSpec> GetChildModuleSpec() override;
+  std::shared_ptr<lldb_private::ModuleSpec> GetChildModuleSpec(const std::string &kernel_name = "") override;
+
+  std::shared_ptr<lldb_private::ModuleSpec> GetTargetModuleSpec(llvm::StringRef kernel_name) override;
 #endif
 };
 

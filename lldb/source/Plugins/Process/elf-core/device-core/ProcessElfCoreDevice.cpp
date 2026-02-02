@@ -30,6 +30,7 @@ static const ConstString GLOBAL_AUXINFO_NAME{".ascend.auxinfo.global"};
 static const ConstString LOCAL_AUXINFO_NAME{".ascend.auxinfo.local."};
 static const ConstString REGS_NAME{".ascend.regs."};
 static const ConstString GLOBAL_NAME{".ascend.global"};
+static const ConstString KERNEL_INFO_NAME{".ascend.kernel_info"};
 
 llvm::StringRef ProcessElfCoreDevice::GetPluginDescriptionStatic() {
   return "ELF core device dump plug-in.";
@@ -39,10 +40,6 @@ ProcessElfCoreDevice::ProcessElfCoreDevice(TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
     : ProcessElfCore(target_sp, listener_sp, core_file) {
-}
-
-ProcessElfCoreDevice::~ProcessElfCoreDevice() {
- 
 }
 
 void ProcessElfCoreDevice::Terminate() {
@@ -82,6 +79,44 @@ ProcessSP ProcessElfCoreDevice::CreateInstance(TargetSP target_sp,
     }
   }
   return process_sp;
+}
+
+Status ProcessElfCoreDevice::UpdateTargetKernel() {
+  Status error;
+  Log *log = GetLog(LLDBLog::Process);
+  llvm::StringRef kernel_name{m_kernel_name};
+  LLDB_LOG(log, "{0}, kernel_name = {1}", __FUNCTION__, kernel_name);
+  if (m_kernel_name.empty()) {
+    return error;
+  }
+  auto &target = GetTarget();
+  auto executable_module = target.GetExecutableModule();
+  if (!executable_module) {
+    error.SetErrorString("Target doesn't contains any executable_module");
+    return error;
+  }
+  auto *object_file = executable_module->GetObjectFile();
+  if (!object_file) {
+    error.SetErrorString("executable_module doesn't contains object file");
+    return error;
+  }
+
+  if (object_file->GetArchitecture().GetMachine() == llvm::Triple::hiipu64) {
+    auto target_module_spec = object_file->GetTargetModuleSpec(kernel_name);
+    if (!target_module_spec) {
+      error.SetErrorString("Get target_module_spec by kernel_name failed");
+      return error;
+    }
+    ModuleSP dev_module;
+    ModuleList::GetSharedModule(*target_module_spec, dev_module, nullptr, nullptr, nullptr);
+    if (!dev_module) {
+      error.SetErrorString("Get dev_module by kernel_name failed");
+      return error;
+    }
+    // may be get dependencies first, now is default
+    target.SetExecutableModule(dev_module);
+  }
+  return error;
 }
 
 Status ProcessElfCoreDevice::DoLoadCore() {
@@ -128,6 +163,10 @@ Status ProcessElfCoreDevice::DoLoadCore() {
     return error;
   }
   Log *log = GetLog(LLDBLog::Process);
+  error = UpdateTargetKernel();
+  if (error.Fail()) {
+    printf("Warning: Use first target kernel because of Updating target kernel failed: %s\n", error.AsCString());
+  }
   LLDB_LOG(log, "Enable device coredump mode, set process status to 'stop in device'.");
   SetDeviceCoredumpEnable(true);
   UpdateStopInfo();
@@ -209,48 +248,26 @@ void ProcessElfCoreDevice::UpdateStopInfo(bool focus_named_error_core) {
 }
 
 Status ProcessElfCoreDevice::ParseSection() {
+  using Parser = Status (ProcessElfCoreDevice::*)(const SectionSP &section, ConstString section_name);
+  static const map<ConstString, Parser> parsers = {
+      {DEVTBL_NAME, &ProcessElfCoreDevice::ParseDevTable},
+      {GLOBAL_AUXINFO_NAME, &ProcessElfCoreDevice::ParseGlobalAuxInfo},
+      {LOCAL_AUXINFO_NAME, &ProcessElfCoreDevice::ParseLocalAuxInfo},
+      {REGS_NAME, &ProcessElfCoreDevice::ParseRegs},
+      {KERNEL_INFO_NAME, &ProcessElfCoreDevice::ParseKernelInfo},
+  };
   Status error;
   for (auto section : m_section_list) {
     ConstString name = section->GetName();
-    if (name == DEVTBL_NAME) {
-      error = ParseDevTable(section);
-      if (error.Fail()) {
-        return error;
+    for (const auto &pair: parsers) {
+      ConstString name_prefix = pair.first;
+      Parser parser = pair.second;
+      if (name.GetStringRef().starts_with(name_prefix)) {
+        error = ((*this).*parser)(section, name);
+        if (error.Fail()) {
+          return error;
+        }
       }
-    }
-    if (name == GLOBAL_AUXINFO_NAME) {
-      error = ParseGlobalAuxInfo(section);
-      if (error.Fail()) {
-        return error;
-      }
-    }
-    if (name.GetStringRef().starts_with(LOCAL_AUXINFO_NAME.GetStringRef())) {
-      uint64_t core_id;
-      if (!to_integer(name.GetStringRef().substr(LOCAL_AUXINFO_NAME.GetLength()), core_id, 10)) {
-        error.SetErrorString("local auxinfo core id is invalid");
-        return error;
-      }
-      error = ParseLocalAuxInfo(section, core_id);
-      if (error.Fail()) {
-        return error;
-      }
-    }
-    if (name.GetStringRef().starts_with(REGS_NAME.GetStringRef())) {
-      uint64_t core_id;
-      if (!to_integer(name.GetStringRef().substr(REGS_NAME.GetLength()), core_id, 10)) {
-        error.SetErrorString("reg info core id is invalid");
-        return error;
-      }
-      if (m_summary_info.chip_type == DevdrvChipType::CHIP_CLOUD_V4) {
-        error = ParseRegData<RegDataV4>(section, core_id);
-      } else {
-        error = ParseRegData<RegDataV2>(section, core_id);
-      }
-      if (error.Fail()) {
-        return error;
-      }
-      m_thread_data_valid = true;
-      m_thread_data.emplace_back(ThreadData{DataExtractor(), {}, 0, SIGSEGV, SIGSEGV, 0, ""});
     }
   }
   return error;
@@ -270,7 +287,7 @@ Status ProcessElfCoreDevice::CheckSectionExist() {
   return error;
 }
 
-Status ProcessElfCoreDevice::ParseDevTable(const SectionSP& section) {
+Status ProcessElfCoreDevice::ParseDevTable(const SectionSP& section, ConstString sectio_name) {
   Status error;
   DataExtractor data;
   section->GetSectionData(data);
@@ -355,7 +372,7 @@ static Status ParseSingleGlobalAuxInfo(GlobalMemInfo &global_mem_info,
   return error;
 }
 
-Status ProcessElfCoreDevice::ParseGlobalAuxInfo(const SectionSP& section) {
+Status ProcessElfCoreDevice::ParseGlobalAuxInfo(const SectionSP& section, ConstString section_name) {
   Log *log = GetLog(LLDBLog::Process);
   Status error;
   DataExtractor data;
@@ -443,7 +460,80 @@ inline Status GetLocalMemoryDataFromSection(const SectionSP &mem_section, const 
   return error;
 }
 
-Status ProcessElfCoreDevice::ParseLocalAuxInfo(const SectionSP& section, uint64_t core_id) {
+Status ProcessElfCoreDevice::ParseLocalAuxInfo(const SectionSP& section, ConstString section_name) {
+  Status error;
+  uint64_t core_id;
+  if (!to_integer(section_name.GetStringRef().substr(LOCAL_AUXINFO_NAME.GetLength()), core_id, 10)) {
+    error.SetErrorString("local auxinfo core id is invalid");
+    return error;
+  }
+  error = ParseOneLocalAuxInfo(section, core_id);
+  if (error.Fail()) {
+    return error;
+  }
+  return error;
+}
+
+Status ProcessElfCoreDevice::ParseRegs(const SectionSP& section, ConstString section_name) {
+  Status error;
+  if (section_name.GetStringRef().starts_with(REGS_NAME.GetStringRef())) {
+    uint64_t core_id;
+    if (!to_integer(section_name.GetStringRef().substr(REGS_NAME.GetLength()), core_id, 10)) {
+      error.SetErrorStringWithFormatv("reg info core id is invalid, section_name is {0}", section_name);
+      return error;
+    }
+    if (m_summary_info.chip_type == DevdrvChipType::CHIP_CLOUD_V4) {
+      error = ParseRegData<RegDataV4>(section, core_id);
+    } else {
+      error = ParseRegData<RegDataV2>(section, core_id);
+    }
+    if (error.Fail()) {
+      return error;
+    }
+    m_thread_data_valid = true;
+    m_thread_data.emplace_back(ThreadData{DataExtractor(), {}, 0, SIGSEGV, SIGSEGV, 0, ""});
+  }
+  return error;
+}
+
+Status ProcessElfCoreDevice::ParseKernelInfo(const SectionSP& section, ConstString section_name) {
+  Status error;
+  DataExtractor data;
+  section->GetSectionData(data);
+  size_t offset = 0;
+  uint32_t name_length = data.GetU32(&offset);
+  if (name_length == 0) {
+    error.SetErrorStringWithFormatv("invalid name length = 0, data_size={0}, section_size={1}",
+                                    data.GetByteSize(), section->GetByteSize());
+    return error;
+  }
+  if (name_length + offset > data.GetByteSize()) {
+    error.SetErrorStringWithFormatv("invalid name length, name_length={0}, section_size={1}, data_size={2}",
+                                    name_length, section->GetByteSize(), data.GetByteSize());
+    return error;
+  }
+  const char *start = data.PeekCStr(offset);
+  if (start == nullptr) {
+    error.SetErrorStringWithFormatv("invalid kernel name, first char is 0");
+    return error;
+  }
+
+  constexpr char const *MIX_AIC_TAIL = "_mix_aic";
+  constexpr char const *MIX_AIV_TAIL = "_mix_aiv";
+  llvm::StringRef full_name(start, name_length);
+  if (full_name.ends_with(MIX_AIC_TAIL) || full_name.ends_with(MIX_AIV_TAIL)) {
+    m_kernel_name = full_name.drop_back(strlen(MIX_AIV_TAIL)).str();
+  } else {
+    m_kernel_name = full_name.str();
+  }
+
+  offset += name_length;
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "Got kernel_name={0}, full_name={1}", m_kernel_name, full_name);
+  return error;
+}
+
+Status ProcessElfCoreDevice::ParseOneLocalAuxInfo(const SectionSP& section, uint64_t core_id) {
   Status error;
   DataExtractor data;
   section->GetSectionData(data);
@@ -508,7 +598,7 @@ Status ProcessElfCoreDevice::ParseRegData(const SectionSP& section, uint64_t cor
   for (size_t i = 0; i < struct_num; ++i) {
     auto reg_data = make_unique<T>();
     data.CopyData(i * reg_data_size, reg_data_size, reinterpret_cast<uint8_t*>(reg_data.get()) + 8);
-    m_summary_info.reg_data[core_id][reg_data->addr] = move(reg_data);
+    m_summary_info.reg_data[core_id][reg_data->addr] = std::move(reg_data);
   }
 
   return error;
@@ -626,7 +716,7 @@ size_t ProcessElfCoreDevice::ReadLocalMemory(lldb_private::MemType local_data_ty
     }
     if (addr >= local_mem.addr && 
           local_mem.addr <= std::numeric_limits<uint64_t>::max() - local_mem.local_mem_info.size &&
-          addr >= local_mem.addr &&addr < local_mem.addr + local_mem.local_mem_info.size) {
+          addr >= local_mem.addr && addr < local_mem.addr + local_mem.local_mem_info.size) {
       size = min(size, local_mem.addr + local_mem.local_mem_info.size - addr);
       const uint8_t *src = local_mem.data.data() + (addr - local_mem.addr);
       uint8_t *dst = (uint8_t *)buf;
@@ -730,6 +820,14 @@ Status ProcessElfCoreDevice::GetCoresInfo(std::vector<CoreInfo> &info) {
   }
   m_summary_info.focus_core_id = old_focus_core_id;
   m_summary_info.focus_core_type = old_focus_core_type;
+  return error;
+}
+
+Status ProcessElfCoreDevice::GetKernelInfo(KernelInfo &info) {
+  Status error;
+  uint32_t name_size = std::min(sizeof(info.name) - 1, m_kernel_name.length());
+  m_kernel_name.copy(info.name, name_size);
+  info.name[name_size] = 0;
   return error;
 }
 

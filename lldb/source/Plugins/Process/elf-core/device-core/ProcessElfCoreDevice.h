@@ -30,7 +30,7 @@ public:
   ProcessElfCoreDevice(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                    const FileSpec &core_file);
 
-  ~ProcessElfCoreDevice() override;
+  ~ProcessElfCoreDevice() override = default;
 
   Status DoLoadCore() override;
 
@@ -54,21 +54,41 @@ public:
   // Update which pipe_err we got, depends on register values.
   void UpdateStopInfo(bool focus_known_error_core = false) override;
 
+  Status GetKernelInfo(KernelInfo &info) override;
 private:
-  Status ParseDevTable(const lldb::SectionSP& section);
-  Status ParseGlobalAuxInfo(const lldb::SectionSP& section);
-  Status ParseLocalAuxInfo(const lldb::SectionSP& section, uint64_t core_id);
-  template<typename T>Status ParseRegData(const lldb::SectionSP& section, uint64_t core_id);
+  Status ParseDevTable(const lldb::SectionSP& section, ConstString section_name);
+
+  // try to change target module by m_kernel_name
+  Status UpdateTargetKernel();
+
+  Status ParseGlobalAuxInfo(const lldb::SectionSP& section, ConstString section_name);
+
+  Status ParseLocalAuxInfo(const lldb::SectionSP& section, ConstString section_name);
+
+  Status ParseOneLocalAuxInfo(const lldb::SectionSP& section, uint64_t core_id);
+
+  Status ParseRegs(const lldb::SectionSP& section, ConstString section_name);
+
+  Status ParseKernelInfo(const lldb::SectionSP& section, ConstString section_name);
+
+  template<typename T>
+  Status ParseRegData(const lldb::SectionSP& section, uint64_t core_id);
+
   size_t ReadGlobalMemory(DeviceAddressClass address_class, lldb::addr_t addr, size_t size, void *buf, Status &error);
+
   size_t ReadLocalMemory(MemType local_data_type, lldb::addr_t addr, size_t size, void *buf, Status &error);
   Status CheckSectionExist();
+
   Status ParseSection();
+
   Status GetGlobalMemData(const device_core::GlobalMemInfo& global_mem_info, bool valid);
+
   void FocusToAnyKnownErrorAiCore();
 
 private:
   device_core::SummaryInfo m_summary_info;
   SectionList m_section_list;
+  std::string m_kernel_name{""};
 };
 }
 
