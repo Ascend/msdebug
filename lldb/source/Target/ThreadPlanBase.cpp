@@ -165,7 +165,18 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
           m_report_stop_vote = eVoteNo;
       }
       return false;
-
+#ifdef MS_DEBUGGER
+    case eStopReasonTrace:
+      if (!stop_info_sp->ShouldStop(event_ptr)) {
+        LLDB_LOGF(
+            log,
+            "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64
+            " (trace: %s)", 
+            m_tid, stop_info_sp->GetDescription());
+        return false;
+      }
+      return true;
+#endif
     default:
       return true;
     }

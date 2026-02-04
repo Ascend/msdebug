@@ -31,6 +31,7 @@ public:
   void SetDeviceStoppedByTrace(const InterruptEvent &param);
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr) override;
   void SetStoppedByDeviceCtrlC(const InterruptEvent &event);
+  void SetStoppedByInternalBreakpoint();
 private:
   std::unique_ptr<NativeRegisterContextLinux> m_device_reg_context_up;
 };

@@ -80,10 +80,12 @@ DynamicLoaderPOSIXDYLD::~DynamicLoaderPOSIXDYLD() {
     m_process->GetTarget().RemoveBreakpointByID(m_dyld_bid);
     m_dyld_bid = LLDB_INVALID_BREAK_ID;
   }
+#ifdef MS_DEBUGGER
   if (m_kernel_launch_bid != LLDB_INVALID_BREAK_ID) {
     m_process->GetTarget().RemoveBreakpointByID(m_kernel_launch_bid);
     m_kernel_launch_bid = LLDB_INVALID_BREAK_ID;
   }
+#endif
 }
 
 void DynamicLoaderPOSIXDYLD::DidAttach() {
@@ -307,27 +309,6 @@ bool DynamicLoaderPOSIXDYLD::EntryBreakpointHit(
   dyld_instance->SetRendezvousBreakpoint();
   return false; // Continue running.
 }
-#ifdef MS_DEBUGGER
-
-bool DynamicLoaderPOSIXDYLD::SetRendezvousKernelLaunchBreakpoint() {
-  Log *log = GetLog(LLDBLog::DynamicLoader);
-  static std::vector<std::string> launch_kernel_func_names{"MSBreakOnLaunch"};
-  Target &target = m_process->GetTarget();
-  auto launch_break = target.CreateBreakpoint(
-          /*containingModules=*/nullptr,
-          /*containingSourceFiles=*/nullptr, launch_kernel_func_names,
-          lldb::eFunctionNameTypeFull, lldb::eLanguageTypeC,
-          /*m_offset=*/0,
-          /*skip_prologue=*/lldb_private::eLazyBoolNo, 
-          /*internal=*/true,
-          /*request_hardware=*/false);
-  launch_break->SetCallback(RendezvousKernelLaunchBreakpointHit, this, true);
-  launch_break->SetBreakpointKind("internal-kernel-launch-event");
-  m_kernel_launch_bid = launch_break->GetID();
-  LLDB_LOG(log, "m_kernel_launch_bid={0}", m_kernel_launch_bid);
-  return true;
-}
-#endif
 
 bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
@@ -404,9 +385,6 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
   dyld_break->SetCallback(RendezvousBreakpointHit, this, true);
   dyld_break->SetBreakpointKind("shared-library-event");
   m_dyld_bid = dyld_break->GetID();
-#ifdef MS_DEBUGGER
-  SetRendezvousKernelLaunchBreakpoint();
-#endif
   return true;
 }
 #ifdef MS_DEBUGGER

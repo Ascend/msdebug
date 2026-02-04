@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2026. All rights reserved.
  */
 
 #ifdef MS_DEBUGGER
@@ -51,6 +51,7 @@ AscendProcessLinux::AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDeleg
   m_pos_info.core_type = CoreType::UNKNOWN_CORE_TYPE;
   m_pos_info.core_id = 0;
   m_device_context.reset();
+  m_stop = false;
 
   m_cores_info.clear();
   m_kernel_name.clear();
@@ -63,8 +64,11 @@ AscendProcessLinux::AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDeleg
   // Let our process instance know the thread has stopped.
   SetCurrentThreadID(tids[0]);
   SetState(StateType::eStateStopped, false);
-  // Proccess any signals we received before installing our handler
-  /* SigchldHandler(); */
+}
+
+AscendProcessLinux::~AscendProcessLinux() {
+  m_stop = true;
+  m_server->Close();
 }
 
 Status AscendProcessLinux::InitDeviceContext(const int device_id, const std::string &soc_version, const ::pid_t tgid) {
@@ -141,6 +145,28 @@ Status AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kernel_info
       m_device_binary_info_que.push({kernel_info_msg.pc_base_addr, kernel_info_msg.elf});
       LLDB_LOG(log, "success get base_pc={0:x}, kernel_hash={1}", kernel_info_msg.pc_base_addr,
                kernel_info_msg.kernel_hash);
+      for (const auto &thread_up : m_threads) {
+        AscendThreadLinux *thread = GetThreadByID(thread_up->GetID());
+        if (!thread) {
+          continue;
+        }
+        if (thread_up->GetID() != GetID()) {
+          thread->SetStopped(false);
+          continue;
+        }
+        LLDB_LOG(log, "Fake internel-breakpoint process state, pid = {0}", thread->GetID());
+        // Mark the thread as stopped at breakpoint.
+        thread->SetStoppedByInternalBreakpoint();
+        m_pending_notification_tid = thread->GetID();
+        m_current_thread_id = thread->GetID();
+        SetState(StateType::eStateStopped, false);
+        m_delegate.ProcessStateChanged(this, StateType::eStateStopped);
+        m_pending_notification_tid = LLDB_INVALID_THREAD_ID;
+      }
+      m_internal_break_done = false;
+      m_device_context->SetCanRun(false);
+      while(!m_internal_break_done && !m_stop);
+      LLDB_LOG(log, "process internal fake break point done");
     }
   } while (0);
 
@@ -314,13 +340,14 @@ Status AscendProcessLinux::Resume(const ResumeActionList &resume_actions) {
       // when resume host, device may invocate a breakpoint then change all thread status to stop more quickly
       // make sure we finished resume thread response then start receive event from driver
       m_device_context->SetCanRun(true);
+      m_internal_break_done = true;
     }
   });
   if (!IsDeviceBreak()) {
     return NativeProcessLinux::Resume(resume_actions);
   }
   Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "pid {0}", GetID());
+  LLDB_LOG(log, "{0} pid {1}", __FUNCTION__, GetID());
   const auto &thread = GetCurrentThread();
   if (!thread) {
     return Status("AscendProcessLinux::%s (): can not get current thread.",
@@ -556,9 +583,15 @@ void AscendProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
   ThreadStopInfo stop_info;
   std::string description;
   // we btter stop host process in future.
-  if (thread.GetStopReason(stop_info, description) && stop_info.still_break_in_device) {
+  if (thread.GetStopReason(stop_info, description) && stop_info.still_break_in_device && !stop_info.internal_break) {
     LLDB_LOG(log, "warn: current device process is debugging, ignore host breakpoint event.");
     return;
+  }
+  // host process will exit, so just ignore internal breakpoint event.
+  // otherwise, prrcess will be trap all the time.
+  if (stop_info.internal_break) {
+    stop_info.internal_break = false;
+    m_internal_break_done = true;
   }
   NativeProcessLinux::MonitorBreakpoint(thread);
   // We should monitor all host states to detect device context switches.

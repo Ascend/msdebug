@@ -112,6 +112,9 @@ public:
 #ifdef MS_DEBUGGER
   static lldb::StopInfoSP
   CreateStopReasonWithBreakpointSite(Thread &thread, lldb::BreakpointSiteSP break_site);
+
+  static lldb::StopInfoSP
+  CreateInternalBreakStopReason(Thread &thread);
 #endif
   // This creates a StopInfo for the thread where the should_stop is already
   // set, and won't be recalculated.

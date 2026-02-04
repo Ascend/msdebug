@@ -26,6 +26,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#ifdef MS_DEBUGGER
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1165,6 +1168,50 @@ public:
   }
 };
 
+#ifdef MS_DEBUGGER
+class StopInfoInternalBreak: public StopInfo {
+public:
+  StopInfoInternalBreak(Thread &thread) : StopInfo(thread, LLDB_INVALID_UID) {}
+
+  ~StopInfoInternalBreak() override = default;
+
+  StopReason GetStopReason() const override { return eStopReasonTrace; }
+
+  const char *GetDescription() override {
+    if (m_description.empty())
+      return "trace";
+    else
+      return m_description.c_str();
+  }
+
+  bool ShouldStop(Event *event_ptr) override {
+    RefreshDeviceModules();
+    return false;
+  }
+
+private:
+  void RefreshDeviceModules() {
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (!thread_sp) {
+      LLDB_LOG(log, "Empty thread");
+      return;
+    }
+    ProcessSP process_sp(thread_sp->GetProcess());
+    if (!process_sp) {
+      LLDB_LOG(log, "Empty process");
+      return;
+    }
+    auto *baton = process_sp->GetDynamicLoader();
+    DynamicLoaderPOSIXDYLD *const dyld_instance = static_cast<DynamicLoaderPOSIXDYLD *>(baton);
+    if (!dyld_instance) {
+      LLDB_LOG(log, "Get empty dyld.");
+    }
+    dyld_instance->RefreshDeviceModules();
+  }
+};
+#endif
+
 // StopInfoException
 
 class StopInfoException : public StopInfo {
@@ -1393,6 +1440,10 @@ StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
 #ifdef MS_DEBUGGER
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSite(Thread &thread, lldb::BreakpointSiteSP break_site) {
   return StopInfoSP(new StopInfoBreakpoint(thread, break_site->GetID(), break_site->GetArchSpec()));
+}
+
+StopInfoSP StopInfo::CreateInternalBreakStopReason(Thread &thread) {
+  return StopInfoSP(new StopInfoInternalBreak(thread));
 }
 #endif
 

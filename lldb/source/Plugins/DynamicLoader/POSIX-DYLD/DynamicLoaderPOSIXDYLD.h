@@ -59,6 +59,11 @@ public:
                                      lldb::addr_t link_map_addr,
                                      lldb::addr_t base_addr,
                                      bool base_addr_is_offset) override;
+#ifdef MS_DEBUGGER
+  /// Helper method for RendezvousKernelLaunchBreakpointHit.
+  /// Updates LLDB's current set of loaded device modules.
+  void RefreshDeviceModules();
+#endif
 
 protected:
   /// Runtime linker rendezvous structure.
@@ -125,11 +130,6 @@ protected:
   /// Helper method for RendezvousBreakpointHit.  Updates LLDB's current set
   /// of loaded modules.
   void RefreshModules();
-#ifdef MS_DEBUGGER
-  /// Helper method for RendezvousKernelLaunchBreakpointHit.
-  /// Updates LLDB's current set of loaded device modules.
-  void RefreshDeviceModules();
-#endif
 
   /// Updates the load address of every allocatable section in \p module.
   ///

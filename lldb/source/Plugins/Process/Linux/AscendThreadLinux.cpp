@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2026. All rights reserved.
  */
 
 #ifdef MS_DEBUGGER
@@ -17,8 +17,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
-static auto g_wait_duration = std::chrono::milliseconds(100);
-
 AscendThreadLinux::AscendThreadLinux(AscendProcessLinux &process,
                                      lldb::tid_t tid)
     : NativeThreadLinux(*static_cast<NativeProcessLinux*>(&process), tid) {}
@@ -33,6 +31,11 @@ Status AscendThreadLinux::Resume(uint32_t signo) {
     m_stop_info.reason = StopReason::eStopReasonNone;
     m_stop_info.still_break_in_device = false;
     m_stop_description.clear();
+    if (m_stop_info.internal_break) {
+      m_stop_info.internal_break = false;
+      LLDB_LOG(log, "internal_break, just let it go");
+      return Status();
+    }
     LLDB_LOG(log, "Use AscendProcessLinux ResumeDevice");
     AscendProcessLinux &process = AscendThreadLinux::GetProcess();
     siginfo_t info;
@@ -88,6 +91,18 @@ void AscendThreadLinux::SetStoppedByDeviceBreakpoint(const InterruptEvent &event
   m_stop_info.details.device.break_addr = event.pc;
   m_stop_info.details.device.core_id = event.core_id;
   m_stop_info.details.device.core_type = event.core_type;
+  m_stop_info.still_break_in_device = true;
+}
+
+void AscendThreadLinux::SetStoppedByInternalBreakpoint() {
+  const StateType new_state = StateType::eStateStopped;
+  MaybeLogStateChange(new_state);
+  m_state = new_state;
+  m_stop_description.clear();
+
+  m_stop_info.reason = StopReason::eStopReasonTrace;
+  m_stop_info.internal_break = true;
+  m_stop_info.signo = SIGTRAP;
   m_stop_info.still_break_in_device = true;
 }
 

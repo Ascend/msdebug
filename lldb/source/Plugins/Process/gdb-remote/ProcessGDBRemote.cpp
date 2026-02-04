@@ -1858,6 +1858,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
             thread_sp->SetStopInfo(
                 StopInfo::CreateStopReasonWithBreakpointSiteID(
                     *thread_sp, bp_site_sp->GetID()));
+#ifdef MS_DEBUGGER
+          } else if (m_thread_pcs.empty()) {
+            thread_sp->SetStopInfo(StopInfo::CreateInternalBreakStopReason(*thread_sp));
+#endif
           } else
             thread_sp->SetStopInfo(
                 StopInfo::CreateStopReasonToTrace(*thread_sp));
@@ -2453,8 +2457,6 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         stop_info.core_id = UINT32_MAX;
       } else if (key.compare("kernel_name") == 0) {
         stop_info.kernel_name = value.str();
-      } else if (key.compare("base_pc") == 0 && (value.getAsInteger(RADIX_HEX, stop_info.base_pc))) {
-        stop_info.base_pc = 0;
       } else if (key.compare("soc_type") == 0) {
         int integer_value;
         if(!value.getAsInteger(RADIX_HEX, integer_value)) {

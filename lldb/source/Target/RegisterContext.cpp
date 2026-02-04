@@ -375,17 +375,6 @@ Status RegisterContext::ReadRegisterValueFromMemory(
     // assuming they are the same.
     reg_value.SetFromMemoryData(*reg_info, src.data(), src_len,
                                 process_sp->GetByteOrder(), error);
-#ifdef MS_DEBUGGER
-    if (IsStopInDevice() && (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC
-        || reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA)) {
-      uint64_t pc = reg_value.GetAsUInt64();
-      uint64_t base_pc = m_thread.GetProcess()->m_device_stop_info.base_pc;
-      if (pc >= base_pc) {
-        pc -= base_pc;
-      }
-      reg_value.SetUInt64(pc);
-    }
-#endif
   } else
     error.SetErrorString("invalid process");
 

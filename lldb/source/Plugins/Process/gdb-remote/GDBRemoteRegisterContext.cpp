@@ -154,15 +154,6 @@ bool GDBRemoteRegisterContext::ReadDeviceRegister(const RegisterInfo *reg_info,
     if (!ReadDeviceRegister(dwarf_num, value_interger)) {
       return false;
     }
-    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC ||
-        reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA) {
-      if (auto process_sp = m_thread.GetProcess()) {
-        uint64_t base_pc = process_sp->m_device_stop_info.base_pc;
-        if (value_interger >= base_pc) {
-          value_interger -= base_pc;
-        }
-      }
-    }
     value.SetUInt64(value_interger);
     return true;
 }

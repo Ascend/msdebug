@@ -73,6 +73,7 @@ protected:
     void MonitorBreakpoint(NativeThreadLinux &thread) override;
 
 private:
+  ~AscendProcessLinux() override;
   void MonitorBreakpoint(const InterruptEvent &param);
   Status InitDeviceContext(const int device_id, const std::string &soc_version, const pid_t tgid);
   Status SetDeviceSoftwareBreakpoint(lldb::addr_t addr);
@@ -116,6 +117,8 @@ private:
   // process status changed from stop to running or running to stop
   // need be one by one
   std::mutex m_status_mtx;
+  std::atomic_bool m_internal_break_done;
+  std::atomic_bool m_stop;
 };
 
 } // namespace process_linux

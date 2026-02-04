@@ -893,6 +893,13 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
       }
     }
   }
+  if (stop_info.internal_break) {
+    const char *reason_str = GetStopReasonString(tid_stop_info.reason);
+    if (reason_str != nullptr) {
+      response.Printf("reason:%s;", reason_str);
+    }
+    return response;
+  }
 #endif
 
   // If a 'QListThreadsInStopReply' was sent to enable this feature, we will
@@ -1016,7 +1023,6 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
         response.PutCString(kernel_name);
       }
       response.PutChar(';');
-      response.PutCString("base_pc:0;");
       response.PutCString("soc_type:");
       response.PutHex64(int(process.GetSocType()));
       response.PutChar(';');

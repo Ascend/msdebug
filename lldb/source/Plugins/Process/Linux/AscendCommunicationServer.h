@@ -26,6 +26,7 @@ public:
   bool Start();
   void Listen(Socket *client_socket);
   void SetMsgHandlerHook(ClientMsgHandlerHook &&hook);
+  void Close();
 
 private:
   std::unique_ptr<Socket> m_domain_socket;

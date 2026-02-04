@@ -133,6 +133,7 @@ struct ThreadStopInfo {
   uint32_t signo;
 #ifdef MS_DEBUGGER
   bool still_break_in_device;
+  bool internal_break;
 #endif
   union {
     // eStopReasonException

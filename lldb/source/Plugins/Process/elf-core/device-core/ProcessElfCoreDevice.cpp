@@ -326,7 +326,6 @@ Status ProcessElfCoreDevice::ParseDevTable(const SectionSP& section, ConstString
   if (!m_summary_info.aic_id.empty()) {
     m_summary_info.focus_core_id = m_summary_info.aic_id[0];
     m_summary_info.focus_core_type = CoreType::AIC;
-    UpdateStopInfo();
   } else if (!m_summary_info.aiv_id.empty()) {
     m_summary_info.focus_core_id = m_summary_info.aiv_id[0];
     m_summary_info.focus_core_type = CoreType::AIV;
@@ -735,6 +734,7 @@ Status ProcessElfCoreDevice::SetAicOnFocus(const uint32_t &core_id) {
            core_id) != m_summary_info.aic_id.end()) {
     m_summary_info.focus_core_id = core_id;
     m_summary_info.focus_core_type = CoreType::AIC;
+    UpdateStopInfo();
   } else {
     error.SetErrorString("Switch AIC failed, please check command: ascend info summary");
   }

@@ -32,6 +32,10 @@ AscendCommunicationServer::AscendCommunicationServer(std::size_t max_client_num,
 }
 
 AscendCommunicationServer::~AscendCommunicationServer() {
+  Close();
+}
+
+void AscendCommunicationServer::Close() {
   m_is_running = false;
   if (m_accept_worker.joinable()) {
     m_accept_worker.join();
@@ -45,6 +49,7 @@ AscendCommunicationServer::~AscendCommunicationServer() {
     if (unlink(m_socket_path.c_str()) != 0) {
       LLDB_LOG(GetLog(POSIXLog::Process), "Failed to delete msdebug socket file");
     }
+    m_socket_path = "";
   }
 }
 
