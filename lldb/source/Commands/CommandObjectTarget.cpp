@@ -184,13 +184,13 @@ static void UpdateExecutableTarget(TargetSP target_sp, const LoadDependentFiles 
   if (object_file->GetArchitecture().GetMachine() == llvm::Triple::hiipu64) {
     return;
   }
-  auto child_module_spec = object_file->GetChildModuleSpec();
-  if (!child_module_spec) {
+  auto child_module_specs = object_file->GetChildModuleSpecs();
+  if (child_module_specs.empty()) {
     result.AppendError("Can not find device binary from fatbin.");
     return;
   }
   ModuleSP child_module;
-  ModuleList::GetSharedModule(*child_module_spec, child_module, nullptr, nullptr, nullptr);
+  ModuleList::GetSharedModule(*child_module_specs.front(), child_module, nullptr, nullptr, nullptr);
   if (!child_module) {
     result.AppendError("Generate device module from child_module_spec failed.");
   }

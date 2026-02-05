@@ -1487,10 +1487,18 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     m_images.Append(executable_sp,
                     notify); // The first image is our executable file
 #ifdef MS_DEBUGGER
-    ModuleSP child_module;
-    if (executable_sp->GetObjectFile() && executable_sp->GetObjectFile()->GetChildModuleSpec()) {
-      auto child_module_spec = executable_sp->GetObjectFile()->GetChildModuleSpec();
-      ModuleList::GetSharedModule(*child_module_spec, child_module, nullptr, nullptr, nullptr);
+    std::vector<ModuleSP> child_modules;
+    auto *object_file = executable_sp->GetObjectFile();
+    std::vector<std::shared_ptr<ModuleSpec>> module_specs;
+    if (object_file) {
+      module_specs = object_file->GetChildModuleSpecs();
+    }
+    if (!module_specs.empty()) {
+      for (const auto &spec: module_specs) {
+        ModuleSP child_module;
+        ModuleList::GetSharedModule(*spec, child_module, nullptr, nullptr, nullptr);
+        child_modules.push_back(child_module);
+      }
     } else {
       // added extra kernel object
       const std::string kernel_object_path = Host::GetEnvironment().lookup("LAUNCH_KERNEL_PATH");
@@ -1513,17 +1521,21 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
           *error = module_spec->CheckInputFileValid(flags);
         }
         if (!error || error->Success()) {
+          ModuleSP child_module;
           module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
           ModuleList::GetSharedModule(*module_spec.get(), child_module, nullptr, nullptr, nullptr);
+          child_modules.push_back(child_module);
         }
       }
     }
-    if (!child_module) {
+    if (child_modules.empty()) {
       LLDB_LOG(log, "get child module failed");
     } else {
-      child_module->GetObjectFile()->SetType(ObjectFile::eTypeSharedLibrary);
-      m_images.Append(child_module, false);
-      LLDB_LOG(log, "child_module appended");
+      for (auto &child_module: child_modules) {
+        child_module->GetObjectFile()->SetType(ObjectFile::eTypeSharedLibrary);
+        m_images.Append(child_module, false);
+      }
+      LLDB_LOG(log, "{0} child_module appended", child_modules.size());
     }
 #endif
 

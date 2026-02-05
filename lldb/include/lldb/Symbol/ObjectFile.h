@@ -733,7 +733,8 @@ public:
   }
 
 #ifdef MS_DEBUGGER
-  virtual std::shared_ptr<ModuleSpec> GetChildModuleSpec(const std::string &kernel_name = "") {return nullptr;}
+  virtual std::vector<std::shared_ptr<ModuleSpec>> GetChildModuleSpecs(const std::string &kernel_name = "") {return {};}
+
 
   virtual std::shared_ptr<ModuleSpec> GetTargetModuleSpec(llvm::StringRef kernel_name) {return nullptr;}
 #endif

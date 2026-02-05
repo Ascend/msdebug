@@ -2008,14 +2008,15 @@ static bool ContainsTargetName(const char* data, size_t size, llvm::StringRef ta
   return false;
 }
 
-static std::pair<size_t, size_t> GetTargetELFOffset(DataExtractor &data, llvm::StringRef kernel_name) {
+static std::vector<std::pair<size_t, size_t>> GetELFOffsets(DataExtractor &data) {
   static const char elf_magic[] = {0x7f, 'E', 'L', 'F'};
   const size_t num_magic = sizeof(elf_magic);
   const llvm::StringRef elf_str(elf_magic, num_magic);
   size_t end_pos = data.GetByteSize();
+  std::vector<std::pair<size_t, size_t>> elf_offsets;
   const char *start = reinterpret_cast<const char*>(data.PeekData(0, end_pos));
   if (start == nullptr) {
-    return {};
+    return elf_offsets;
   }
   size_t last_elf_start_pos = 0;
   size_t elf_size = 0;
@@ -2028,53 +2029,66 @@ static std::pair<size_t, size_t> GetTargetELFOffset(DataExtractor &data, llvm::S
       continue;
     }
     elf_size = i - last_elf_start_pos;
-    if (ContainsTargetName(start + last_elf_start_pos, elf_size, kernel_name)) {
-      return {last_elf_start_pos, elf_size};
-    }
+    elf_offsets.emplace_back(last_elf_start_pos, elf_size);
     last_elf_start_pos = i;
   }
   elf_size = end_pos - last_elf_start_pos;
-  if (ContainsTargetName(start + last_elf_start_pos, elf_size, kernel_name)) {
-      return {last_elf_start_pos, elf_size};
-  }
-  return {};
+  elf_offsets.emplace_back(last_elf_start_pos, elf_size);
+  return elf_offsets;
 }
 
-static DataBufferSP ParseAiCoreBinarySection(DataExtractor &data, llvm::StringRef kernel_name) {
-  DataBufferSP data_buf;
-  size_t offset = 0;
+static std::vector<std::shared_ptr<ModuleSpec>> ParseAiCoreBinarySection(DataExtractor &data, const FileSpec &file_spec, llvm::StringRef kernel_name) {
   Log *log = GetLog(LLDBLog::Modules);
-  auto num_bytes = data.GetByteSize();
-  if (!kernel_name.empty()) {
-    auto offset_and_size = GetTargetELFOffset(data, kernel_name);
-    if (offset_and_size.second != 0) {
-      offset = offset_and_size.first;
-      num_bytes = offset_and_size.second;
-    } else {
-      LLDB_LOG(log, "Find kernel_name in all all elf failed");
+  auto offset_and_sizes = GetELFOffsets(data);
+  std::vector<std::shared_ptr<ModuleSpec>> module_specs;
+  if (offset_and_sizes.empty()) {
+    LLDB_LOG(log, "Find 0 device elf data");
+  } else {
+    DataBufferSP data_buf;
+    const char *start = reinterpret_cast<const char*>(data.PeekData(0, data.GetByteSize()));
+    for (size_t i = 0; i < offset_and_sizes.size(); i++) {
+      size_t offset = offset_and_sizes[i].first;
+      size_t num_bytes = offset_and_sizes[i].second;
+      if (kernel_name.empty() || ContainsTargetName(start + offset, num_bytes, kernel_name)) {
+        if (i == 0) {
+          // trick for coredump
+          num_bytes = data.GetByteSize();
+        }
+        data_buf.reset(new DataBufferHeap(data.PeekData(offset, num_bytes), num_bytes));
+        auto fspec = file_spec.CopyByAppendingPathComponent(llvm::StringRef("device_debugdata" + std::to_string(i)));
+        auto module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
+        module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+        module_specs.push_back(module_spec);
+        LLDB_LOG(log, "Got {0}th elf at offset={1}, num_byte={2}", i, offset, num_bytes);
+        if (!kernel_name.empty()) {
+          LLDB_LOG(log, "Got target elf, kernel_name={0}", kernel_name);
+          return module_specs;
+        }
+      }
+    }
+    if (module_specs.empty() && !kernel_name.empty()) {
+      LLDB_LOG(log, "No target elf found, kernel_name={0}", kernel_name);
     }
   }
-  data_buf.reset(new DataBufferHeap(data.PeekData(offset, num_bytes), num_bytes));
-  LLDB_LOG(log, "Got elf at offset={0}, num_byte={1}, kernel_name={2}", offset, num_bytes, kernel_name);
-  return data_buf;
+  return module_specs;
 }
 
 // current elf object may contains multiple elf object
 std::shared_ptr<ModuleSpec> ObjectFileELF::GetTargetModuleSpec(llvm::StringRef kernel_name) {
-  DataBufferSP data_buf = ParseAiCoreBinarySection(m_data, kernel_name);
-  auto fspec = GetFileSpec();
-  fspec.AppendPathComponent("kernel");
-  auto module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
-  module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
-  return module_spec;
+  auto module_specs = ParseAiCoreBinarySection(m_data, GetFileSpec(), kernel_name);
+  if (module_specs.empty()) {
+    return nullptr;
+  }
+  return module_specs.front();
 }
 
-std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec(const std::string &kernel_name) {
+std::vector<std::shared_ptr<ModuleSpec>> ObjectFileELF::GetChildModuleSpecs(const std::string &kernel_name) {
   SectionSP section;
   uint8_t match_id = UINT8_MAX;
   SectionList *section_list = GetSectionList();
+  std::vector<std::shared_ptr<ModuleSpec>> module_specs;
   if (!section_list) {
-    return nullptr;
+    return module_specs;
   }
   for (size_t i = 0; i < BINARY_NAME.size(); ++i) {
     section = section_list->FindSectionByPrefixName(BINARY_NAME[i]);
@@ -2084,7 +2098,7 @@ std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec(const std::string 
     }
   }
   if (match_id == UINT8_MAX) {
-    return nullptr;
+    return module_specs;
   }
   Log *log = GetLog(LLDBLog::Modules);
   LLDB_LOG(log, "Kernel section {0} matched", section->GetName());
@@ -2093,7 +2107,7 @@ std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec(const std::string 
   DataBufferSP data_buf;
   if (match_id == 0) {
     // .aicore_binary 段仅保存了算子.o
-    data_buf = ParseAiCoreBinarySection(data, kernel_name);
+    return ParseAiCoreBinarySection(data, GetFileSpec(), kernel_name);
   } else if (match_id > 0 && match_id < BINARY_NAME.size()) {
     // 其他段首放置了20个字节的额外信息
     AclrtLaunchKernelNode node;
@@ -2105,14 +2119,15 @@ std::shared_ptr<ModuleSpec> ObjectFileELF::GetChildModuleSpec(const std::string 
     node.aicore_file_len = data.GetU32(&offset);
     if (node.aicore_len == 0 || node.aicore_file_len == 0 ||
         !data.ValidOffsetForDataOfSize(offset, node.aicore_len)) {
-      return nullptr;
+      return module_specs;
     }
     data_buf.reset(new DataBufferHeap(data.GetDataStart() + offset, node.aicore_len));
+    auto fspec = GetFileSpec().CopyByAppendingPathComponent(llvm::StringRef("device_debugdata"));
+    auto module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
+    module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+    module_specs.push_back(module_spec);
   }
-  auto fspec = GetFileSpec().CopyByAppendingPathComponent(llvm::StringRef("device_debugdata"));
-  auto module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
-  module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
-  return module_spec;
+  return module_specs;
 }
 #endif
 
