@@ -92,6 +92,7 @@ struct DeviceInfo {
 
 struct DeviceBinaryInfo {
   uint64_t pc_base_addr;
+  uint32_t reset_all_device_binary;
   std::vector<char> binary;
 };
 

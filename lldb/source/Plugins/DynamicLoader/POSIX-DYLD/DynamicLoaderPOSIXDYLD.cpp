@@ -483,6 +483,13 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
     LLDB_LOG(log, "Get device binary failed: {0}", error);
     return;
   }
+
+  bool reset_all_device_binary = false;
+  if (info.reset_all_device_binary == 1U) {
+    reset_all_device_binary = true;
+    LLDB_LOG(log, "need to reset all previously loaded device binary");
+  }
+
   if (info.binary.empty()) {
     LLDB_LOG(log, "Get empty device binary.");
     return;
@@ -492,19 +499,25 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
     return;
   }
   ModuleList new_modules;
-  ModuleList old_modules;
+  ModuleList old_modules; // modules that need to be removed from loaded modules
   ModuleList &loaded_modules = m_process->GetTarget().GetImages();
 
-  // remove repeat modules, such as aicore_binary section or last run section
   for (size_t i = 0; i < loaded_modules.GetSize(); i++) {
     const auto module_sp = loaded_modules.GetModuleAtIndex(i);
-    if (module_sp && module_sp->GetUUID() == device_module->GetUUID()) {
+
+    // remove this module from loaded modules if any one of these conditions below are met:
+    // 1. it is a hiipu64-module and we need to reset all device binary.
+    // 2. it is a duplicate module. we replace the old one with it in loaded modules.
+    if ((reset_all_device_binary &&
+        module_sp->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) ||
+        (!reset_all_device_binary &&
+        module_sp && module_sp->GetUUID() == device_module->GetUUID())) {
       old_modules.Append(module_sp);
       UnloadSections(module_sp);
     }
+    loaded_modules.Remove(old_modules);
+    m_process->GetTarget().ModulesDidUnload(old_modules, false);
   }
-  loaded_modules.Remove(old_modules);
-  m_process->GetTarget().ModulesDidUnload(old_modules, false);
 
   // added new modules
   new_modules.Append(device_module);

@@ -4604,25 +4604,32 @@ uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBDeviceBinaryPacket(
   Log *log = GetLog(GDBRLog::Packets);
   if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
     if (!response.Consume("pc_base_addr:")) {
-      return 1;
+      return 10;
     }
     device_binary_info.pc_base_addr = response.GetU64(UINT64_MAX, 16);
     if (device_binary_info.pc_base_addr == UINT64_MAX) {
-      return 2;
+      return 11;
+    }
+    if (!response.Consume(";reset_all_device_binary:")) {
+      return 20;
+    }
+    device_binary_info.reset_all_device_binary = response.GetU32(UINT32_MAX, 10);
+    if (device_binary_info.pc_base_addr == UINT32_MAX) {
+      return 21;
     }
     if (!response.Consume(";binary_size:")) {
-      return 3;
+      return 30;
     }
     size_t binary_size = response.GetU64(UINT64_MAX, 16);
     if (binary_size == UINT64_MAX) {
-      return 4;
+      return 31;
     }
     if (!response.Consume(";device_binary:")) {
-      return 5;
+      return 40;
     }
     if (response.GetBytesLeft() != binary_size) {
       LLDB_LOG(log, "Require remain {0} bytes, but remain {1} bytes", binary_size, response.GetBytesLeft());
-      return 6;
+      return 41;
     }
     const char *data = response.Peek();
     device_binary_info.binary.assign(data, data + binary_size);

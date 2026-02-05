@@ -4823,6 +4823,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qDeviceBinaryInfo(StringExtractorGDBRem
   std::stringstream ss;
   ss << "pc_base_addr:";
   ss << std::hex << binary_info.pc_base_addr << ";";
+  ss << "reset_all_device_binary:" << std::dec << binary_info.reset_all_device_binary << ";";
   ss << "binary_size:" << std::hex << binary_info.binary.size() << ";";
   ss << "device_binary:";
   std::string payload = ss.str();

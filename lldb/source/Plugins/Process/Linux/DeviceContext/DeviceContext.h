@@ -185,7 +185,9 @@ public:
   Status BaseSqCqComm(CmdType type, const uint8_t *data = nullptr, const uint8_t len = 0,
                       uint8_t *out = nullptr, uint8_t out_len = 0) const;
   void SetSocket(const Socket *client_socket);
-  bool IsSocketMatched(const Socket *client_socket) const;
+  bool IsDeviceIdMatched(const uint32_t device_id) const;
+  bool IsTgidMatched(const int32_t tgid) const;
+  void UpdateTgid(const int32_t tgid);
 
 protected:
   int32_t m_drv_fd;

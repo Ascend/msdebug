@@ -709,8 +709,16 @@ void DeviceContext::SetSocket(const Socket *client_socket) {
   m_client_socket = client_socket;
 }
 
-bool DeviceContext::IsSocketMatched(const Socket *client_socket) const {
-  return m_client_socket == client_socket;
+bool DeviceContext::IsDeviceIdMatched(const uint32_t device_id) const {
+  return m_device_id == device_id;
+}
+
+bool DeviceContext::IsTgidMatched(const int32_t tgid) const {
+  return m_pid == tgid;
+}
+
+void DeviceContext::UpdateTgid(const int32_t tgid) {
+  m_pid = tgid;
 }
 
 DeviceContext::~DeviceContext() {

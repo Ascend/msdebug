@@ -99,7 +99,6 @@ Status AscendProcessLinux::InitDeviceContext(const int device_id, const std::str
     error.SetErrorStringWithFormatv("Start listen thread failed");
     return error;
   }
-  m_device_context->SetSocket(m_client_socket);
   return error;
 }
 
@@ -135,14 +134,41 @@ Status AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kernel_info
       LLDB_LOG(log, "{0} device context is not initialized!", __FUNCTION__);
       break;
     }
-    if (!m_device_context->IsSocketMatched(m_client_socket)) {
-      LLDB_LOG(log, "client is not matched");
+    // query device id from socket handle
+    auto it = m_socket_device_pid.find(m_client_socket);
+    if (it == m_socket_device_pid.end()) {
+      LLDB_LOG(log, "cannot find on which device the kernel {0} should be launched.",
+        kernel_info_msg.kernel_name.c_str());
       break;
     }
+
+    auto device_id = it->second.first;
+    auto tgid = it->second.second;
+    if (!m_device_context->IsDeviceIdMatched(device_id)) {
+      LLDB_LOG(log, "device id {0} from client {1} is not matched",
+        device_id, m_client_socket);
+      break;
+    }
+    LLDB_LOG(log, "device id matched. device id:{0} client:{1}", device_id, m_client_socket);
+
     m_kernel_name = kernel_info_msg.kernel_name;
     LLDB_LOG(log, "update kernel_name to {0}", m_kernel_name);
     if (!kernel_info_msg.elf.empty()) {
-      m_device_binary_info_que.push({kernel_info_msg.pc_base_addr, kernel_info_msg.elf});
+      DeviceBinaryInfo binary_info;
+      binary_info.pc_base_addr = kernel_info_msg.pc_base_addr;
+      binary_info.binary = kernel_info_msg.elf;
+      if (!m_device_context->IsTgidMatched(tgid)) {
+        // Critical: this means a kernel is about to be launched on a new process which is
+        // also set to the target device. It happens when the previous process exited and
+        // a new one was forked to launch kernels on the same device. At this time we need
+        // to notify the client to remove the previously loaded kernel binary and restart
+        // resolving device breakpoints.
+        binary_info.reset_all_device_binary = 1U;
+        m_device_context->UpdateTgid(tgid);
+      } else {
+        binary_info.reset_all_device_binary = 0U;
+      }
+      m_device_binary_info_que.push(binary_info);
       LLDB_LOG(log, "success get base_pc={0:x}, kernel_hash={1}", kernel_info_msg.pc_base_addr,
                kernel_info_msg.kernel_hash);
       for (const auto &thread_up : m_threads) {
@@ -179,8 +205,18 @@ Status AscendProcessLinux::HandleStreamId(uint32_t stream_id) {
     LLDB_LOG(log, "{0} device context is not initialized!", __FUNCTION__);
     return {};
   }
-  if (!m_device_context->IsSocketMatched(m_client_socket)) {
-    LLDB_LOG(log, "client is not matched");
+
+  // query device id from socket handle
+  auto it = m_socket_device_pid.find(m_client_socket);
+  if (it == m_socket_device_pid.end()) {
+    LLDB_LOG(log, "cannot find on which device the kernel {0} should be launched.",
+      m_kernel_name.c_str());
+    return {};
+  }
+  auto device_id = it->second.first;
+  if (!m_device_context->IsDeviceIdMatched(device_id)) {
+    LLDB_LOG(log, "device id {0} from client {1} is not matched",
+      device_id, m_client_socket);
     return {};
   }
   LLDB_LOG(log, "Process stream id");
@@ -627,7 +663,6 @@ void AscendProcessLinux::MonitorBreakpoint(const InterruptEvent &param) {
       continue;
     }
     LLDB_LOG(log, "Handle breakpoint process state, pid = {0}", thread->GetID());
-    thread->RequestStop();
     // Mark the thread as stopped at breakpoint.
     thread->SetStoppedByDeviceBreakpoint(param);
     m_pending_notification_tid = thread->GetID();

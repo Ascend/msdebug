@@ -10,7 +10,7 @@ find_program(MAKE make)
 
 if(NINJA)
     set(LLVM_GENERATOR "Ninja")
-    set(LLVM_BUILD_CMD ${NINJA} -v -j ${NPROC} lldb lldb-server runtime_stub)
+    set(LLVM_BUILD_CMD ${NINJA} -j ${NPROC} lldb lldb-server runtime_stub)
     if(LLDB_INCLUDE_TESTS)
         list(APPEND LLVM_BUILD_CMD check-lldb-unit)
     endif()
@@ -58,7 +58,7 @@ ExternalProject_Add(llvm_project
         -DHISTEDIT_FILE=${LIBEDIT_INSTALL_DIR}/include/histedit.h
         -DMS_DEBUGGER_LIBEDIT=${LIBEDIT_INSTALL_DIR}/lib
         -DMS_DEBUGGER_NCURSES=${NCURSES_INSTALL_DIR}/lib
-        -DCMAKE_VERBOSE_MAKEFILE=ON
+        -DCMAKE_VERBOSE_MAKEFILE=OFF
     CMAKE_CACHE_ARGS
         -DLLVM_TARGETS_TO_BUILD:STRING=AArch64\;X86\;ARM
         -DLLVM_ENABLE_PROJECT_LIST:STRING=clang\;lldb
