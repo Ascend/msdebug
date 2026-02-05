@@ -653,7 +653,7 @@ size_t DeviceContext::ReadMemory(lldb::addr_t addr, size_t size, const MemoryTyp
       return 0;
     }
   } else if (address_class == DeviceAddressClass::STACK && mem_type == MemType::OUT_MEM) {
-    if (!IsValidStack(addr, size)) {
+    if (!(IsValidStack(addr, size) || IsValidGlobalAddr(addr, size))) {
       LLDB_LOG(log, "Invalid stack addr or size.");
       return 0;
     }
