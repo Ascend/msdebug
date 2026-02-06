@@ -13,7 +13,7 @@
 #include "lldb/Utility/Status.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend910B.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend310P.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend910D.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend950.h"
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -27,8 +27,8 @@ NativeRegisterContextLinux::CreateDeviceNativeRegisterContextLinux(
     register_info_up = std::make_unique<RegisterInfoPOSIX_ascend910B>(target_arch);
   } else if (soc_type == SocType::ASCEND310P) {
     register_info_up = std::make_unique<RegisterInfoPOSIX_ascend310P>(target_arch);
-  } else if (soc_type == SocType::ASCEND910D) {
-    register_info_up = std::make_unique<RegisterInfoPOSIX_ascend910D>(target_arch);
+  } else if (soc_type == SocType::ASCEND950) {
+    register_info_up = std::make_unique<RegisterInfoPOSIX_ascend950>(target_arch);
   } else {
     LLDB_LOG(GetLog(LLDBLog::Process), "invalid soc type={0}", static_cast<uint32_t>(soc_type));
   }

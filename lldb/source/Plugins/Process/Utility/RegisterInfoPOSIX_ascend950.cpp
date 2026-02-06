@@ -2,7 +2,7 @@
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
 #ifdef MS_DEBUGGER
-#include "RegisterInfoPOSIX_ascend910D.h"
+#include "RegisterInfoPOSIX_ascend950.h"
 #include "lldb/Utility/LLDBLog.h"
 using namespace lldb_private;
 using namespace lldb;
@@ -150,7 +150,7 @@ enum {
   k_num_register_sets = 4
 };
  
-static const uint32_t g_su_regnums_ascend910d[] = {
+static const uint32_t g_su_regnums_ascend950[] = {
   lldb_x0_ascend, lldb_x1_ascend, lldb_x2_ascend, lldb_x3_ascend,
   lldb_x4_ascend, lldb_x5_ascend, lldb_x6_ascend, lldb_x7_ascend,
   lldb_x8_ascend, lldb_x9_ascend, lldb_x10_ascend, lldb_x11_ascend,
@@ -169,10 +169,10 @@ static const uint32_t g_su_regnums_ascend910d[] = {
   lldb_set_intra_blk_cnt_ascend, LLDB_INVALID_REGNUM
 };
  
-static_assert(sizeof(g_su_regnums_ascend910d) / sizeof(uint32_t) - 1 == k_num_su_registers,
-              "Invalid size of g_su_regnums_ascend910d");
+static_assert(sizeof(g_su_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_su_registers,
+              "Invalid size of g_su_regnums_ascend950");
  
-static const uint32_t g_mte_regnums_ascend910d[] = {
+static const uint32_t g_mte_regnums_ascend950[] = {
   lldb_mte_warn_ascend, lldb_l0_set_value_mte_ascend,
   lldb_padding_mte_ascend, lldb_pad_val_outtoub_ascend, lldb_pad_val_outtol1_ascend,
   lldb_loop_size_outtol1_ascend, lldb_loop1_stride_outtol1_ascend, lldb_loop2_stride_outtol1_ascend,
@@ -218,10 +218,10 @@ static const uint32_t g_mte_regnums_ascend910d[] = {
   lldb_xgamma_lut_imp_65_ascend, LLDB_INVALID_REGNUM
 };
  
-static_assert(sizeof(g_mte_regnums_ascend910d) / sizeof(uint32_t) - 1 == k_num_mte_registers,
-              "Invalid size of g_mte_regnums_ascend910d");
+static_assert(sizeof(g_mte_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_mte_registers,
+              "Invalid size of g_mte_regnums_ascend950");
  
-static const uint32_t g_vecrb_regnums_ascend910d[] = {
+static const uint32_t g_vecrb_regnums_ascend950[] = {
   lldb_vreg0_ascend, lldb_vreg1_ascend, lldb_vreg2_ascend,
   lldb_vreg3_ascend, lldb_vreg4_ascend, lldb_vreg5_ascend, lldb_vreg6_ascend,
   lldb_vreg7_ascend, lldb_vreg8_ascend, lldb_vreg9_ascend, lldb_vreg10_ascend,
@@ -278,10 +278,10 @@ static const uint32_t g_vecrb_regnums_ascend910d[] = {
   lldb_simt_pc_ascend, lldb_mrf_ascend, lldb_p_register_ascend, lldb_execmask_ascend, LLDB_INVALID_REGNUM
 };
  
-static_assert(sizeof(g_vecrb_regnums_ascend910d) / sizeof(uint32_t) - 1 == k_num_vecrb_registers,
-              "Invalid size of g_vecrb_regnums_ascend910d");
+static_assert(sizeof(g_vecrb_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_vecrb_registers,
+              "Invalid size of g_vecrb_regnums_ascend950");
  
-static const uint32_t g_l1_regnums_ascend910d[] = {
+static const uint32_t g_l1_regnums_ascend950[] = {
   lldb_fmatrix_ascend, lldb_padding_l1_ascend, lldb_l0_set_value_l1_ascend, lldb_l1_3d_size_ascend,
   lldb_l3d_rpt_ascend, lldb_fmatrix_dual_0_ascend, lldb_fmatrix_dual_1_ascend, lldb_fmatrix_b_ascend,
   lldb_l3d_rpt_b_ascend, lldb_padding_b_ascend, lldb_relu_alpha_ascend, lldb_quant_post_ascend,
@@ -290,9 +290,9 @@ static const uint32_t g_l1_regnums_ascend910d[] = {
   lldb_l1_warn_ascend, LLDB_INVALID_REGNUM
 };
  
-static const RegisterSet g_reg_sets_ascend910d[k_num_register_sets_default] = {
+static const RegisterSet g_reg_sets_ascend950[k_num_register_sets_default] = {
   {"Registers", "register", k_num_su_registers,
-   g_su_regnums_ascend910d}};
+   g_su_regnums_ascend950}};
  
 static constexpr uint64_t SU_ID = 1UL;
 static constexpr uint64_t MTE_ID = 2UL;
@@ -303,7 +303,7 @@ static constexpr uint64_t L1_ID = 6UL;
 static constexpr uint64_t ID_OFFSET = 52UL;
  
 // The array should be POD type.
-static const DeviceRegisterInfo REGISTER_910D_INFO[] = {
+static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_GPR(GPR0, x0, LLDB_INVALID_REGNUM), SU_ID << ID_OFFSET | 0, MIX_MASK},
   {ASCEND_GPR(GPR1, x1, LLDB_INVALID_REGNUM), SU_ID << ID_OFFSET | 1, MIX_MASK},
   {ASCEND_GPR(GPR2, x2, LLDB_INVALID_REGNUM), SU_ID << ID_OFFSET | 2, MIX_MASK},
@@ -729,30 +729,30 @@ static const DeviceRegisterInfo REGISTER_910D_INFO[] = {
   {ASCEND_REG(L1_WARN, lldb_l1_warn_ascend), L1_ID << ID_OFFSET | 7UL << 48, AIC_MASK}
 };
  
-static_assert(sizeof(REGISTER_910D_INFO) / sizeof(DeviceRegisterInfo) == k_num_registers_ascend,
-              "REGISTER_910D_INFO size is invalid");
+static_assert(sizeof(REGISTER_950_INFO) / sizeof(DeviceRegisterInfo) == k_num_registers_ascend,
+              "REGISTER_950_INFO size is invalid");
  
-const RegExtractor &RegisterInfoPOSIX_ascend910D::GetRegExtractor() {
-  static RegExtractor instance(REGISTER_910D_INFO, k_num_su_registers);
+const RegExtractor &RegisterInfoPOSIX_ascend950::GetRegExtractor() {
+  static RegExtractor instance(REGISTER_950_INFO, k_num_su_registers);
   LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
             instance.raw_register_infos.size());
   return instance;
 }
  
-RegisterInfoPOSIX_ascend910D::RegisterInfoPOSIX_ascend910D(const ArchSpec &target_arch)
+RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch)
   : RegisterInfoPOSIX_ascend(target_arch, k_num_su_registers,
     k_last_gpr_ascend - k_first_gpr_ascend + 1,
     GetRegExtractor().raw_register_infos.data(),
     GetRegExtractor().register_map) {
 }
  
-const RegisterSet* RegisterInfoPOSIX_ascend910D::GetRegisterSet(size_t set_index) const {
+const RegisterSet* RegisterInfoPOSIX_ascend950::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
-    return &g_reg_sets_ascend910d[set_index];
+    return &g_reg_sets_ascend950[set_index];
   return nullptr;
 }
  
-Status RegisterInfoPOSIX_ascend910D::GetRegisterAddr(const llvm::StringRef reg_name,
+Status RegisterInfoPOSIX_ascend950::GetRegisterAddr(const llvm::StringRef reg_name,
   CoreType core_type, uint64_t &addr) {
   Status error;
   auto reg_info = m_register_map.find(reg_name.str());
@@ -769,27 +769,27 @@ Status RegisterInfoPOSIX_ascend910D::GetRegisterAddr(const llvm::StringRef reg_n
   return error;
 }
 
-uint64_t RegisterInfoPOSIX_ascend910D::GetDbgAddr(uint64_t addr) {
+uint64_t RegisterInfoPOSIX_ascend950::GetDbgAddr(uint64_t addr) {
     addr |= (SU_ID << ID_OFFSET);
     return addr;
 }
 
-// ============== RegisterInfoPOSIXCore_ascend910D =================
-const RegExtractor &RegisterInfoPOSIXCore_ascend910D::GetRegExtractor() {
-  static RegExtractor instance(REGISTER_910D_INFO, k_num_registers_ascend);
+// ============== RegisterInfoPOSIXCore_ascend950 =================
+const RegExtractor &RegisterInfoPOSIXCore_ascend950::GetRegExtractor() {
+  static RegExtractor instance(REGISTER_950_INFO, k_num_registers_ascend);
   LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
             instance.raw_register_infos.size());
   return instance;
 }
  
-RegisterInfoPOSIXCore_ascend910D::RegisterInfoPOSIXCore_ascend910D(const ArchSpec &target_arch)
-  : RegisterInfoPOSIX_ascend910D(target_arch, k_num_registers_ascend,
+RegisterInfoPOSIXCore_ascend950::RegisterInfoPOSIXCore_ascend950(const ArchSpec &target_arch)
+  : RegisterInfoPOSIX_ascend950(target_arch, k_num_registers_ascend,
     k_num_gpr_registers,
     GetRegExtractor().raw_register_infos.data(),
     GetRegExtractor().register_map) {
 }
  
-RegisterInfoPOSIX_ascend910D::RegisterInfoPOSIX_ascend910D(const ArchSpec &target_arch, uint32_t register_info_count,
+RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch, uint32_t register_info_count,
   uint32_t register_gpr_count, const RegisterInfo *register_info_p,
   const std::map<std::string, DeviceRegisterInfo>& register_map)
   : RegisterInfoPOSIX_ascend(target_arch, register_info_count,
@@ -797,20 +797,20 @@ RegisterInfoPOSIX_ascend910D::RegisterInfoPOSIX_ascend910D(const ArchSpec &targe
 }
  
 static const RegisterSet g_core_reg_sets[k_num_register_sets] = {
-  {"SURegisters", "su_dbg_reg", k_num_su_registers, g_su_regnums_ascend910d},
-  {"MTERegisters", "mte_dbg_reg", k_num_mte_registers, g_mte_regnums_ascend910d},
-  {"VECRegisters", "vec_dbg_reg", k_num_vecrb_registers, g_vecrb_regnums_ascend910d},
-  {"L1Registers", "l1_dbg_reg", k_num_l1_registers, g_l1_regnums_ascend910d},
+  {"SURegisters", "su_dbg_reg", k_num_su_registers, g_su_regnums_ascend950},
+  {"MTERegisters", "mte_dbg_reg", k_num_mte_registers, g_mte_regnums_ascend950},
+  {"VECRegisters", "vec_dbg_reg", k_num_vecrb_registers, g_vecrb_regnums_ascend950},
+  {"L1Registers", "l1_dbg_reg", k_num_l1_registers, g_l1_regnums_ascend950},
 };
  
-const RegisterSet* RegisterInfoPOSIXCore_ascend910D::GetRegisterSet(size_t set_index) const {
+const RegisterSet* RegisterInfoPOSIXCore_ascend950::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &g_core_reg_sets[set_index];
   LLDB_LOGF(GetLog(LLDBLog::Thread), "get A2/A3 core register set failed");
   return nullptr;
 }
  
-size_t RegisterInfoPOSIXCore_ascend910D::GetRegisterSetCount() const {
+size_t RegisterInfoPOSIXCore_ascend950::GetRegisterSetCount() const {
   return k_num_register_sets;
 }
 

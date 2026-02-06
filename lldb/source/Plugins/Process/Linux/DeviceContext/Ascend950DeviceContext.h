@@ -3,18 +3,18 @@
  */
  
 #ifdef MS_DEBUGGER
-#ifndef ASCEND910DDEVICECONTEXT_H
-#define ASCEND910DDEVICECONTEXT_H
+#ifndef ASCEND950DEVICECONTEXT_H
+#define ASCEND950DEVICECONTEXT_H
  
 #include "DeviceContext.h"
  
 namespace lldb_private {
 
 
-class Ascend910DDeviceContext : public DeviceContext {
+class Ascend950DeviceContext : public DeviceContext {
 public:
-  Ascend910DDeviceContext(const ::pid_t pid, const uint32_t device_id);
-  ~Ascend910DDeviceContext() = default;
+  Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id);
+  ~Ascend950DeviceContext() = default;
   SocType GetSocType() override { return m_soc_type; }
   Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) override;
   Status GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) override;
@@ -46,5 +46,5 @@ private:
  
 } // namespace lldb_private
  
-#endif //ASCEND910DDEVICECONTEXT_H
+#endif //ASCEND950DEVICECONTEXT_H
 #endif // #ifdef MS_DEBUGGER

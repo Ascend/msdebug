@@ -210,7 +210,7 @@ static std::unordered_map<DeviceAddressClass, MemType> AddressClassLocalDataType
 
 static std::unordered_map<DevdrvChipType, SocType> DevdrvChipSocTypeMap = {
   {DevdrvChipType::CHIP_CLOUD_V2, lldb_private::SocType::ASCEND910B},
-  {DevdrvChipType::CHIP_CLOUD_V4, lldb_private::SocType::ASCEND910D}
+  {DevdrvChipType::CHIP_CLOUD_V4, lldb_private::SocType::ASCEND950}
 };
 
 inline std::string CenterText(const std::string& text, size_t width) {

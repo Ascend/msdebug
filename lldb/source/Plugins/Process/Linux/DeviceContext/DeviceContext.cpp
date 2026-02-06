@@ -14,7 +14,7 @@
 #include "DeviceContext.h"
 #include "Ascend910BDeviceContext.h"
 #include "Ascend310PDeviceContext.h"
-#include "Ascend910DDeviceContext.h"
+#include "Ascend950DeviceContext.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -86,14 +86,38 @@ static const std::map<std::string, SocType> SOC_STRING_TO_TYPE = {
   {"Ascend310P3Vir03", SocType::ASCEND310P},
   {"Ascend310P3Vir04", SocType::ASCEND310P},
   {"Ascend310P4", SocType::ASCEND310P},
-  {"Ascend910_9599",  SocType::ASCEND910D},
-  {"Ascend910_9589",  SocType::ASCEND910D},
-  {"Ascend910_958a",  SocType::ASCEND910D},
-  {"Ascend910_958b",  SocType::ASCEND910D},
-  {"Ascend910_957b",  SocType::ASCEND910D},
-  {"Ascend910_957d",  SocType::ASCEND910D},
-  {"Ascend910_956d",  SocType::ASCEND910D},
-  {"Ascend910_950z",  SocType::ASCEND910D},
+  {"Ascend950DT_950x",  SocType::ASCEND950},
+  {"Ascend950DT_950y",  SocType::ASCEND950},
+  {"Ascend950DT_9571",  SocType::ASCEND950},
+  {"Ascend950DT_9572",  SocType::ASCEND950},
+  {"Ascend950DT_9573",  SocType::ASCEND950},
+  {"Ascend950DT_9574",  SocType::ASCEND950},
+  {"Ascend950DT_9575",  SocType::ASCEND950},
+  {"Ascend950DT_9576",  SocType::ASCEND950},
+  {"Ascend950DT_9577",  SocType::ASCEND950},
+  {"Ascend950DT_9578",  SocType::ASCEND950},
+  {"Ascend950DT_9581",  SocType::ASCEND950},
+  {"Ascend950DT_9582",  SocType::ASCEND950},
+  {"Ascend950DT_9583",  SocType::ASCEND950},
+  {"Ascend950DT_9584",  SocType::ASCEND950},
+  {"Ascend950DT_9585",  SocType::ASCEND950},
+  {"Ascend950DT_9586",  SocType::ASCEND950},
+  {"Ascend950DT_9587",  SocType::ASCEND950},
+  {"Ascend950DT_9588",  SocType::ASCEND950},
+  {"Ascend950DT_9591",  SocType::ASCEND950},
+  {"Ascend950DT_9592",  SocType::ASCEND950},
+  {"Ascend950DT_9595",  SocType::ASCEND950},
+  {"Ascend950DT_9596",  SocType::ASCEND950},
+  {"Ascend950DT_95A1",  SocType::ASCEND950},
+  {"Ascend950DT_95A2",  SocType::ASCEND950},
+  {"Ascend950PR_950z",  SocType::ASCEND950},
+  {"Ascend950PR_9579",  SocType::ASCEND950},
+  {"Ascend950PR_957b",  SocType::ASCEND950},
+  {"Ascend950PR_957c",  SocType::ASCEND950},
+  {"Ascend950PR_957d",  SocType::ASCEND950},
+  {"Ascend950PR_9589",  SocType::ASCEND950},
+  {"Ascend950PR_958b",  SocType::ASCEND950},
+  {"Ascend950PR_9599",  SocType::ASCEND950},
 };
 
 std::shared_ptr<DeviceContext> DeviceContext::Factory::GetDeviceContext(

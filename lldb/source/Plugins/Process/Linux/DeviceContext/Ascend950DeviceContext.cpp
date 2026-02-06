@@ -2,10 +2,10 @@
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
 #ifdef MS_DEBUGGER
-#include "Ascend910DDeviceContext.h"
+#include "Ascend950DeviceContext.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend910D.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend950.h"
  
 using namespace lldb_private;
 using namespace lldb;
@@ -73,15 +73,15 @@ struct WarpInfo {
  
 using namespace debug_ts;
  
-Ascend910DDeviceContext::Ascend910DDeviceContext(const ::pid_t pid, const uint32_t device_id):
+Ascend950DeviceContext::Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id):
   DeviceContext(pid, device_id) {
-  m_soc_type = SocType::ASCEND910D;
+  m_soc_type = SocType::ASCEND950;
 }
  
-Status Ascend910DDeviceContext::ReadRegister(const RegisterInfo *reg_info,
+Status Ascend950DeviceContext::ReadRegister(const RegisterInfo *reg_info,
                                              uint32_t core_id, CoreType core_type, RegisterValue &value) {
   Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend910D::GetRegExtractor().register_map;
+  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
   if (reg_info && reg_info->kinds[eRegisterKindLLDB] < register_map.size() &&
       register_map.find(reg_info->name) != register_map.end()) {
     const DeviceRegisterInfo &device_reg_info = register_map.at(reg_info->name);
@@ -98,14 +98,14 @@ Status Ascend910DDeviceContext::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
-Status Ascend910DDeviceContext::ReadRegister(uint64_t addr, uint32_t core_id, CoreType core_type, uint64_t &value) {
-  addr = RegisterInfoPOSIX_ascend910D::GetDbgAddr(addr);
+Status Ascend950DeviceContext::ReadRegister(uint64_t addr, uint32_t core_id, CoreType core_type, uint64_t &value) {
+  addr = RegisterInfoPOSIX_ascend950::GetDbgAddr(addr);
   return DeviceContext::ReadRegister(addr, core_id, core_type, value);
 }
 
-Status Ascend910DDeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
+Status Ascend950DeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
   Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend910D::GetRegExtractor().register_map;
+  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
   auto reg_info = register_map.find(reg_name.str());
   if (reg_info == register_map.end()) {
       error.SetErrorStringWithFormatv(
@@ -120,13 +120,13 @@ Status Ascend910DDeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, 
   return error;
 }
 
-Status Ascend910DDeviceContext::GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) {
+Status Ascend950DeviceContext::GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) {
   Status error;
   if (core_type == CoreType::UNKNOWN_CORE_TYPE) {
     error.SetErrorString("GetRegisterList failed due to unknown core type.");
     return error;
   }
-  const auto &register_map = RegisterInfoPOSIX_ascend910D::GetRegExtractor().register_map;
+  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
   for(const auto &item : register_map) {
     if ((1U << static_cast<int>(core_type)) & item.second.core_type_support_mask) {
       reg_list.push_back(item.first);
@@ -135,9 +135,9 @@ Status Ascend910DDeviceContext::GetRegisterList(std::vector<std::string> &reg_li
   return error;
 }
 
-Status Ascend910DDeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) {
+Status Ascend950DeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) {
   Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend910D::GetRegExtractor().register_map;
+  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
   for (const auto &item : register_map) {
     if ((1U << static_cast<int>(core_type)) & item.second.core_type_support_mask) {
       if (item.second.addr == addr) {
@@ -150,11 +150,11 @@ Status Ascend910DDeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t a
   return error;
 }
 
-MemType Ascend910DDeviceContext::GetStackMemType() const {
+MemType Ascend950DeviceContext::GetStackMemType() const {
   return MemType::OUT_MEM;
 }
 
-Status Ascend910DDeviceContext::GetDeviceInfo(DeviceInfo &device_info) {
+Status Ascend950DeviceContext::GetDeviceInfo(DeviceInfo &device_info) {
   Status error;
   DeviceCoreMask info;
   Log *log = GetLog(LLDBLog::Process);
@@ -202,7 +202,7 @@ inline CoreMaskParam GenCoreMask(const InterruptPosInfo &pos_info) {
   return core_info;
 }
  
-Status Ascend910DDeviceContext::Resume(const InterruptPosInfo &pos_info) const {
+Status Ascend950DeviceContext::Resume(const InterruptPosInfo &pos_info) const {
   ControlUnitParam param;
   param.core_info = GenCoreMask(pos_info);
   if (pos_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
@@ -217,7 +217,7 @@ Status Ascend910DDeviceContext::Resume(const InterruptPosInfo &pos_info) const {
   return BaseSqCqComm(CmdType::RESUME_DEVICE, (uint8_t*)&param, sizeof(param));
 }
  
-Status Ascend910DDeviceContext::SingleStep(const InterruptPosInfo &pos_info) const {
+Status Ascend950DeviceContext::SingleStep(const InterruptPosInfo &pos_info) const {
   ControlUnitParam param{};
   param.core_info = GenCoreMask(pos_info);
   if (pos_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
@@ -232,7 +232,7 @@ Status Ascend910DDeviceContext::SingleStep(const InterruptPosInfo &pos_info) con
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&param, sizeof(param));
 }
 
-Status Ascend910DDeviceContext::InvalidInstrCache(const lldb::addr_t &addr,
+Status Ascend950DeviceContext::InvalidInstrCache(const lldb::addr_t &addr,
     const InterruptPosInfo &pos_info, uint8_t redirect_ifu) const {
   debug_ts::InvalidCacheParam param;
   param.reserve0 = 0;
@@ -242,7 +242,7 @@ Status Ascend910DDeviceContext::InvalidInstrCache(const lldb::addr_t &addr,
   return BaseSqCqComm(CmdType::INVALID_INSTR_CACHE, (uint8_t*)&param, sizeof(param));
 }
 
-Status Ascend910DDeviceContext::SetHardwareBreakpoint(
+Status Ascend950DeviceContext::SetHardwareBreakpoint(
     lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const {
   HardBreakpointParam param;
   param.virt_addr = addr;
@@ -251,7 +251,7 @@ Status Ascend910DDeviceContext::SetHardwareBreakpoint(
   return BaseSqCqComm(CmdType::SET_HARD_BREAKPOINT, (uint8_t*)&param, sizeof(param));
 }
  
-Status Ascend910DDeviceContext::RemoveHardwareBreakpoint(
+Status Ascend950DeviceContext::RemoveHardwareBreakpoint(
     lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const {
   HardBreakpointParam param;
   param.virt_addr = addr;

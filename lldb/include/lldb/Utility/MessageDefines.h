@@ -17,7 +17,7 @@ enum class SocType {
   SOC_BEGIN = 0,
   ASCEND910B,
   ASCEND310P,
-  ASCEND910D,
+  ASCEND950,
   SOC_END,
 };
 

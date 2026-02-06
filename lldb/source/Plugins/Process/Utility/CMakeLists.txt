@@ -62,7 +62,7 @@ if (MS_DEBUGGER)
       RegisterInfoPOSIX_ascend.cpp
       RegisterInfoPOSIX_ascend310P.cpp
       RegisterInfoPOSIX_ascend910B.cpp
-      RegisterInfoPOSIX_ascend910D.cpp)
+      RegisterInfoPOSIX_ascend950.cpp)
 
   add_lldb_library(lldbPluginProcessUtility
     ${LLDB_PLUGIN_PROCESS_UTILITY_SRC}

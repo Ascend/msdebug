@@ -134,7 +134,7 @@ bool GDBRemoteRegisterContext::ReadDeviceRegister(const RegisterInfo *reg_info,
       return false;
     }
     process->GetDeviceStopInfoCached(info);
-    if (info.soc_type == SocType::ASCEND910B || info.soc_type == SocType::ASCEND910D) {
+    if (info.soc_type == SocType::ASCEND910B || info.soc_type == SocType::ASCEND950) {
       constexpr uint32_t ASCEND_DWARF_OFFSET = 64U;
       dwarf_num = reg_info->kinds[eRegisterKindDWARF] - ASCEND_DWARF_OFFSET;
     } else if (info.soc_type == SocType::ASCEND310P) {

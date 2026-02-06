@@ -7,7 +7,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend910B.h"
 #include "lldb/Target/RegisterContext.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend310P.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend910D.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend950.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -22,8 +22,8 @@ RegisterContextPOSIXCore_ascend::Create(Thread &thread, const ArchSpec &arch,
   std::unique_ptr<RegisterInfoPOSIX_ascend> register_info;
   if (soc_type == SocType::ASCEND910B) {
     register_info = std::make_unique<RegisterInfoPOSIXCore_ascend910B>(arch);
-  } else if (soc_type == SocType::ASCEND910D) {
-    register_info = std::make_unique<RegisterInfoPOSIXCore_ascend910D>(arch);
+  } else if (soc_type == SocType::ASCEND950) {
+    register_info = std::make_unique<RegisterInfoPOSIXCore_ascend950>(arch);
   }
   if (!register_info) {
     LLDB_LOG(log, "Create register info failed for soc_type={0}.", static_cast<uint32_t>(soc_type));
