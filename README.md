@@ -38,7 +38,7 @@ msDebug工具可通过构建软件包进行安装，具体操作请参见[MindSt
 
 ## 快速入门
 
-快速入门是以一个简单样例介绍如何使用msDebug工具调试算子。具体内容请参见[MindStudio Debugger快速入门](./docs/zh/msdebug_quick_start.md)。
+详细操作步骤请参见[快速入门](./docs/zh/quick_start/msdebug_quick_start.md)。
 
 ## 工具限制与注意事项
 
