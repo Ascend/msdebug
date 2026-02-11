@@ -1969,6 +1969,8 @@ static llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> CreateOB
 static bool ContainsTargetName(const char* data, size_t size, llvm::StringRef target_name)
 {
   auto expectOBinary = CreateOBinary(data, size);
+  const char *mix_aic = "_mix_aic";
+  const char *mix_aiv = "_mix_aiv";
   if (expectOBinary) {
     auto *objectFile = llvm::dyn_cast<llvm::object::ObjectFile>(expectOBinary->getBinary());
     if (!objectFile) {
@@ -1987,7 +1989,9 @@ static bool ContainsTargetName(const char* data, size_t size, llvm::StringRef ta
             continue;
           }
           llvm::StringRef name = std::move(*expectName);
-          if (name != target_name) {
+          if (name != target_name
+              && target_name.str() + mix_aic != name.str()
+              && target_name.str() + mix_aiv != name.str()) {
             continue;
           }
           uint32_t flags = std::move(*expectFlags);

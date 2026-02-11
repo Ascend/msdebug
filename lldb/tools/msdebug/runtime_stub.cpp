@@ -479,10 +479,14 @@ static void *GetStubFuncPtr(const std::string funcName)
 uint64_t GetFixedPcStartAddr(const KernelInfo &kernelInfo,
     const std::string &targetKernelName, uint64_t pcStartAddr)
 {
+    const char *mix_aic = "_mix_aic";
+    const char *mix_aiv = "_mix_aiv";
     uint64_t kernelOffset = UINT64_MAX;
     for (size_t i = 0; i < kernelInfo.kernelNames.size(); i++) {
         const auto &kernelName = kernelInfo.kernelNames[i];
-        if (kernelName == targetKernelName) {
+        if (kernelName == targetKernelName 
+            || targetKernelName + mix_aic == kernelName
+            || targetKernelName + mix_aiv == kernelName) {
             kernelOffset = kernelInfo.kernelOffsets[i];
             break;
         }
