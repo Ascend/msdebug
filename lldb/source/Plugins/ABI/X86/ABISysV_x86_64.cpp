@@ -130,6 +130,15 @@ bool ABISysV_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx)
     return false;
 
+#ifdef MS_DEBUGGER
+  // we need have hiipu64 abi in future
+  auto t_process_sp = thread.GetProcess();
+  if (!t_process_sp || t_process_sp->IsStopInDevice()) {
+    LLDB_LOGF(log, "stop in device, we have no abi, just return");
+    return false;
+  }
+#endif
+
   const RegisterInfo *reg_info = nullptr;
 
   if (args.size() > 6) // TODO handle more than 6 arguments

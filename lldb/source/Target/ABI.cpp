@@ -72,6 +72,14 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
   if (!ast_type.IsValid())
     return ValueObjectSP();
 
+#ifdef MS_DEBUGGER
+  // we need have hiipu64 abi in future
+  auto t_process_sp = thread.GetProcess();
+  if (!t_process_sp || t_process_sp->IsStopInDevice()) {
+    return ValueObjectSP();
+  }
+#endif
+
   ValueObjectSP return_valobj_sp;
 
   return_valobj_sp = GetReturnValueObjectImpl(thread, ast_type);
@@ -183,6 +191,13 @@ addr_t ABI::FixDataAddress(lldb::addr_t pc) {
 ValueObjectSP ABI::GetReturnValueObject(Thread &thread, llvm::Type &ast_type,
                                         bool persistent) const {
   ValueObjectSP return_valobj_sp;
+#ifdef MS_DEBUGGER
+  // we need have hiipu64 abi in future
+  auto t_process_sp = thread.GetProcess();
+  if (!t_process_sp || t_process_sp->IsStopInDevice()) {
+    return return_valobj_sp;
+  }
+#endif
   return_valobj_sp = GetReturnValueObjectImpl(thread, ast_type);
   return return_valobj_sp;
 }
