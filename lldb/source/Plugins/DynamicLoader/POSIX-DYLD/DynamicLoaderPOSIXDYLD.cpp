@@ -513,11 +513,15 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
         (!reset_all_device_binary &&
         module_sp && module_sp->GetUUID() == device_module->GetUUID())) {
       old_modules.Append(module_sp);
-      UnloadSections(module_sp);
     }
-    loaded_modules.Remove(old_modules);
-    m_process->GetTarget().ModulesDidUnload(old_modules, false);
   }
+
+  for (size_t i = 0; i < old_modules.GetSize(); i++) {
+    const auto module_sp = old_modules.GetModuleAtIndex(i);
+    UnloadSections(module_sp);
+  }
+  loaded_modules.Remove(old_modules);
+  m_process->GetTarget().ModulesDidUnload(old_modules, false);
 
   // added new modules
   new_modules.Append(device_module);
