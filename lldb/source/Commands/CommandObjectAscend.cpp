@@ -568,7 +568,7 @@ void PrintDevtbl(const SummaryInfo& summary_info, const DeviceStopInfo &stop_inf
   static constexpr uint32_t ID_WIDTH = 4;
   for (const auto &core_info: core_infos) {
     std::stringstream ss; 
-    ss << (core_info.core_id == stop_info.core_id ? " *" : "  ");
+    ss << (core_info.core_type == stop_info.core_type && core_info.core_id == stop_info.core_id ? " *" : "  ");
     ss << std::setw(ID_WIDTH) << static_cast<uint64_t>(core_info.core_id) << "       " <<
         (core_info.core_type == CoreType::AIC ? "AIC" : "AIV") << "    0x" << std::hex <<
         core_info.pc << "    " << std::setw(ID_WIDTH) << std::dec <<

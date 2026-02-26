@@ -92,7 +92,7 @@ Status ProcessElfCoreDevice::UpdateTargetKernel() {
   auto &target = GetTarget();
   auto executable_module = target.GetExecutableModule();
   if (!executable_module) {
-    error.SetErrorString("Target doesn't contains any executable_module");
+    // input kernel object file is an option
     return error;
   }
   auto *object_file = executable_module->GetObjectFile();
