@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "artifact_spec": {},
+  "dependency_sets": {
+    "prod": {
+      "submodules": [
+        "third-party/makeself",
+        "third-party/libedit",
+        "third-party/ncurses"
+      ],
+      "artifacts": []
+    },
+    "test": {
+      "submodules": [
+        "third-party/makeself",
+        "third-party/libedit",
+        "third-party/ncurses"
+      ],
+      "artifacts": []
+    }
+  }
+}
+

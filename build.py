@@ -1,96 +1,87 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
-import os
-import sys
-import logging
-import subprocess
+
 import argparse
-import tarfile
-import glob
-import shutil
+import logging
+import os
+import subprocess
+import sys
+import traceback
+from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def exec_cmd(cmd, env=None, shell=False):
-    try:
-        result = subprocess.run(
-            cmd, 
-            capture_output=False, 
-            text=True, 
-            timeout=360000,
-            env=env if env else os.environ, 
-            shell=shell
-        )
-        if result.returncode != 0:
-            logging.error("Execute command failed: %s", " ".join(cmd) if not shell else cmd)
-            sys.exit(result.returncode)
-    except subprocess.TimeoutExpired:
-        logging.error("Command timed out: %s", " ".join(cmd) if not shell else cmd)
-        sys.exit(1)
-    except Exception as e:
-        logging.error("Failed to execute command %s: %s", " ".join(cmd) if not shell else cmd, str(e))
-        sys.exit(1)       
+class BuildManager:
+    """
+    统一构建管理：依赖拉取 → CMake 配置 → Ninja 编译 → 安装 / 测试。
 
+    用法:
+        python build.py                  完整构建（拉取依赖 + Release 编译）
+        python build.py local            本地构建（跳过依赖拉取, Release 编译）
+        python build.py test             单元测试（拉取依赖 + 编译 + 执行测试）
+        python build.py test local       单元测试（跳过依赖拉取, 编译 + 执行测试）
+        python build.py -r <revision>    指定依赖的内部源码仓(例如msopcom)的 Git 分支/标签/commit
 
-def execute_build(build_path):
-    try:
-        if not os.path.exists(build_path):
-            os.makedirs(build_path, mode=0o755)
-        os.chdir(build_path)
-    except Exception as e:
-        logging.error("Failed to execute build: %s", str(e))
-        sys.exit(1)
+    参数说明:
+        - 参数: command : 构建动作: 为空时为全构建, local 为跳过依赖下载, test 为运行单元测试。
+        - 参数: -r, --revision : 指定 Git 修订版本或标签用于依赖检出。
+    """
 
+    def __init__(self):
+        self.project_root = Path(__file__).resolve().parent
+        argument_parser = argparse.ArgumentParser(description='Build the project and optionally run tests.')
+        argument_parser.add_argument('command', nargs='*', default=[],
+                                     choices=[[], 'local', 'test'],
+                                     help='Build action: omit for full build, "local" to skip dependency download, "test" to run unit tests')
+        argument_parser.add_argument('-r', '--revision',
+                                     help='Specify Git revision for internal dependent repo (e.g., msopcom).')
+        self.parsed_arguments = argument_parser.parse_args()
 
-def execute_compile(args):
-    try:
-        current_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-        llvm_build_dir = os.path.join(current_dir, 'build')
-        os.makedirs(llvm_build_dir, exist_ok=True)
-        os.chdir(llvm_build_dir)
-        cmake_args = [
-            '-G', 'Ninja',
-            '-DCMAKE_BUILD_TYPE=Release',
-            f'-DENABLE_LLDB_TESTS={"ON" if "test" in args.command else "OFF"}',
-            '..' 
-        ]
-        ninja_targets = []
-        if "test" in args.command:
-            ninja_targets.extend(['check-lldb-unit'])
-        logging.info("Configuring project with CMake...")
-        exec_cmd(["cmake"] + cmake_args)
-        logging.info("Building targets: %s", ninja_targets if ninja_targets else "[default]")
-        exec_cmd(["ninja"] + ninja_targets)
-    except Exception as e:
-        logging.error("Build failed: %s", str(e), exc_info=True)
-        sys.exit(1)
+    def _execute_command(self, command_sequence, timeout_seconds=36000, cwd=None, env=None):
+        logging.info("Running: %s", " ".join(command_sequence))
+        subprocess.run(command_sequence, timeout=timeout_seconds, check=True, cwd=cwd, env=env)
 
+    def run(self):
+        os.chdir(self.project_root)
 
-def create_arg_parser():
-    parser = argparse.ArgumentParser(description='Build script with optional testing')
-    parser.add_argument('command', nargs='*', default=[],
-                        choices=[[], 'local', 'test'],
-                        help='Command to execute (python build.py [ |local|test])')
-    parser.add_argument('-r', '--revision',
-                        help="Build with specific revision or tag")
-    return parser
+        # 在非 local 场景下按需更新依赖；在 local 场景下仅使用本地已有代码，不更新依赖。
+        if 'local' not in self.parsed_arguments.command:
+            from download_dependencies import DependencyManager
+            DependencyManager(self.parsed_arguments).run()
+
+        if 'test' in self.parsed_arguments.command:
+            # -------------------- 单元测试 --------------------
+            unit_test_build_dir = self.project_root / "build_ut"
+            unit_test_build_dir.mkdir(exist_ok=True)
+            os.chdir(unit_test_build_dir)
+
+            self._execute_command([
+                "cmake", "-G", "Ninja",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DENABLE_LLDB_TESTS=ON",
+                ".."
+            ])
+            self._execute_command(["ninja"])
+        else:
+            # -------------------- 产品构建 --------------------
+            product_build_dir = self.project_root / "build"
+            product_build_dir.mkdir(exist_ok=True)
+            os.chdir(product_build_dir)
+
+            self._execute_command([
+                "cmake", "-G", "Ninja",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DENABLE_LLDB_TESTS=OFF",
+                ".."
+            ])
+            self._execute_command(["ninja"])
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    parser = create_arg_parser()
-    args = parser.parse_args()
-
-    current_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-    os.chdir(current_dir)
-
-    build_path = os.path.join(current_dir, "build")
-
-    # 解析入参是否为local，非local场景时按需更新代码；local场景不更新代码只使用本地代码
-    if 'local' not in args.command:
-        from download_dependencies import update_submodule
-        update_submodule(args)
-
-    # 执行构建并打run包
-    execute_compile(args)
-    execute_build(build_path)
+    try:
+        BuildManager().run()
+    except Exception:
+        logging.error(f"Unexpected error: {traceback.format_exc()}")
+        sys.exit(1)

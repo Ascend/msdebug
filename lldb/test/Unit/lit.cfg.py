@@ -33,6 +33,9 @@ llvm_config.with_system_environment(
     ]
 )
 llvm_config.with_environment("PATH", os.path.dirname(sys.executable), append_path=True)
+llvm_config.with_environment(
+    "LD_LIBRARY_PATH", os.path.join(config.llvm_obj_root, "lib"), append_path=True
+)
 
 # Enable sanitizer runtime flags.
 config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"

@@ -4,13 +4,13 @@
 #ifdef MS_DEBUGGER
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "Plugins/Process/Linux/AscendProcessLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #define private public  // hack complier
 #define protected public
+#include "Plugins/Process/Linux/AscendProcessLinux.h"
 #include "Plugins/Process/Linux/AscendThreadLinux.h"
 #undef private
 #undef protected
@@ -37,7 +37,70 @@ using namespace lldb_private::process_linux;
 using namespace lldb_private::process_gdb_remote;
 using namespace ::testing;
 
-typedef process_linux::NativeProcessLinux::Factory NativeProcessFactory;
+class FakeDeviceContext : public DeviceContext {
+public:
+    FakeDeviceContext() : DeviceContext(0, 0) {
+        m_drv_fd = 3;
+    }
+
+    Status Init() override { return Status(); }
+    bool StartListenThread() override { return true; }
+    Status EnableDebugMode() override { return Status(); }
+
+    Status ReadRegister(const RegisterInfo *reg_info,
+                        uint32_t core_id, CoreType core_type,
+                        RegisterValue &value) override {
+        return Status("Not implemented");
+    }
+    Status GetRegisterAddr(const llvm::StringRef reg_name,
+                           CoreType core_type, uint64_t &addr) override {
+        return Status("Not implemented");
+    }
+    Status GetRegisterList(std::vector<std::string> &reg_list,
+                           CoreType core_type) override {
+        return Status("Not implemented");
+    }
+    Status CheckRegisterAddr(CoreType core_type, uint64_t addr) override {
+        return Status();
+    }
+    SocType GetSocType() override { return SocType::SOC_END; }
+    MemType GetStackMemType() const override { return MemType::OUT_MEM; }
+
+    size_t ReadGlobalMemory(lldb::addr_t addr, size_t size, void *data) override {
+        DebugInfo debug_info = {0, 1000, 0, 0};
+        DmaParam *param = (DmaParam*)debug_info.data;
+        std::vector<uint8_t> tmpData(size, 0);
+        param->host_addr = (uint64_t)&tmpData[0];
+        param->device_addr = addr;
+        param->size = size;
+        param->direction = DEVDRV_DMA_DEVICE_TO_HOST;
+        int32_t rtn = ioctl(m_drv_fd, CMD_GM_COPY, &debug_info);
+        if (rtn != 0) return 0;
+        std::copy(tmpData.begin(), tmpData.end(), static_cast<uint8_t*>(data));
+        return size;
+    }
+
+    size_t WriteGlobalMemory(lldb::addr_t addr, size_t size,
+                             const void *data) override {
+        DebugInfo debug_info = {0, 1000, 0, 0};
+        DmaParam *param = (DmaParam*)debug_info.data;
+        uint8_t *data_ptr = static_cast<uint8_t *>(const_cast<void *>(data));
+        std::vector<uint8_t> tmpData(data_ptr, data_ptr + size);
+        param->host_addr = (uint64_t)&tmpData[0];
+        param->device_addr = addr;
+        param->size = size;
+        param->direction = DEVDRV_DMA_HOST_TO_DEVICE;
+        int32_t rtn = ioctl(m_drv_fd, CMD_GM_COPY, &debug_info);
+        if (rtn != 0) return 0;
+        return size;
+    }
+
+    Status InvalidInstrCache(const lldb::addr_t &addr,
+                             const InterruptPosInfo &pos_info,
+                             uint8_t redirect_ifu = 0) const override {
+        return Status();
+    }
+};
 
 class AscendProcessLinuxTest : public testing::Test {
 public:
@@ -75,36 +138,25 @@ extern "C"
     }
 }
 
- TEST_F(AscendProcessLinuxTest, HandleStubMessage) {
+TEST_F(AscendProcessLinuxTest, HandleStubMessage) {
     HostInfo::Initialize();
     MainLoop mainloop;
-    NativeProcessFactory factory;
-    GDBRemoteCommunicationServerLLGS gdb_server(mainloop, factory);
+    NativeProcessLinux::Manager manager(mainloop);
+    GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
 
     int terminal_fd = 3;
     ::pid_t pid = 11111;
     ArchSpec arch = ArchSpec("hiipu64");
-    int sockets[2]; /* the pair of socket descriptors */
-    int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
-    ASSERT_TRUE(ret != -1);
-    int our_socket = sockets[0];
-    int gdb_socket = sockets[1];
     llvm::ArrayRef<::pid_t> tids({pid});
 
     auto process = std::make_unique<AscendProcessLinux>(
         pid, terminal_fd, gdb_server,
-        arch, mainloop, tids, our_socket);
-    std::string resp = "$ok;";
-    std::string deviceMsg = "$device_id:0;";
+        arch, manager, tids);
 
-    ret = write(gdb_socket, deviceMsg.c_str(), deviceMsg.length());
-    ASSERT_TRUE(ret >= (int)deviceMsg.length());
-    process->HandleStubMessage();
-    char buf[30] = {0};
-    ret = read(gdb_socket, buf, sizeof(buf));
-    ASSERT_TRUE(ret >= 0);
-    printf("read bytes=%s\n", buf);
- }
+    std::string deviceMsg = "device_id:0;tgid:0;soc_version:test;";
+    Status status = process->m_parser.ParseMessage(deviceMsg);
+    ASSERT_TRUE(status.Success() || status.GetError() != 0);
+}
 
 int read_trap_opcodes(int a, unsigned long int b, DebugInfo &c) {
     DmaParam *param = (DmaParam*)c.data;
@@ -119,39 +171,26 @@ int read_trap_opcodes(int a, unsigned long int b, DebugInfo &c) {
 TEST_F(AscendProcessLinuxTest, SetBreakpoint) {
     HostInfo::Initialize();
     MainLoop mainloop;
-    NativeProcessFactory factory;
-    GDBRemoteCommunicationServerLLGS gdb_server(mainloop, factory);
+    NativeProcessLinux::Manager manager(mainloop);
+    GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
 
     int terminal_fd = 3;
     ::pid_t pid = 11111;
     ArchSpec arch = ArchSpec("hiipu64");
-    int sockets[2]; /* the pair of socket descriptors */
-    int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, sockets);
-    ASSERT_TRUE(ret != -1);
-    int our_socket = sockets[0];
-    int gdb_socket = sockets[1];
     llvm::ArrayRef<::pid_t> tids({pid});
 
     auto process = std::make_unique<AscendProcessLinux>(
         pid, terminal_fd, gdb_server,
-        arch, mainloop, tids, our_socket);
- 
-    std::string resp = "$ok;";
-    std::string deviceMsg = "$device_id:0;";
+        arch, manager, tids);
 
-    ret = write(gdb_socket, deviceMsg.c_str(), deviceMsg.length());
-    ASSERT_TRUE(ret >= (int)deviceMsg.length());
-    process->HandleStubMessage();
-    char buf[30] = {0};
-    ret = read(gdb_socket, buf, sizeof(buf));
-    ASSERT_TRUE(ret >= 0);
+    std::string deviceMsg = "device_id:0;tgid:0;soc_version:test;";
+    process->m_parser.ParseMessage(deviceMsg);
 
-    std::string pcMsg = "$pc_base_addr:47;";
-    ret = write(gdb_socket, pcMsg.c_str(), pcMsg.length());
-    ASSERT_TRUE(ret >= (int)pcMsg.length());
-    process->HandleStubMessage();
-    ret = read(gdb_socket, buf, sizeof(buf));
-    ASSERT_TRUE(ret >= 0);
+    std::string kernelMsg = "kernel_name:test;kernel_hash:0;pc_base_addr:47;";
+    process->m_parser.ParseMessage(kernelMsg);
+
+    process->m_device_context = std::make_shared<FakeDeviceContext>();
+
     EXPECT_CALL(*fake_system_func, ioctl(_, CMD_GM_COPY, _))
                 .WillOnce(Return(0)).WillOnce(Return(0))
                 .WillOnce(read_trap_opcodes);

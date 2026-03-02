@@ -28,7 +28,7 @@ public:
 class GDBRemoteCommunicationTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
+    ASSERT_THAT_ERROR(ConnectLocallyViaSocketPair(client, server),
                       llvm::Succeeded());
   }
 

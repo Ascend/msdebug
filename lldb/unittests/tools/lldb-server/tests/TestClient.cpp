@@ -20,6 +20,7 @@
 #include <future>
 #include <sstream>
 #include <string>
+#include <sys/socket.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -71,7 +72,6 @@ TestClient::launchCustom(StringRef Log, bool disable_stdio,
   args.AppendArgument(LLDB_SERVER);
   if (IsLldbServer())
     args.AppendArgument("gdbserver");
-  args.AppendArgument("--reverse-connect");
 
   if (!Log.empty()) {
     args.AppendArgument(("--log-file=" + Log).str());
@@ -81,55 +81,48 @@ TestClient::launchCustom(StringRef Log, bool disable_stdio,
       args.AppendArgument("--log-flags=0x800000");
   }
 
-  auto LocalhostIPOrErr = GetLocalhostIP();
-  if (!LocalhostIPOrErr)
-    return LocalhostIPOrErr.takeError();
-  const std::string &LocalhostIP = *LocalhostIPOrErr;
+  int sockets[2];
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) != 0)
+    return llvm::createStringError(inconvertibleErrorCode(),
+                                   "socketpair failed");
+  int client_fd = sockets[0];
+  int server_fd = sockets[1];
 
-  Status status;
-  TCPSocket listen_socket(true, false);
-  status = listen_socket.Listen(LocalhostIP + ":0", 5);
-  if (status.Fail())
-    return status.ToError();
-
-  args.AppendArgument(
-      formatv("{0}:{1}", LocalhostIP, listen_socket.GetLocalPortNumber())
-          .str());
+  args.AppendArgument(formatv("--fd={0}", server_fd).str());
 
   for (StringRef arg : ServerArgs)
     args.AppendArgument(arg);
-
-  if (!InferiorArgs.empty()) {
-    args.AppendArgument("--");
-    for (StringRef arg : InferiorArgs)
-      args.AppendArgument(arg);
-  }
 
   ProcessLaunchInfo Info;
   Info.SetArchitecture(arch_spec);
   Info.SetArguments(args, true);
   Info.GetEnvironment() = Host::GetEnvironment();
-  // TODO: Use this callback to detect botched launches. If lldb-server does not
-  // start, we can print a nice error message here instead of hanging in
-  // Accept().
   Info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
+  Info.AppendDuplicateFileAction(server_fd, server_fd);
 
   if (disable_stdio)
     Info.GetFlags().Set(lldb::eLaunchFlagDisableSTDIO);
-  status = Host::LaunchProcess(Info);
-  if (status.Fail())
+  Status status = Host::LaunchProcess(Info);
+  if (status.Fail()) {
+    close(client_fd);
+    close(server_fd);
     return status.ToError();
+  }
 
-  Socket *accept_socket;
-  listen_socket.Accept(accept_socket);
-  auto Conn = std::make_unique<ConnectionFileDescriptor>(accept_socket);
+  close(server_fd);
+
+  auto Conn = std::make_unique<ConnectionFileDescriptor>(
+      new TCPSocket(client_fd, true, false));
   auto Client = std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
 
   if (Error E = Client->initializeConnection())
     return std::move(E);
 
   if (!InferiorArgs.empty()) {
-    if (Error E = Client->queryProcess())
+    std::vector<std::string> args_vec;
+    for (const auto &arg : InferiorArgs)
+      args_vec.push_back(arg.str());
+    if (Error E = Client->SetInferior(args_vec))
       return std::move(E);
   }
 

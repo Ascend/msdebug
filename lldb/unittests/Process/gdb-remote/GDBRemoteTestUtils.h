@@ -12,10 +12,28 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
+#include "lldb/Host/common/TCPSocket.h"
+#include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Utility/Connection.h"
+
+#include <sys/socket.h>
 
 namespace lldb_private {
 namespace process_gdb_remote {
+
+inline llvm::Error
+ConnectLocallyViaSocketPair(GDBRemoteCommunication &client,
+                            GDBRemoteCommunication &server) {
+  int sockets[2];
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) != 0)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "socketpair failed: %s", std::error_code(errno, std::generic_category()).message().c_str());
+  client.SetConnection(std::make_unique<ConnectionFileDescriptor>(
+      new TCPSocket(sockets[0], true, false)));
+  server.SetConnection(std::make_unique<ConnectionFileDescriptor>(
+      new TCPSocket(sockets[1], true, false)));
+  return llvm::Error::success();
+}
 
 class GDBRemoteTest : public testing::Test {
 public:
