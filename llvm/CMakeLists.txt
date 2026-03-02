@@ -74,6 +74,11 @@ endif()
 if (MS_DEBUGGER AND MS_DEBUGGER_LIBEDIT)
   add_link_options("-Wl,-rpath-link,${MS_DEBUGGER_LIBEDIT}")
   add_link_options("-Wl,-rpath-link,${MS_DEBUGGER_NCURSES}")
+  if (LLDB_INCLUDE_TESTS)
+    add_link_options("-Wl,--disable-new-dtags")
+    add_link_options("-Wl,-rpath,${MS_DEBUGGER_LIBEDIT}")
+    add_link_options("-Wl,-rpath,${MS_DEBUGGER_NCURSES}")
+  endif()
 endif()
 
 # This C++ standard is required to build LLVM.
