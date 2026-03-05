@@ -1,14 +1,16 @@
 # msDebug算子调试工具快速入门
-<br>
 
 ## 1. 概述
+
 msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧执行的算子程序，为算子开发人员提供关键调试能力，包括读取昇腾设备内存与寄存器、断点暂停与恢复程序运行状态等。   
 本文档基于入门教程中开发的简易加法算子，演示 msDebug 工具的核心功能，帮助初学者直观体验其在算子开发过程中带来的高效性与便捷性。
 
 ### 1.1 建议
+
 本章节以您已完成<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《昇腾算子开发工具链快速入门》</a>的全流程操作为前提；若尚未体验，建议先完成该指南以获得更佳的学习效果。
 
 ### 1.2 环境准备
+
 请严格按照<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/installation_guide.md" target="_blank">《昇腾 AI 算子开发工具链学习环境安装指南》</a>完成环境安装与工作区配置。
 即使您已具备类似环境，也需按该指南重新执行一遍，以确保所有依赖组件、环境变量等完整且一致。
 
@@ -17,18 +19,21 @@ msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧
 ### 2.1 【环境】运行环境预检
 
 #### 2.1.1 确认 Python 依赖包已安装
+
 执行以下命令，若输出"All is OK"，则表明所需 Python 包及其版本均满足规范：
+
 ```shell
 python3 -c "import numpy, sympy, scipy, attrs, psutil, decorator; from packaging import version; assert version.parse(numpy.__version__) <= version.parse('1.26.4'); print('All is OK')"
 ```
+
 若报错，请参考[第 1.2 节](#12-环境准备)正确安装。
 
 ### 2.2 【前提】算子工程准备完成
 
 按照<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《昇腾算子开发工具链快速入门》</a>中的指导，完成2.1节和2.3节。
 
-
 ### 2.3 【调试】断点调试算子代码（msDebug）
+
 若算子功能异常，可借助 msDebug 工具进行断点调试，高效定位问题。先按步骤操作体验效果，原理部分可稍后阅读。
 
 #### 2.3.1 开启内核调试开关
@@ -39,25 +44,32 @@ python3 -c "import numpy, sympy, scipy, attrs, psutil, decorator; from packaging
 >这在很多环境（如共享开发机、容器）中可能无法满足，这时请联系系统管理员开启，或在拥有特权的容器中体验此部分。
 
 确认内核调试开关 debug_switch 是否已打开：
+
 ```shell
 cat /proc/debug_switch
 ```
+
 若输出值不为 1，请使用 root 权限执行以下命令：
+
 ```shell
 echo 1 > /proc/debug_switch
 ```
+
 如果不能成功设置为 1，则 msDebug 功能不可用，只能跳过本节 msDebug 的体验。
 
-
 #### 2.3.2 修改编译选项并重新部署
+
 **1. 修改编译选项**   
 在 Kernel 侧 CMakeLists.txt 首行插入一行配置，用于启用调试信息、禁用编译优化：
+
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
 \cp -f op_kernel/CMakeLists.txt op_kernel/CMakeLists.txt.orig.bak
 sed -i "1i\\add_ops_compile_options(ALL OPTIONS -g -O0)" op_kernel/CMakeLists.txt
 ```
+
 **2. 重新编译部署算子**
+
 ```shell
 bash ./build.sh
 MY_OP_PKG=$(find ./build_out -maxdepth 1 -name "custom_opp_*.run" | head -1) && bash $MY_OP_PKG
@@ -72,27 +84,38 @@ MY_OP_PKG=$(find ./build_out -maxdepth 1 -name "custom_opp_*.run" | head -1) && 
 
 设置 LAUNCH_KERNEL_PATH，指定算子 obj 加载路径并导入调试符号信息：
 > **算子 obj 路径查找方法：**   需要在算子部署路径中搜索，示例路径：/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_ab1b6750d7f510985325b603cb06dc8b.o
+
 ```shell
 export LAUNCH_KERNEL_PATH={path_to_kernel}/my_kernel.o
 ```
 
 #### 2.3.4 断点调试与变量查看
+
 ##### 2.3.4.1 启动调试器
+
 ```shell
 cd ~/ot_demo/workspace/src/caller/build
 msdebug execute_add_op
 ```
+
 ##### 2.3.4.2 设置断点
+
 待 (msdebug) 提示符出现后，设置断点于 add_custom.cpp 第 34 行：
+
 ```text
 b add_custom.cpp:34
 ```
+
 ##### 2.3.4.3 运行算子   
+
 输入 run 启动程序，等待命中断点：
+
 ```shell
 run
 ```
+
 显示如下信息，则成功命中断点：
+
 ```text
 (msdebug) run
 Process 163027 launched: '/root/ot_demo/workspace/src/caller/build/execute_add_op' (aarch64)
@@ -110,11 +133,15 @@ Process 163027 stopped
 ```
 
 ##### 2.3.4.4 查看变量的值 
+
 在断点处执行以下命令，显示当前作用域内的所有局部变量：
+
 ```text
 var
 ```
+
 输出示例如下：
+
 ```text
 (msdebug) var
 (KernelAdd *__stack__) this = 0x00000000001d78a8
@@ -126,10 +153,13 @@ var
 ```
 
 ##### 2.3.4.5 查看寄存器的值
+
 ```shell
 register read -a
 ```
+
 输出示例如下：
+
 ```text
 (msdebug) register read -a
                   PC = 0x12C04120088C
@@ -144,10 +174,13 @@ register read -a
 ```
 
 ##### 2.3.4.6 查询Device信息
+
 ```shell
 ascend info devices
 ```
+
 输出示例如下：
+
 ```text
 (msdebug) ascend info devices
   Device Aic_Num Aiv_Num Aic_Mask Aiv_Mask
@@ -155,10 +188,13 @@ ascend info devices
 ```
 
 ##### 2.3.4.7 查询算子所运行的aicore相关信息
+
 ```shell
 ascend info cores
 ```
+
 输出示例如下：
+
 ```text
 (msdebug) ascend info cores
   CoreId  Type  Device Stream Task Block         PC               stop reason
@@ -173,10 +209,13 @@ ascend info cores
 ```
 
 ##### 2.3.4.8 查询算子所运行的task相关信息
+
 ```shell
 ascend info tasks
 ```
+
 输出示例如下：
+
 ```text
 (msdebug) ascend info tasks
   Device Stream Task Invocation
@@ -184,10 +223,13 @@ ascend info tasks
 ```
 
 ##### 2.3.4.9 查询算子所运行的stream相关信息
+
 ```shell
 ascend info stream
 ```
+
 输出示例如下：
+
 ```text
 (msdebug) ascend info stream
   Device Stream Type
@@ -195,10 +237,13 @@ ascend info stream
 ```
 
 ##### 2.3.4.10 查询算子所运行的block相关信息
+
 ```shell
 ascend info blocks 
 ```
+
 输出示例如下：
+
 ```text
 (msdebug) ascend info blocks 
   Device Stream Task Block
@@ -213,14 +258,17 @@ ascend info blocks
 ```
 
 ##### 2.3.4.11 退出调试器
+
 ```text
 q
 y
 ```
+
 #### 2.3.5 恢复被修改的文件
+
 执行如下命令：
+
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
 \cp -f op_kernel/CMakeLists.txt.orig.bak op_kernel/CMakeLists.txt
 ```
-

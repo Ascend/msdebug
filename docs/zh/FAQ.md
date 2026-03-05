@@ -101,3 +101,16 @@ currentWorkspace[0]= systemWorkspaceSize;
 (msdebug) settings set target.disable-aslr false
 ...
 ```
+
+## 编译时出现报错error: undefined symbol: g_opSystemRunCfg
+
+**问题现象**
+
+在O0编译时，出现以下报错。
+
+```bash
+ld.lld: error: undefined symbol: g_opSystemRunCfg
+```
+
+**解决方案**
+需要去掉编译选项`- DL2_CACHE_HINT`。

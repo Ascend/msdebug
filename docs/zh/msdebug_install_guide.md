@@ -127,8 +127,6 @@ export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/lib64:$LD_LIBRARY_PATH
 mindstudio-debugger uninstall success!
 ```
 
-    
-
 > [!NOTE]  说明  
 > 默认会在${HOME}/Ascend目录下卸载，如果安装时通过```--install-path```指定了安装路径，则卸载时也需添加```--install-path```，例如```./Ascend-mindstudio-debugger-<version>_linux-<arch>.run  --install-path=./test --uninstall```。
 
