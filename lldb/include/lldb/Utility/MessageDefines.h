@@ -68,6 +68,9 @@ struct CoreInfo {
   uint16_t reserve1;
 };
 
+static_assert(sizeof(CoreInfo) <= 64,
+    "CoreInfo param size must less than params in DebugSendInfo");
+
 // Message from runtime stub to lldb-server
 struct DeviceInfoMsg {
   int32_t device_id;

@@ -62,7 +62,9 @@ AscendProcessLinux::AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDeleg
   }
 
   // Let our process instance know the thread has stopped.
-  SetCurrentThreadID(tids[0]);
+  if (!tids.empty()) {
+    SetCurrentThreadID(tids[0]);
+  }
   SetState(StateType::eStateStopped, false);
 }
 
@@ -415,7 +417,14 @@ Status AscendProcessLinux::Resume(const ResumeActionList &resume_actions) {
 }
 
 Status AscendProcessLinux::SetDeviceHardwareBreakpoint(lldb::addr_t addr) {
-  return m_device_context->SetHardwareBreakpoint(addr, m_stream_id, m_pos_info);
+  constexpr size_t bp_size = 4;
+  auto error = m_device_context->SetHardwareBreakpoint(addr, m_stream_id, m_pos_info);
+  if (error.Success()) {
+    // Register new hardware breakpoint into hardware breakpoints map of current
+    // process.
+    m_hw_breakpoints_map[addr] = {addr, bp_size};
+  }
+  return error;
 }
 
 AscendThreadLinux *AscendProcessLinux::GetThreadByID(lldb::tid_t tid) {

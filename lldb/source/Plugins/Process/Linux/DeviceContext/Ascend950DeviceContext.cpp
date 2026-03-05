@@ -43,14 +43,15 @@ struct InvalidCacheParam {
 };
 
 struct HardBreakpointParam {
-  uint8_t reserve[2];
+  uint8_t enable_all;
+  uint8_t reserve;
   uint16_t stream_id;
   uint64_t virt_addr;
-  CoreMaskParam core_info; // 使能哪些core做断点设置
+  DeviceCoreMask core_info; // 使能哪些core做断点设置
 };
  
 struct WarpInfoParam {
-  uint16_t core_type;
+  uint8_t core_type;
   InterruptPosType pos_type;
   uint8_t core_id;
   uint8_t reserve0;
@@ -201,10 +202,16 @@ inline CoreMaskParam GenCoreMask(const InterruptPosInfo &pos_info) {
   }
   return core_info;
 }
+
+inline auto FormatCoresLog(const DeviceCoreMask &cores) {
+  return llvm::formatv("aic_bitmap0={0:x}, aic_bitmap1={1:x}, aiv_bitmap0={2:x}, aiv_bitmap1={3:x}",
+          cores.aic_bitmap0, cores.aic_bitmap1, cores.aiv_bitmap0, cores.aiv_bitmap1);
+}
  
 Status Ascend950DeviceContext::Resume(const InterruptPosInfo &pos_info) const {
   ControlUnitParam param;
   param.core_info = GenCoreMask(pos_info);
+  param.pos_type = pos_info.pos_type;
   if (pos_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
       if (pos_info.single_warp_run) {
           param.thread_id_x = pos_info.thread_id_x;
@@ -214,6 +221,13 @@ Status Ascend950DeviceContext::Resume(const InterruptPosInfo &pos_info) const {
           param.enable_all_warp = true;
       }
   }
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, {5}), pos_type={6}",
+           param.core_info.magic,
+           FormatCoresLog(param.core_info.cores),
+           param.enable_all_warp,
+           param.thread_id_x, param.thread_id_y, param.thread_id_z,
+           static_cast<uint8_t>(param.pos_type));
   return BaseSqCqComm(CmdType::RESUME_DEVICE, (uint8_t*)&param, sizeof(param));
 }
  
@@ -229,6 +243,13 @@ Status Ascend950DeviceContext::SingleStep(const InterruptPosInfo &pos_info) cons
           param.enable_all_warp = true;
       }
   }
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, {5}), pos_type={6}",
+           param.core_info.magic,
+           FormatCoresLog(param.core_info.cores),
+           param.enable_all_warp,
+           param.thread_id_x, param.thread_id_y, param.thread_id_z,
+           static_cast<uint8_t>(param.pos_type));
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&param, sizeof(param));
 }
 
@@ -239,24 +260,42 @@ Status Ascend950DeviceContext::InvalidInstrCache(const lldb::addr_t &addr,
   param.virt_addr = addr;
   param.redirect_ifu = redirect_ifu;
   param.core_info = GenCoreMask(pos_info);
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "magic={0:x}, {1}, virt_addr={2:x}, pos_type={3}",
+           param.core_info.magic,
+           FormatCoresLog(param.core_info.cores),
+           param.virt_addr,
+           static_cast<uint8_t>(pos_info.pos_type));
   return BaseSqCqComm(CmdType::INVALID_INSTR_CACHE, (uint8_t*)&param, sizeof(param));
 }
 
 Status Ascend950DeviceContext::SetHardwareBreakpoint(
     lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const {
-  HardBreakpointParam param;
+  HardBreakpointParam param{};
+  param.enable_all = 1;
   param.virt_addr = addr;
   param.stream_id = stream_id;
-  param.core_info = GenCoreMask(pos_info);
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "{0}, virt_addr={1:x}, stream_id={2}, pos_type={3}",
+           FormatCoresLog(param.core_info),
+           param.virt_addr,
+           param.stream_id,
+           static_cast<uint8_t>(pos_info.pos_type));
   return BaseSqCqComm(CmdType::SET_HARD_BREAKPOINT, (uint8_t*)&param, sizeof(param));
 }
  
 Status Ascend950DeviceContext::RemoveHardwareBreakpoint(
     lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const {
   HardBreakpointParam param;
+  param.enable_all = 1;
   param.virt_addr = addr;
   param.stream_id = stream_id;
-  param.core_info = GenCoreMask(pos_info);
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "{0}, virt_addr={1:x}, stream_id={2}, pos_type={3}",
+           FormatCoresLog(param.core_info),
+           param.virt_addr,
+           param.stream_id,
+           static_cast<uint8_t>(pos_info.pos_type));
   return BaseSqCqComm(CmdType::UNSET_HARD_BREAKPOINT, (uint8_t*)&param, sizeof(param));
 }
 #endif // ifdef MS_DEBUGGER

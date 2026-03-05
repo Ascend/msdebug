@@ -147,7 +147,7 @@ TEST_F(AscendProcessLinuxTest, HandleStubMessage) {
     int terminal_fd = 3;
     ::pid_t pid = 11111;
     ArchSpec arch = ArchSpec("hiipu64");
-    llvm::ArrayRef<::pid_t> tids({pid});
+    llvm::ArrayRef<::pid_t> tids;
 
     auto process = std::make_unique<AscendProcessLinux>(
         pid, terminal_fd, gdb_server,
@@ -177,7 +177,7 @@ TEST_F(AscendProcessLinuxTest, SetBreakpoint) {
     int terminal_fd = 3;
     ::pid_t pid = 11111;
     ArchSpec arch = ArchSpec("hiipu64");
-    llvm::ArrayRef<::pid_t> tids({pid});
+    llvm::ArrayRef<::pid_t> tids;
 
     auto process = std::make_unique<AscendProcessLinux>(
         pid, terminal_fd, gdb_server,

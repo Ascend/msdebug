@@ -135,6 +135,8 @@ std::shared_ptr<DeviceContext> DeviceContext::Factory::GetDeviceContext(
       return std::make_shared<Ascend910BDeviceContext>(pid, device_id);
     case SocType::ASCEND310P:
       return std::make_shared<Ascend310PDeviceContext>(pid, device_id);
+    case SocType::ASCEND950:
+      return std::make_shared<Ascend950DeviceContext>(pid, device_id);
     default:
       LLDB_LOG(log, "unsupported soc type: {0}", (int)soc_type);
       return nullptr;
@@ -233,12 +235,18 @@ Status DeviceContext::BaseSqCqComm(CmdType type, const uint8_t *data, const uint
     return error;
   }
   DebugInfo debug_info = { m_device_id, g_timeout, 0, m_pid };
+  if (CMD_TO_STRING.find(type) == CMD_TO_STRING.end()) {
+    error.SetErrorStringWithFormat("can't find type %d in CMD_TO_STRING map", int(type));
+    return error;
+  }
+  const char *cmd_name = CMD_TO_STRING[type].c_str();
   Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOG(log, "cmd_type={0}, base comm, timeout={1}, data_len={2}", static_cast<uint32_t>(type),
+  LLDB_LOG(log, "cmd_type={0}({1}), base comm, timeout={2}, data_len={3}", cmd_name, static_cast<uint32_t>(type),
            debug_info.timeout, static_cast<uint32_t>(len));
   DebugSendInfo *send_info = (DebugSendInfo*)debug_info.data;
   send_info->req_id = type;
   send_info->is_return = 1;
+  send_info->data_len = len;
   std::fill(send_info->params, send_info->params + sizeof(send_info->params), 0);
   if (data != nullptr && len > 0) {
     if (len > sizeof(send_info->params)) {
@@ -247,11 +255,6 @@ Status DeviceContext::BaseSqCqComm(CmdType type, const uint8_t *data, const uint
     }
     std::copy(data, data + len, send_info->params);
   }
-  if (CMD_TO_STRING.find(type) == CMD_TO_STRING.end()) {
-    error.SetErrorStringWithFormat("can't find type %d in CMD_TO_STRING map", int(type));
-    return error;
-  }
-  const char *cmd_name = CMD_TO_STRING[type].c_str();
   int32_t rtn = ioctl(m_drv_fd, CMD_SQ_SEND, &debug_info);
   if (rtn != 0) {
     error.SetErrorStringWithFormat("call sq %s failed: %d", cmd_name, rtn);
@@ -387,7 +390,7 @@ inline bool IsValidStack(addr_t addr, size_t size)
 
 inline bool IsValidGlobalAddr(addr_t addr, size_t size)
 {
-    constexpr uint64_t START_DEVICE_ADDR = 0x120000000000;
+    constexpr uint64_t START_DEVICE_ADDR = 0x020000000000;
     constexpr uint64_t END_DEVICE_ADDR = 0x330000000000;
     constexpr uint64_t MAX_GLOBAL_SIZE = 1ULL << 48;
 
