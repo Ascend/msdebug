@@ -19,7 +19,7 @@ set(PACKAGE_VERSION "${CMAKE_MATCH_1}")
 
 
 set(OS_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
-set(RUN_PACKAGE_NAME "Ascend-${PACKAGE_NAME}-${PACKAGE_VERSION}_linux-${OS_ARCH}.run")
+set(RUN_PACKAGE_NAME "${PACKAGE_NAME}_${PACKAGE_VERSION}_${OS_ARCH}.run")
 set(MAKESELF_TOOL "${ROOT_DIR}/third-party/makeself/makeself.sh")
 set(MAKESELF_HEADER "${ROOT_DIR}/third-party/makeself/makeself-header.sh")
 set(HELP_INFO "${ROOT_DIR}/package/conf/help.info")
