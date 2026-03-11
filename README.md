@@ -107,6 +107,10 @@ msDebug工具的使用许可证，具体请参见[LICENSE](./LICENSE.TXT)。
 
 msDebug工具docs目录下的文档适用CC-BY 4.0许可证，具体请参见[LICENSE](./docs/LICENSE)。
 
+## 安全声明
+
+安全声明详见《[安全声明](docs/zh/legal/security_statement.md)》。
+
 ## 贡献声明
 
 1. **提交错误报告**：如果您在msDebug中发现了一个不存在安全问题的漏洞，请在msDebug仓库中的Issues中搜索，以防该漏洞被重复提交，如果找不到漏洞可以创建一个新的Issues。如果发现了一个安全问题请不要将其公开，请参阅安全问题处理方式。提交错误报告时应该包含完整信息。
