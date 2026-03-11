@@ -169,11 +169,8 @@ public:
   Status GetSignalInfo(lldb::tid_t tid, void *siginfo) const;
 #ifdef MS_DEBUGGER
   // FIXME: remove all to native proto
-  Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) override {
-    return Status();
-  }
-
-  Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) override {
+  Status ReadDeviceRegisterValue(const RegisterInfo *reg_info, 
+                                 RegisterValue &value) override {
     return Status();
   }
 

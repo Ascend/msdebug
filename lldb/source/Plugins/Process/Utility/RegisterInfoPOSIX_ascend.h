@@ -96,7 +96,7 @@ enum DWARF_ASCEND_REGNUM {
  
 #define ASCEND_REG_32B(reg, kind5)                                         \
   {                                                                       \
-    #reg, nullptr, 32, 0, eEncodingUint, eFormatHex,                      \
+    #reg, nullptr, 32, 0, eEncodingVector, eFormatHex,                      \
        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                         \
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, kind5},                 \
        nullptr, nullptr,                                                  \
@@ -130,13 +130,18 @@ struct ErrRegMask {
 
 struct RegExtractor {
   RegExtractor(const DeviceRegisterInfo *table, size_t tableSize) {
+    // 寄存器信息改成可变的，为了offset赋值
     raw_register_infos.resize(tableSize);
     std::transform(table, table + tableSize, raw_register_infos.begin(),
-                   [](const DeviceRegisterInfo &info) {return info.reg_info;} );
+                   [](const DeviceRegisterInfo &info) {return RegisterInfo(info.reg_info);} );
     register_map.clear();
+    uint32_t offset = 0;
     for (size_t i = 0; i < tableSize; i++) {
       const auto &info = table[i];
       register_map[info.reg_info.name] = info;
+      register_map[info.reg_info.name].reg_info.byte_offset = offset;
+      raw_register_infos[i].byte_offset = offset;
+      offset += info.reg_info.byte_size;
     }
   }
   std::vector<RegisterInfo> raw_register_infos;

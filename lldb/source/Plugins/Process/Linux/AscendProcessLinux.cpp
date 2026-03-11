@@ -828,20 +828,6 @@ Status AscendProcessLinux::ReadDeviceRegisterValue(const RegisterInfo *reg_info,
   return m_device_context->ReadRegister(reg_info, m_pos_info.core_id, m_pos_info.core_type, value);
 }
 
-Status AscendProcessLinux::ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) {
-  if (m_device_context == nullptr) {
-    return Status("device context is null!");
-  }
-  return m_device_context->ReadRegister(reg_num, m_pos_info.core_id, m_pos_info.core_type, value);
-}
-
-Status AscendProcessLinux::ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) {
-  if (m_device_context == nullptr) {
-    return Status("device context is null!");
-  }
-  return m_device_context->ReadRegister(reg_name, m_pos_info.core_id, m_pos_info.core_type, value);
-}
-
 Status AscendProcessLinux::ReadDeviceRegisterList(std::vector<std::string> &reg_list) {
   if (m_device_context == nullptr) {
     return Status("device context is null!");

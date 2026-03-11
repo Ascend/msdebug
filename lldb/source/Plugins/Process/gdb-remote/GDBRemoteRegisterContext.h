@@ -71,12 +71,6 @@ public:
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
   bool ReadAllRegisterValues(RegisterCheckpoint &reg_checkpoint) override;
-#ifdef MS_DEBUGGER
-  bool ReadDeviceRegister(uint32_t register_id, uint64_t &value) override;
-
-  bool ReadDeviceRegister(const RegisterInfo *reg_info,
-                          RegisterValue &value);
-#endif
   bool
   WriteAllRegisterValues(const RegisterCheckpoint &reg_checkpoint) override;
 
@@ -102,6 +96,11 @@ protected:
   void SetAllRegisterValid(bool b);
 
   bool GetRegisterIsValid(uint32_t reg) const {
+#ifdef MS_DEBUGGER
+    if (IsStopInDevice()) {
+      return GetDeviceRegisterIsValid(reg);
+    }
+#endif
     assert(reg < m_reg_valid.size());
     if (reg < m_reg_valid.size())
       return m_reg_valid[reg];
@@ -115,15 +114,38 @@ protected:
   }
 
   void SetRegisterIsValid(uint32_t reg, bool valid) {
+#ifdef MS_DEBUGGER
+    if (IsStopInDevice()) {
+      SetDeviceRegisterIsValid(reg, valid);
+      return;
+    }
+#endif
     assert(reg < m_reg_valid.size());
     if (reg < m_reg_valid.size())
       m_reg_valid[reg] = valid;
   }
 
 #ifdef MS_DEBUGGER
+  void SetAllDeviceRegisterValid(bool b);
+
+  bool GetDeviceRegisterIsValid(uint32_t reg) const {
+    assert(reg < m_device_reg_valid.size());
+    if (reg < m_device_reg_valid.size())
+      return m_device_reg_valid[reg];
+    return false;
+  }
+
+  void SetDeviceRegisterIsValid(uint32_t reg, bool valid) {
+    assert(reg < m_device_reg_valid.size());
+    if (reg < m_device_reg_valid.size())
+      m_device_reg_valid[reg] = valid;
+  }
+
   void UpdateDeviceRegIfNeeded();
 
-  std::vector<RegisterInfo> m_device_reg_info;
+  std::vector<bool> m_device_reg_valid;
+  GDBRemoteDynamicRegisterInfoSP m_device_reg_info;
+  DataExtractor m_device_reg_data;
 #endif
 
   GDBRemoteDynamicRegisterInfoSP m_reg_info_sp;

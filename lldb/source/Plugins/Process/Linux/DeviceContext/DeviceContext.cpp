@@ -15,9 +15,11 @@
 #include "Ascend910BDeviceContext.h"
 #include "Ascend310PDeviceContext.h"
 #include "Ascend950DeviceContext.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Errno.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StreamString.h"
@@ -482,9 +484,12 @@ Status DeviceContext::SingleStep(const InterruptPosInfo &pos_info) const {
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&maskInfo, sizeof(maskInfo));
 }
 
-Status DeviceContext::ReadRegister(uint64_t addr, uint32_t core_id, CoreType core_type, uint64_t &value) {
+Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info, 
+                                   uint32_t core_id, CoreType core_type, 
+                                   RegisterValue &reg_value) {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(reg_info->byte_size, 0));
   RegisterParam param;
   param.core_id = core_id;
   param.core_type = static_cast<uint8_t>(core_type);
@@ -494,27 +499,14 @@ Status DeviceContext::ReadRegister(uint64_t addr, uint32_t core_id, CoreType cor
     return error;
   }
   error = BaseSqCqComm(CmdType::READ_REGISTER, (const uint8_t *)&param, sizeof(param),
-                       (uint8_t *)&value, sizeof(value));
-  LLDB_LOGF(log, "Read Register core_id=%d addr=%" PRIu64 " value=%#lx core_type=%d",
-            core_id, addr, value, int(core_type));
-  return error;
-}
-
-Status DeviceContext::ReadRegister(const llvm::StringRef reg_name, uint32_t core_id,
-                                   CoreType core_type, uint64_t &value) {
-  Status error;
-  Log *log = GetLog(LLDBLog::Process);
-  RegisterParam param;
-  param.core_id = core_id;
-  param.core_type = static_cast<uint8_t>(core_type);
-  error = GetRegisterAddr(reg_name, core_type, param.src_addr);
+                       (uint8_t *)buffer_sp->GetBytes(), buffer_sp->GetByteSize());
+  LLDB_LOGF(log, "Read Register core_id=%d addr=%" PRIu64 " core_type=%d",
+            core_id, addr, int(core_type));
   if (error.Fail()) {
     return error;
   }
-  error = BaseSqCqComm(CmdType::READ_REGISTER, (const uint8_t *)&param, sizeof(param),
-                       (uint8_t *)&value, sizeof(value));
-  LLDB_LOGF(log, "Read Register core_id=%d reg_name=%s value=%#lx core_type=%d",
-                  core_id, reg_name.str().c_str(), value, int(core_type));
+  reg_value.SetFromMemoryData(*reg_info, buffer_sp->GetBytes(), 
+                              reg_info->byte_size, eByteOrderLittle, error);
   return error;
 }
 

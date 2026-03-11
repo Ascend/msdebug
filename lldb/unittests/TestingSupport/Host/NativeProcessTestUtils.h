@@ -67,7 +67,8 @@ public:
   MOCK_METHOD1(GetCoresInfo, Status(std::vector<CoreInfo> &info));
   MOCK_METHOD1(GetStoppedCorePC, Status(lldb::addr_t &pc));
   MOCK_METHOD1(GetKernelInfo, Status(KernelInfo &info));
-  MOCK_METHOD2(ReadDeviceRegisterValue, Status(uint32_t reg_num, uint64_t &value));
+  MOCK_METHOD2(ReadDeviceRegisterValue, Status(const RegisterInfo *reg_info,
+                                         RegisterValue &value));
   MOCK_METHOD2(ReadDeviceRegisterValueByName, Status(const llvm::StringRef reg_name, uint64_t &value));
   Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) /*override*/ {
     return ReadDeviceRegisterValueByName(reg_name, value);

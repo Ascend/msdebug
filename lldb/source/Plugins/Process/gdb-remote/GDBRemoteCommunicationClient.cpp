@@ -3531,6 +3531,30 @@ bool GDBRemoteCommunicationClient::AvoidGPackets(ProcessGDBRemote *process) {
   return m_avoid_g_packets == eLazyBoolYes;
 }
 
+#ifdef MS_DEBUGGER
+DataBufferSP GDBRemoteCommunicationClient::ReadDeviceRegister(lldb::tid_t tid,
+                                                              uint32_t reg) {
+  StreamString payload;
+  const size_t packet_len = payload.Printf("qDeviceRegisterValue:%d;", reg);
+  std::string packet = payload.GetString().data();
+
+  if (packet_len != packet.size()) {
+    return nullptr;
+  }
+
+  StringExtractorGDBRemote response;
+  if (SendThreadSpecificPacketAndWaitForResponse(
+          tid, std::move(payload), response) != PacketResult::Success ||
+      !response.IsNormalResponse())
+    return nullptr;
+
+  WritableDataBufferSP buffer_sp(
+      new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+  response.GetHexBytes(buffer_sp->GetData(), '\xcc');
+  return buffer_sp;
+}
+#endif
+
 DataBufferSP GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid,
                                                         uint32_t reg) {
   StreamString payload;

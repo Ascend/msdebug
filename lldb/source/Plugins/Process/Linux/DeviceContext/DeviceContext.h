@@ -157,8 +157,8 @@ public:
 
   virtual Status ReadRegister(const RegisterInfo *reg_info,
                               uint32_t core_id, CoreType core_type, RegisterValue &value) = 0;
-  virtual Status ReadRegister(uint64_t addr, uint32_t core_id, CoreType core_type, uint64_t &value);
-  virtual Status ReadRegister(const llvm::StringRef reg_name, uint32_t core_id, CoreType core_type, uint64_t &value);
+  virtual Status ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
+                              uint32_t core_id, CoreType core_type, RegisterValue &value);
   virtual Status ReadRegisterList(std::vector<std::string> &reg_list, uint32_t core_id, CoreType core_type);
   virtual Status GetDeviceInfo(DeviceInfo &device_info);
   virtual Status GetCoresInfo(std::vector<CoreInfo> &cores_info);

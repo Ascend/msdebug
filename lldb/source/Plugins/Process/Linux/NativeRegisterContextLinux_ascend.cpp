@@ -45,11 +45,11 @@ NativeRegisterContextLinux_ascend::NativeRegisterContextLinux_ascend(
       NativeRegisterContextLinux(native_thread) {}
 
 uint32_t NativeRegisterContextLinux_ascend::GetRegisterSetCount() const {
-  return 0;
+  return static_cast<RegisterInfoPOSIX_ascend *>(m_register_info_interface_up.get())->GetRegisterSetCount();
 }
 
 const RegisterSet* NativeRegisterContextLinux_ascend::GetRegisterSet(uint32_t set_index) const {
-  return nullptr;
+  return static_cast<RegisterInfoPOSIX_ascend *>(m_register_info_interface_up.get())->GetRegisterSet(set_index);
 }
 
 Status NativeRegisterContextLinux_ascend::ReadRegister(

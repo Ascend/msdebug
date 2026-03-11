@@ -290,6 +290,7 @@ public:
       uint32_t length,       // Byte Size of breakpoint or watchpoint
       std::chrono::seconds interrupt_timeout); // Time to wait for an interrupt
 #ifdef MS_DEBUGGER
+  lldb::DataBufferSP ReadDeviceRegister(lldb::tid_t tid, uint32_t reg);
   uint8_t SendGDBStoppointTypePacket(
       GDBStoppointType type, // Type of breakpoint or watchpoint
       bool insert,           // Insert or remove?

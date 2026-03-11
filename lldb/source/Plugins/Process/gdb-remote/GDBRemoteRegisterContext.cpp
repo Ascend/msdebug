@@ -55,6 +55,10 @@ GDBRemoteRegisterContext::~GDBRemoteRegisterContext() = default;
 
 void GDBRemoteRegisterContext::InvalidateAllRegisters() {
   SetAllRegisterValid(false);
+#ifdef MS_DEBUGGER 
+  // stop_id 改变的时候，触发所有的寄存器缓存失效
+  SetAllDeviceRegisterValid(false);
+#endif
 }
 
 void GDBRemoteRegisterContext::SetAllRegisterValid(bool b) {
@@ -65,14 +69,31 @@ void GDBRemoteRegisterContext::SetAllRegisterValid(bool b) {
 }
 
 #ifdef MS_DEBUGGER
+void GDBRemoteRegisterContext::SetAllDeviceRegisterValid(bool b) {
+  // 设置device侧的寄存器缓存失效
+  m_gpacket_cached = b;
+  std::vector<bool>::iterator pos, end = m_device_reg_valid.end();
+  for (pos = m_device_reg_valid.begin(); pos != end; ++pos)
+    *pos = b;
+}
+
 void GDBRemoteRegisterContext::UpdateDeviceRegIfNeeded() {
-  if (IsStopInDevice() && m_device_reg_info.empty()) {
+  // 初始化device侧的寄存器缓存，加载寄存器信息
+  if (IsStopInDevice() && m_device_reg_info == nullptr) {
     auto &gdb_process = static_cast<ProcessGDBRemote &>(*m_thread.GetProcess());
-    Status error = gdb_process.UpdateDeviceRegisterInfo(m_device_reg_info);
-    if (error.Fail()) {
+    gdb_process.UpdateDeviceRegisterInfo(m_device_reg_info, true);
+    if (m_device_reg_info == nullptr) {
        Log *log(GetLog(GDBRLog::Thread | GDBRLog::Packets));
-       LLDB_LOG(log, "{0} failed: {1}", __FUNCTION__, error);
+       LLDB_LOG(log, "{0} failed: {1}", __FUNCTION__, "failed to load device register info");
+       return;
     }
+    m_device_reg_valid.resize(m_device_reg_info->GetNumRegisters());
+
+    DataBufferSP reg_data_sp(
+      new DataBufferHeap(m_device_reg_info->GetRegisterDataByteSize(), 0)
+    );
+    m_device_reg_data.SetData(reg_data_sp);
+    m_device_reg_data.SetByteOrder(m_thread.GetProcess()->GetByteOrder());
   }
 }
 #endif
@@ -81,7 +102,7 @@ size_t GDBRemoteRegisterContext::GetRegisterCount() {
 #ifdef MS_DEBUGGER
   if (IsStopInDevice()) {
     UpdateDeviceRegIfNeeded();
-    return m_device_reg_info.size();
+    return m_device_reg_info->GetNumRegisters();
   }
 #endif
   return m_reg_info_sp->GetNumRegisters();
@@ -92,83 +113,41 @@ GDBRemoteRegisterContext::GetRegisterInfoAtIndex(size_t reg) {
 #ifdef MS_DEBUGGER
   if (IsStopInDevice()) {
     UpdateDeviceRegIfNeeded();
-    return reg < GetRegisterCount() ? &m_device_reg_info[reg]: nullptr;
+    return m_device_reg_info->GetRegisterInfoAtIndex(reg);
   }
 #endif
   return m_reg_info_sp->GetRegisterInfoAtIndex(reg);
 }
 
 size_t GDBRemoteRegisterContext::GetRegisterSetCount() {
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    return m_device_reg_info->GetNumRegisterSets();
+  }
+#endif
   return m_reg_info_sp->GetNumRegisterSets();
 }
 
 const RegisterSet *GDBRemoteRegisterContext::GetRegisterSet(size_t reg_set) {
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    return m_device_reg_info->GetRegisterSet(reg_set);
+  }
+#endif
   return m_reg_info_sp->GetRegisterSet(reg_set);
 }
 
-#ifdef MS_DEBUGGER
-bool GDBRemoteRegisterContext::ReadDeviceRegister(uint32_t register_id, uint64_t &value) {
-  ExecutionContext exe_ctx(CalculateThread());
-  Process *process = exe_ctx.GetProcessPtr();
-  Thread *thread = exe_ctx.GetThreadPtr();
-  if (process == nullptr || thread == nullptr)
-    return false;
-
-  return process->ReadDeviceRegister(register_id, value);
-}
-
-bool GDBRemoteRegisterContext::ReadDeviceRegister(const RegisterInfo *reg_info,
-                                                  RegisterValue &value) {
-    if (!reg_info) {
-      LLDB_LOG(GetLog(GDBRLog::Thread | GDBRLog::Packets),
-               "register information is null, do not support to read device register");
-      return false;
-    }
-    ExecutionContext exe_ctx(CalculateThread());
-    Process *process = exe_ctx.GetProcessPtr();
-    DeviceStopInfo info;
-    uint32_t dwarf_num;
-    if (!process) {
-      LLDB_LOG(GetLog(GDBRLog::Thread | GDBRLog::Packets),
-               "process is null, do not support to read device register");
-      return false;
-    }
-    process->GetDeviceStopInfoCached(info);
-    if (info.soc_type == SocType::ASCEND910B || info.soc_type == SocType::ASCEND950) {
-      constexpr uint32_t ASCEND_DWARF_OFFSET = 64U;
-      dwarf_num = reg_info->kinds[eRegisterKindDWARF] - ASCEND_DWARF_OFFSET;
-    } else if (info.soc_type == SocType::ASCEND310P) {
-      if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
-        constexpr uint32_t ASCEND_DWARF_OFFSET = 128U;
-        dwarf_num = reg_info->kinds[eRegisterKindDWARF] - ASCEND_DWARF_OFFSET;
-      } else {
-        dwarf_num = reg_info->kinds[eRegisterKindDWARF];
-      }
-    } else {
-      LLDB_LOG(GetLog(GDBRLog::Thread | GDBRLog::Packets), "soc type is "
-               "wrong, do not support to read device register");
-      return false;
-    }
-
-    uint64_t value_interger;
-    if (!ReadDeviceRegister(dwarf_num, value_interger)) {
-      return false;
-    }
-    value.SetUInt64(value_interger);
-    return true;
-}
-
-#endif
 bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
                                             RegisterValue &value) {
-#ifdef MS_DEBUGGER
-  if (IsStopInDevice()) {
-    return ReadDeviceRegister(reg_info, value);
-  }
-#endif
   // Read the register
   if (ReadRegisterBytes(reg_info)) {
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+#ifdef MS_DEBUGGER
+    if (IsStopInDevice()) {
+      if (m_device_reg_valid[reg] == false)
+        return false;
+    } else
+#endif
     if (m_reg_valid[reg] == false)
       return false;
     if (reg_info->value_regs &&
@@ -195,6 +174,14 @@ bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
                  m_reg_data.GetByteOrder(), error) == combined_data.size();
     } else {
       const bool partial_data_ok = false;
+#ifdef MS_DEBUGGER
+      if (IsStopInDevice()) {
+        // 从device侧的缓存里面读取寄存器信息
+        Status error(value.SetValueFromData(
+          *reg_info, m_device_reg_data, reg_info->byte_offset, partial_data_ok));
+        return error.Success();
+      }
+#endif
       Status error(value.SetValueFromData(
           *reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
       return error.Success();
@@ -213,9 +200,20 @@ bool GDBRemoteRegisterContext::PrivateSetRegisterValue(
   InvalidateIfNeeded(false);
 
   const size_t reg_byte_size = reg_info->byte_size;
+
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    std::copy_n(data.data(), std::min(data.size(), reg_byte_size), const_cast<uint8_t *>(
+            m_device_reg_data.PeekData(reg_info->byte_offset, reg_byte_size)));
+  }else {
+    std::copy_n(data.data(), std::min(data.size(), reg_byte_size), const_cast<uint8_t *>(
+            m_reg_data.PeekData(reg_info->byte_offset, reg_byte_size)));
+  }
+#else
   memcpy(const_cast<uint8_t *>(
              m_reg_data.PeekData(reg_info->byte_offset, reg_byte_size)),
          data.data(), std::min(data.size(), reg_byte_size));
+#endif
   bool success = data.size() >= reg_byte_size;
   if (success) {
     SetRegisterIsValid(reg, true);
@@ -246,7 +244,32 @@ bool GDBRemoteRegisterContext::PrivateSetRegisterValue(uint32_t reg,
 
   DataBufferSP buffer_sp(new DataBufferHeap(&new_reg_val, sizeof(new_reg_val)));
   DataExtractor data(buffer_sp, endian::InlHostByteOrder(), sizeof(void *));
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    // If our register context and our register info disagree, which should never
+    // happen, don't overwrite past the end of the buffer.
+    if (m_device_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
+      return false;
 
+    // Grab a pointer to where we are going to put this register
+    uint8_t *dst = const_cast<uint8_t *>(
+        m_device_reg_data.PeekData(reg_info->byte_offset, reg_info->byte_size));
+
+    if (dst == nullptr)
+      return false;
+
+    if (data.CopyByteOrderedData(0,                          // src offset
+                                reg_info->byte_size,        // src length
+                                dst,                        // dst
+                                reg_info->byte_size,        // dst length
+                                m_device_reg_data.GetByteOrder())) // dst byte order
+    {
+      SetRegisterIsValid(reg, false);
+      return true;
+    }
+    return false;
+  }
+#endif
   // If our register context and our register info disagree, which should never
   // happen, don't overwrite past the end of the buffer.
   if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
@@ -276,7 +299,16 @@ bool GDBRemoteRegisterContext::GetPrimordialRegister(
     const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm) {
   const uint32_t lldb_reg = reg_info->kinds[eRegisterKindLLDB];
   const uint32_t remote_reg = reg_info->kinds[eRegisterKindProcessPlugin];
-
+#ifdef MS_DEBUGGER
+  if (IsStopInDevice()) {
+    if (DataBufferSP buffer_sp =
+          gdb_comm.ReadDeviceRegister(m_thread.GetProtocolID(), remote_reg))
+      return PrivateSetRegisterValue(
+          lldb_reg, llvm::ArrayRef<uint8_t>(buffer_sp->GetBytes(),
+                                            buffer_sp->GetByteSize()));
+    return false;
+  }
+#endif
   if (DataBufferSP buffer_sp =
           gdb_comm.ReadRegister(m_thread.GetProtocolID(), remote_reg))
     return PrivateSetRegisterValue(

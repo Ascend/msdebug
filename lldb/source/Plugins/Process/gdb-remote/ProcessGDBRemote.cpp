@@ -373,97 +373,178 @@ static size_t SplitCommaSeparatedRegisterNumberString(
 }
 
 #ifdef MS_DEBUGGER
-void ProcessGDBRemote::ParseDeviceRegisterInfo(StringExtractorGDBRemote &response, RegisterInfo &reg_info) {
-  llvm::StringRef name;
-  llvm::StringRef value;
-  while (response.GetNameColonValue(name, value)) {
-    if (name == "name") {
-      reg_info.name = ConstString(value).AsCString();
-    } else if (name == "alt-name") {
-      reg_info.alt_name = ConstString(value).AsCString();
-    } else if (name == "bitsize") {
-      if (!value.getAsInteger(0, reg_info.byte_size))
-        reg_info.byte_size /= CHAR_BIT;
-    } else if (name == "offset") {
-      value.getAsInteger(0, reg_info.byte_offset);
-    } else if (name == "encoding") {
-      const Encoding encoding = Args::StringToEncoding(value);
-      if (encoding != eEncodingInvalid)
-        reg_info.encoding = encoding;
-    } else if (name == "format") {
-      if (!OptionArgParser::ToFormat(value.str().c_str(), reg_info.format, nullptr).Success())
-        reg_info.format =
-            llvm::StringSwitch<Format>(value)
-                .Case("binary", eFormatBinary)
-                .Case("decimal", eFormatDecimal)
-                .Case("hex", eFormatHex)
-                .Case("float", eFormatFloat)
-                .Case("vector-sint8", eFormatVectorOfSInt8)
-                .Case("vector-uint8", eFormatVectorOfUInt8)
-                .Case("vector-sint16", eFormatVectorOfSInt16)
-                .Case("vector-uint16", eFormatVectorOfUInt16)
-                .Case("vector-sint32", eFormatVectorOfSInt32)
-                .Case("vector-uint32", eFormatVectorOfUInt32)
-                .Case("vector-float32", eFormatVectorOfFloat32)
-                .Case("vector-uint64", eFormatVectorOfUInt64)
-                .Case("vector-uint128", eFormatVectorOfUInt128)
-                .Default(eFormatInvalid);
-    } else if (name == "ehframe") {
-      value.getAsInteger(0, reg_info.kinds[eRegisterKindEHFrame]);
-    } else if (name == "dwarf") {
-      value.getAsInteger(0, reg_info.kinds[eRegisterKindDWARF]);
-    } else if (name == "generic") {
-      reg_info.kinds[eRegisterKindGeneric] = Args::StringToGenericRegister(value);
-    }
-  }
-}
+void ProcessGDBRemote::UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamicRegisterInfo> &device_registers,
+                                                bool force) {
+  if (!force && m_device_register_info_sp)
+    return;
 
-Status ProcessGDBRemote::UpdateDeviceRegisterInfo(std::vector<RegisterInfo> &registers, bool force) {
-  Status error;
-  if (!force && !m_device_register_info.empty()) {
-    registers = m_device_register_info;
-    return error;
-  }
+  m_device_register_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>();
+
+  // Check if qHostInfo specified a specific packet timeout for this
+  // connection. If so then lets update our setting so the user knows what the
+  // timeout is and can see it.
   const auto host_packet_timeout = m_gdb_comm.GetHostDefaultPacketTimeout();
   if (host_packet_timeout > std::chrono::seconds(0)) {
     GetGlobalPluginProperties().SetPacketTimeout(host_packet_timeout.count());
   }
+
+  // Register info search order:
+  //     1 - Use the target definition python file if one is specified.
+  //     2 - If the target definition doesn't have any of the info from the
+  //     target.xml (registers) then proceed to read the target.xml.
+  //     3 - Fall back on the qRegisterInfo packets.
+  //     4 - Use hardcoded defaults if available.
+
+  FileSpec target_definition_fspec =
+      GetGlobalPluginProperties().GetTargetDefinitionFile();
+  if (!FileSystem::Instance().Exists(target_definition_fspec)) {
+    // If the filename doesn't exist, it may be a ~ not having been expanded -
+    // try to resolve it.
+    FileSystem::Instance().Resolve(target_definition_fspec);
+  }
+  if (target_definition_fspec) {
+    // See if we can get register definitions from a python file
+    if (ParsePythonTargetDefinition(target_definition_fspec))
+      return;
+
+    Debugger::ReportError("target description file " +
+                              target_definition_fspec.GetPath() +
+                              " failed to parse",
+                          GetTarget().GetDebugger().GetID());
+  }
+
+  const ArchSpec &target_arch = GetTarget().GetArchitecture();
+  const ArchSpec &remote_host_arch = m_gdb_comm.GetHostArchitecture();
+  const ArchSpec &remote_process_arch = m_gdb_comm.GetProcessArchitecture();
+
+  // Use the process' architecture instead of the host arch, if available
   ArchSpec arch_to_use("hiipu64");
 
-  m_device_register_info.clear();
+  if (GetGDBServerRegisterInfo(arch_to_use))
+    return;
+
+  char packet[128];
+  std::vector<DynamicRegisterInfo::Register> registers;
   uint32_t reg_num = 0;
-  for (StringExtractorGDBRemote::ResponseType response_type = StringExtractorGDBRemote::eResponse;
+  for (StringExtractorGDBRemote::ResponseType response_type =
+           StringExtractorGDBRemote::eResponse;
        response_type == StringExtractorGDBRemote::eResponse; ++reg_num) {
-    StreamString packet;
-    packet.Printf("qRegisterInfo%x", reg_num);
+    const int packet_len =
+        ::snprintf(packet, sizeof(packet), "qRegisterInfo%x", reg_num);
+    assert(packet_len < (int)sizeof(packet));
+    UNUSED_IF_ASSERT_DISABLED(packet_len);
     StringExtractorGDBRemote response;
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString().data(), response) ==
+    if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response) ==
         GDBRemoteCommunication::PacketResult::Success) {
       response_type = response.GetResponseType();
-      if (response_type != StringExtractorGDBRemote::eResponse) {
-        break;
+      if (response_type == StringExtractorGDBRemote::eResponse) {
+        llvm::StringRef name;
+        llvm::StringRef value;
+        DynamicRegisterInfo::Register reg_info;
+
+        while (response.GetNameColonValue(name, value)) {
+          if (name == "name") {
+            reg_info.name.SetString(value);
+          } else if (name == "alt-name") {
+            reg_info.alt_name.SetString(value);
+          } else if (name == "bitsize") {
+            if (!value.getAsInteger(0, reg_info.byte_size))
+              reg_info.byte_size /= CHAR_BIT;
+          } else if (name == "offset") {
+            value.getAsInteger(0, reg_info.byte_offset);
+          } else if (name == "encoding") {
+            const Encoding encoding = Args::StringToEncoding(value);
+            if (encoding != eEncodingInvalid)
+              reg_info.encoding = encoding;
+          } else if (name == "format") {
+            if (!OptionArgParser::ToFormat(value.str().c_str(), reg_info.format, nullptr)
+                    .Success())
+              reg_info.format =
+                  llvm::StringSwitch<Format>(value)
+                      .Case("binary", eFormatBinary)
+                      .Case("decimal", eFormatDecimal)
+                      .Case("hex", eFormatHex)
+                      .Case("float", eFormatFloat)
+                      .Case("vector-sint8", eFormatVectorOfSInt8)
+                      .Case("vector-uint8", eFormatVectorOfUInt8)
+                      .Case("vector-sint16", eFormatVectorOfSInt16)
+                      .Case("vector-uint16", eFormatVectorOfUInt16)
+                      .Case("vector-sint32", eFormatVectorOfSInt32)
+                      .Case("vector-uint32", eFormatVectorOfUInt32)
+                      .Case("vector-float32", eFormatVectorOfFloat32)
+                      .Case("vector-uint64", eFormatVectorOfUInt64)
+                      .Case("vector-uint128", eFormatVectorOfUInt128)
+                      .Default(eFormatInvalid);
+          } else if (name == "set") {
+            reg_info.set_name.SetString(value);
+          } else if (name == "gcc" || name == "ehframe") {
+            value.getAsInteger(0, reg_info.regnum_ehframe);
+          } else if (name == "dwarf") {
+            value.getAsInteger(0, reg_info.regnum_dwarf);
+          } else if (name == "generic") {
+            reg_info.regnum_generic = Args::StringToGenericRegister(value);
+          } else if (name == "container-regs") {
+            SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
+          } else if (name == "invalidate-regs") {
+            SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
+          }
+        }
+
+        assert(reg_info.byte_size != 0);
+        registers.push_back(reg_info);
+      } else {
+        break; // ensure exit before reg_num is incremented
       }
-      RegisterInfo reg_info = {
-         nullptr, nullptr, 0, 0, lldb::eEncodingUint, eFormatHex,
-         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-          LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
-         nullptr, nullptr
-      };
-      ParseDeviceRegisterInfo(response, reg_info);
-      if (reg_info.byte_size == 0) {
-        error.SetErrorString("invalid reg, bytes_size=0");
-        return error;
-      }
-      m_device_register_info.push_back(reg_info);
     } else {
       break;
     }
   }
-  for (uint32_t index = 0; index < m_device_register_info.size(); index++) {
-    m_device_register_info[index].kinds[eRegisterKindLLDB] = index;
+
+  if (registers.empty())
+    registers = GetFallbackRegisters(arch_to_use);
+
+  AddDeviceRemoteRegisters(registers, arch_to_use);
+  device_registers = m_device_register_info_sp;
+}
+
+void ProcessGDBRemote::AddDeviceRemoteRegisters(
+    std::vector<DynamicRegisterInfo::Register> &registers,
+    const ArchSpec &arch_to_use) {
+  std::map<uint32_t, uint32_t> remote_to_local_map;
+  uint32_t remote_regnum = 0;
+  for (auto it : llvm::enumerate(registers)) {
+    DynamicRegisterInfo::Register &remote_reg_info = it.value();
+
+    // Assign successive remote regnums if missing.
+    if (remote_reg_info.regnum_remote == LLDB_INVALID_REGNUM)
+      remote_reg_info.regnum_remote = remote_regnum;
+
+    // Create a mapping from remote to local regnos.
+    remote_to_local_map[remote_reg_info.regnum_remote] = it.index();
+
+    remote_regnum = remote_reg_info.regnum_remote + 1;
   }
-  registers = m_device_register_info;
-  return error;
+
+  for (DynamicRegisterInfo::Register &remote_reg_info : registers) {
+    auto proc_to_lldb = [&remote_to_local_map](uint32_t process_regnum) {
+      auto lldb_regit = remote_to_local_map.find(process_regnum);
+      return lldb_regit != remote_to_local_map.end() ? lldb_regit->second
+                                                     : LLDB_INVALID_REGNUM;
+    };
+
+    llvm::transform(remote_reg_info.value_regs,
+                    remote_reg_info.value_regs.begin(), proc_to_lldb);
+    llvm::transform(remote_reg_info.invalidate_regs,
+                    remote_reg_info.invalidate_regs.begin(), proc_to_lldb);
+  }
+
+  // Don't use Process::GetABI, this code gets called from DidAttach, and
+  // in that context we haven't set the Target's architecture yet, so the
+  // ABI is also potentially incorrect.
+  if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
+    abi_sp->AugmentRegisterInfo(registers);
+
+  m_device_register_info_sp->SetRegisterInfo(std::move(registers), arch_to_use);
 }
 
 #endif
@@ -6200,29 +6281,6 @@ void ProcessGDBRemote::DidExec() {
 
 #ifdef MS_DEBUGGER
 static constexpr uint32_t DURATION_SEC = 5;
-bool ProcessGDBRemote::ReadDeviceRegister(uint32_t register_id, uint64_t &value) {
-  StreamString temp;
-  const size_t packet_len = temp.Printf("qDeviceRegisterValue:%d;", register_id);
-  std::string packet = temp.GetString().data();
-
-  if (packet_len != packet.size()) {
-    return false;
-  }
-
-  StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, std::chrono::seconds(DURATION_SEC)) ==
-      GDBRemoteCommunication::PacketResult::Success) {
-    llvm::StringRef reg_key;
-    llvm::StringRef reg_value;
-    if (response.GetNameColonValue(reg_key, reg_value) && reg_key.compare("reg_value") == 0) {
-      if (response.IsNormalResponse() && !reg_value.getAsInteger(16, value)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 Status ProcessGDBRemote::GetDeviceBinaryInfo(DeviceBinaryInfo &device_binary_info) {
   constexpr auto timeout = std::chrono::seconds(20);
   Status error;

@@ -249,8 +249,8 @@ public:
   NativeThreadProtocol *GetThreadByID(lldb::tid_t tid);
 
 #ifdef MS_DEBUGGER
-  virtual Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) = 0;
-  virtual Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) = 0;
+  virtual Status ReadDeviceRegisterValue(const RegisterInfo *reg_info,
+                                         RegisterValue &value) = 0;
   virtual Status ReadDeviceRegisterList(std::vector<std::string> &reg_list) = 0;
 #endif
 

@@ -23,8 +23,6 @@ public:
   Status ReadRegister(const RegisterInfo *reg_info,
                       uint32_t core_id, CoreType core_type, RegisterValue &value) override;
 
-  Status ReadRegister(uint64_t addr, uint32_t core_id, CoreType core_type, uint64_t &value) override;
-
   MemType GetStackMemType() const override;
 
   Status InvalidInstrCache(const lldb::addr_t &addr,

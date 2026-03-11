@@ -246,9 +246,6 @@ public:
   void DidExec() override;
 
   llvm::Expected<bool> SaveCore(llvm::StringRef outfile) override;
-#ifdef MS_DEBUGGER
-  bool ReadDeviceRegister(uint32_t register_id, uint64_t &value) override;
-#endif
 
 #ifdef MS_DEBUGGER
   Status SetAicOnFocus(const uint32_t &core_id) override;
@@ -259,8 +256,8 @@ public:
   Status SetDeviceSingleCoreRunFlag(bool isSingleCoreRunning) override;
   Status GetDeviceRegisterInfo(const llvm::StringRef reg_name, uint64_t &reg_value) override;
   Status GetDeviceRegisterList(std::vector<std::string> &reg_list) override;
-  Status UpdateDeviceRegisterInfo(std::vector<RegisterInfo> &registers, bool force=false);
-  void ParseDeviceRegisterInfo(StringExtractorGDBRemote &response, RegisterInfo &reg_info);
+  void UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamicRegisterInfo> &device_registers,
+                                bool force);
   Status GetDeviceBinaryInfo(DeviceBinaryInfo &info) override;
   Status SendDeviceId(const int32_t device_id) override;
 #endif
@@ -289,7 +286,7 @@ protected:
 
   GDBRemoteDynamicRegisterInfoSP m_register_info_sp;
 #ifdef MS_DEBUGGER
-  std::vector<RegisterInfo> m_device_register_info;
+  GDBRemoteDynamicRegisterInfoSP m_device_register_info_sp;
 #endif
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
@@ -424,6 +421,11 @@ protected:
 
   // Convert DynamicRegisterInfo::Registers into RegisterInfos and add
   // to the dynamic register list.
+#ifdef MS_DEBUGGER
+  void AddDeviceRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
+                                const ArchSpec &arch_to_use);
+#endif
+
   void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information

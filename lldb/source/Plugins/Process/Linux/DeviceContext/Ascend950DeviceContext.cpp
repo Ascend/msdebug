@@ -87,22 +87,16 @@ Status Ascend950DeviceContext::ReadRegister(const RegisterInfo *reg_info,
       register_map.find(reg_info->name) != register_map.end()) {
     const DeviceRegisterInfo &device_reg_info = register_map.at(reg_info->name);
     uint64_t addr = device_reg_info.addr;
-    uint64_t value_int;
-    error = DeviceContext::ReadRegister(addr, core_id, core_type, value_int);
+    error = DeviceContext::ReadRegister(addr, reg_info, core_id, core_type, value);
     if (error.Fail()) {
       return error;
     }
-    value.SetUInt64(value_int);
   } else {
     error.SetErrorString("reg_info is null or reg_num in reg_info is invalid");
   }
   return error;
 }
 
-Status Ascend950DeviceContext::ReadRegister(uint64_t addr, uint32_t core_id, CoreType core_type, uint64_t &value) {
-  addr = RegisterInfoPOSIX_ascend950::GetDbgAddr(addr);
-  return DeviceContext::ReadRegister(addr, core_id, core_type, value);
-}
 
 Status Ascend950DeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
   Status error;

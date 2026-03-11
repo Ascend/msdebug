@@ -52,8 +52,6 @@ public:
   Status GetStoppedCorePC(lldb::addr_t &pc) override;
   Status GetKernelInfo(KernelInfo &info) override;
 
-  Status ReadDeviceRegisterValue(uint32_t reg_num, uint64_t &value) override;
-  Status ReadDeviceRegisterValue(const llvm::StringRef reg_name, uint64_t &value) override;
   Status ReadDeviceRegisterList(std::vector<std::string> &reg_list) override;
   Status ReadDeviceRegisterValue(const RegisterInfo *reg_info, RegisterValue &value);
 

@@ -114,51 +114,6 @@ public:
     strm.EOL();
     return true;
   }
-#ifdef MS_DEBUGGER 
-  bool DumpRegister(Process *process, Stream &strm,
-                    llvm::StringRef reg_name) {
-    strm.Indent();
-    if (!process) {
-      return false;
-    }
-    uint64_t reg_value;
-    Status error = process->GetDeviceRegisterInfo(reg_name, reg_value);
-    if (!error.Success()) {
-      strm.Printf("Invalid register name '%s'.", reg_name.str().c_str());
-      strm.EOL();
-      return false;
-    }
-    strm.Printf("%20s = 0x%lX", reg_name.str().c_str(), reg_value);
-    strm.EOL();
-    return true;
-  }
-
-  bool DumpRegisterSet(Process *process, Stream &strm) {
-    strm.Indent();
-    if (!process) {
-      return false;
-    }
-    std::vector<std::string> reg_list;
-    Status error = process->GetDeviceRegisterList(reg_list);
-    if (!error.Success()) {
-      strm.Printf("error: unavailable");
-      strm.EOL();
-      return false;
-    }
-    std::sort(reg_list.begin(), reg_list.end(),
-              [](const std::string &a, const std::string &b) {
-                  if (a.length() == b.length()) {
-                    return a < b;
-                  }
-                  return a.length() < b.length();
-              });
-    for (const auto &reg_name : reg_list) {
-      DumpRegister(process, strm, llvm::StringRef(reg_name));
-    }
-    strm.EOL();
-    return true;
-  }
-#endif
 
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
                        RegisterContext *reg_ctx, size_t set_idx,
@@ -197,7 +152,79 @@ public:
     }
     return available_count > 0;
   }
+#ifdef MS_DEBUGGER
+  bool DumpRegisterSetWithSort(const ExecutionContext &exe_ctx, Stream &strm,
+                       RegisterContext *reg_ctx, size_t set_idx,
+                       bool primitive_only = false) {
+    // 按照长度和字母序进行排序输出
+    uint32_t unavailable_count = 0;
+    uint32_t available_count = 0;
 
+    if (!reg_ctx)
+      return false; // thread has no registers (i.e. core files are corrupt,
+                    // incomplete crash logs...)
+
+    const RegisterSet *const reg_set = reg_ctx->GetRegisterSet(set_idx);
+    if (!reg_set) {
+      return false;
+    }
+
+    strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
+    strm.IndentMore();
+
+    std::vector<uint32_t> reg_indices;
+    const size_t num_registers = reg_set->num_registers;
+
+    for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
+        const uint32_t reg = reg_set->registers[reg_idx];
+        const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
+
+        if (!reg_info) {
+          continue;
+        }
+
+        if (primitive_only && reg_info->value_regs) {
+          continue;
+        }
+
+        reg_indices.push_back(reg);
+    }
+
+    // 按照名称和长度对寄存器索引排序
+    std::sort(reg_indices.begin(), reg_indices.end(), 
+              [reg_ctx](uint32_t a, uint32_t b) {
+                const RegisterInfo *info_a = reg_ctx->GetRegisterInfoAtIndex(a);
+                const RegisterInfo *info_b = reg_ctx->GetRegisterInfoAtIndex(b);
+                const char *name_a = info_a->name? info_a->name: "";
+                const char *name_b = info_b->name? info_b->name: "";
+                size_t len_a = strlen(name_a);
+                size_t len_b = strlen(name_b);
+
+                if (len_a == len_b){
+                  return strcmp(name_a, name_b) < 0;
+                }
+                return len_a < len_b;
+              });
+    
+    for (uint32_t reg : reg_indices) {
+      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
+      if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
+                                     /*print_flags=*/false))
+        ++available_count;
+      else
+        ++unavailable_count;
+    }
+
+    strm.IndentLess();
+    if (unavailable_count) {
+      strm.Indent();
+      strm.Printf("%u registers were unavailable.\n", unavailable_count);
+    }
+    strm.EOL();
+
+    return available_count > 0;
+  }
+#endif
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
@@ -248,7 +275,8 @@ protected:
             result.AppendError("Ascend device dose not support setting register alternate name.");
           }
           if (m_command_options.dump_all_sets) {
-            DumpRegisterSet(process, strm);
+            DumpRegisterSetWithSort(m_exe_ctx, strm, reg_ctx, set_idx,
+                          !m_command_options.dump_all_sets.GetCurrentValue());
           }
           return;
         }
@@ -271,16 +299,6 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-#ifdef MS_DEBUGGER
-        if (process->IsStopInDevice() && !process->DeviceCoredumpEnable()) {
-          for (const auto &entry : command) {
-            auto arg_str = entry.ref();
-            arg_str.consume_front("$");
-            DumpRegister(process, strm, arg_str);
-          }
-          return;
-        } 
-#endif 
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
