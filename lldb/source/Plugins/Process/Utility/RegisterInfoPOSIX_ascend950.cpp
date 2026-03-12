@@ -24,7 +24,8 @@ enum LLDB_ASCEND_RENUM {
   k_last_gpr_ascend = lldb_x31_ascend,
   lldb_pc_ascend, lldb_status_ascend, lldb_ctrl_su_ascend, lldb_condition_flag_ascend,
   lldb_cond_ascend, lldb_sys_cnt_ascend, lldb_safety_crc_excpt_ascend, lldb_call_depth_cnt_ascend,
-  lldb_icache_prl_st_ascend, lldb_ffts_base_addr_ascend, lldb_kick_start_pc_ascend, lldb_su_warn_status_0_ascend,
+  lldb_icache_prl_st_ascend, lldb_ffts_base_addr_ascend, lldb_kick_start_pc_ascend,
+  lldb_su_warn_status_0_ascend, lldb_su_warn_status_1_ascend,
   lldb_pb_slot_offset_ascend, lldb_pb_slot_id_ascend, lldb_pb_slot_occupy_bitmap_ascend, lldb_vec_event_table_ascend,
   lldb_cube_event_table_ascend, lldb_fixp_event_table_ascend, lldb_scalar_event_table_ascend,
   lldb_mte1_event_table_ascend, lldb_mte2_event_table_ascend, lldb_mte3_event_table_ascend,
@@ -39,42 +40,8 @@ enum LLDB_ASCEND_RENUM {
   lldb_mte2_nz_para_ascend, lldb_mte2_src_para_ascend, lldb_pad_cnt_nddma_ascend,
   lldb_pad_val_nddma_ascend, lldb_loop0_stride_nddma_ascend, lldb_loop1_stride_nddma_ascend,
   lldb_loop2_stride_nddma_ascend, lldb_loop3_stride_nddma_ascend, lldb_loop4_stride_nddma_ascend,
-  lldb_pcie_rd_ctrl_ascend, lldb_pcie_wr_ctrl_ascend, lldb_xgmma_dtc_ascend,
-  lldb_xgamma_lut_inv_0_ascend, lldb_xgamma_lut_inv_1_ascend, lldb_xgamma_lut_inv_2_ascend,
-  lldb_xgamma_lut_inv_3_ascend, lldb_xgamma_lut_inv_4_ascend, lldb_xgamma_lut_inv_5_ascend,
-  lldb_xgamma_lut_inv_6_ascend, lldb_xgamma_lut_inv_7_ascend, lldb_xgamma_lut_inv_8_ascend,
-  lldb_xgamma_lut_inv_9_ascend, lldb_xgamma_lut_inv_10_ascend, lldb_xgamma_lut_inv_11_ascend,
-  lldb_xgamma_lut_inv_12_ascend, lldb_xgamma_lut_inv_13_ascend, lldb_xgamma_lut_inv_14_ascend,
-  lldb_xgamma_lut_inv_15_ascend, lldb_xgamma_lut_inv_16_ascend, lldb_xgamma_lut_inv_17_ascend,
-  lldb_xgamma_lut_inv_18_ascend, lldb_xgamma_lut_inv_19_ascend, lldb_xgamma_lut_inv_20_ascend,
-  lldb_xgamma_lut_inv_21_ascend, lldb_xgamma_lut_inv_22_ascend, lldb_xgamma_lut_inv_23_ascend,
-  lldb_xgamma_lut_inv_24_ascend, lldb_xgamma_lut_inv_25_ascend, lldb_xgamma_lut_inv_26_ascend,
-  lldb_xgamma_lut_inv_27_ascend, lldb_xgamma_lut_inv_28_ascend, lldb_xgamma_lut_inv_29_ascend,
-  lldb_xgamma_lut_inv_30_ascend, lldb_xgamma_lut_inv_31_ascend, lldb_xgamma_lut_inv_32_ascend,
-  lldb_xgamma_lut_inv_33_ascend, lldb_xgamma_lut_imp_0_ascend, lldb_xgamma_lut_imp_1_ascend,
-  lldb_xgamma_lut_imp_2_ascend, lldb_xgamma_lut_imp_3_ascend, lldb_xgamma_lut_imp_4_ascend,
-  lldb_xgamma_lut_imp_5_ascend, lldb_xgamma_lut_imp_6_ascend, lldb_xgamma_lut_imp_7_ascend,
-  lldb_xgamma_lut_imp_8_ascend, lldb_xgamma_lut_imp_9_ascend, lldb_xgamma_lut_imp_10_ascend,
-  lldb_xgamma_lut_imp_11_ascend, lldb_xgamma_lut_imp_12_ascend, lldb_xgamma_lut_imp_13_ascend,
-  lldb_xgamma_lut_imp_14_ascend, lldb_xgamma_lut_imp_15_ascend, lldb_xgamma_lut_imp_16_ascend,
-  lldb_xgamma_lut_imp_17_ascend, lldb_xgamma_lut_imp_18_ascend, lldb_xgamma_lut_imp_19_ascend,
-  lldb_xgamma_lut_imp_20_ascend, lldb_xgamma_lut_imp_21_ascend, lldb_xgamma_lut_imp_22_ascend,
-  lldb_xgamma_lut_imp_23_ascend, lldb_xgamma_lut_imp_24_ascend, lldb_xgamma_lut_imp_25_ascend,
-  lldb_xgamma_lut_imp_26_ascend, lldb_xgamma_lut_imp_27_ascend, lldb_xgamma_lut_imp_28_ascend,
-  lldb_xgamma_lut_imp_29_ascend, lldb_xgamma_lut_imp_30_ascend, lldb_xgamma_lut_imp_31_ascend,
-  lldb_xgamma_lut_imp_32_ascend, lldb_xgamma_lut_imp_33_ascend, lldb_xgamma_lut_imp_34_ascend,
-  lldb_xgamma_lut_imp_35_ascend, lldb_xgamma_lut_imp_36_ascend, lldb_xgamma_lut_imp_37_ascend,
-  lldb_xgamma_lut_imp_38_ascend, lldb_xgamma_lut_imp_39_ascend, lldb_xgamma_lut_imp_40_ascend,
-  lldb_xgamma_lut_imp_41_ascend, lldb_xgamma_lut_imp_42_ascend, lldb_xgamma_lut_imp_43_ascend,
-  lldb_xgamma_lut_imp_44_ascend, lldb_xgamma_lut_imp_45_ascend, lldb_xgamma_lut_imp_46_ascend,
-  lldb_xgamma_lut_imp_47_ascend, lldb_xgamma_lut_imp_48_ascend, lldb_xgamma_lut_imp_49_ascend,
-  lldb_xgamma_lut_imp_50_ascend, lldb_xgamma_lut_imp_51_ascend, lldb_xgamma_lut_imp_52_ascend,
-  lldb_xgamma_lut_imp_53_ascend, lldb_xgamma_lut_imp_54_ascend, lldb_xgamma_lut_imp_55_ascend,
-  lldb_xgamma_lut_imp_56_ascend, lldb_xgamma_lut_imp_57_ascend, lldb_xgamma_lut_imp_58_ascend,
-  lldb_xgamma_lut_imp_59_ascend, lldb_xgamma_lut_imp_60_ascend, lldb_xgamma_lut_imp_61_ascend,
-  lldb_xgamma_lut_imp_62_ascend, lldb_xgamma_lut_imp_63_ascend, lldb_xgamma_lut_imp_64_ascend,
-  lldb_xgamma_lut_imp_65_ascend,
-  k_last_mte_reg_ascend = lldb_xgamma_lut_imp_65_ascend,
+  lldb_pcie_rd_ctrl_ascend, lldb_pcie_wr_ctrl_ascend,
+  k_last_mte_reg_ascend = lldb_pcie_wr_ctrl_ascend,
   lldb_vreg0_ascend, lldb_vreg1_ascend, lldb_vreg2_ascend,
   lldb_vreg3_ascend, lldb_vreg4_ascend, lldb_vreg5_ascend, lldb_vreg6_ascend,
   lldb_vreg7_ascend, lldb_vreg8_ascend, lldb_vreg9_ascend, lldb_vreg10_ascend,
@@ -139,7 +106,7 @@ enum LLDB_ASCEND_RENUM {
   k_last_l1_reg_ascend = lldb_l1_warn_ascend,
   k_num_registers_ascend
 };
- 
+
 enum {
   k_num_gpr_registers = k_last_gpr_ascend - k_first_gpr_ascend + 1,
   k_num_su_registers = k_last_su_reg_ascend + 1,
@@ -149,7 +116,7 @@ enum {
   k_num_register_sets_default = 1,
   k_num_register_sets = 4
 };
- 
+
 static const uint32_t g_su_regnums_ascend950[] = {
   lldb_x0_ascend, lldb_x1_ascend, lldb_x2_ascend, lldb_x3_ascend,
   lldb_x4_ascend, lldb_x5_ascend, lldb_x6_ascend, lldb_x7_ascend,
@@ -161,17 +128,18 @@ static const uint32_t g_su_regnums_ascend950[] = {
   lldb_x28_ascend, lldb_x29_ascend, lldb_x30_ascend, lldb_x31_ascend,
   lldb_pc_ascend, lldb_status_ascend, lldb_ctrl_su_ascend, lldb_condition_flag_ascend,
   lldb_cond_ascend, lldb_sys_cnt_ascend, lldb_safety_crc_excpt_ascend, lldb_call_depth_cnt_ascend,
-  lldb_icache_prl_st_ascend, lldb_ffts_base_addr_ascend, lldb_kick_start_pc_ascend, lldb_su_warn_status_0_ascend,
+  lldb_icache_prl_st_ascend, lldb_ffts_base_addr_ascend, lldb_kick_start_pc_ascend,
+  lldb_su_warn_status_0_ascend, lldb_su_warn_status_1_ascend,
   lldb_pb_slot_offset_ascend, lldb_pb_slot_id_ascend, lldb_pb_slot_occupy_bitmap_ascend, lldb_vec_event_table_ascend,
   lldb_cube_event_table_ascend, lldb_fixp_event_table_ascend, lldb_scalar_event_table_ascend,
   lldb_mte1_event_table_ascend, lldb_mte2_event_table_ascend, lldb_mte3_event_table_ascend,
   lldb_glb_get_cnt_ascend, lldb_glb_rel_cnt_ascend, lldb_set_cross_core_cnt_ascend,
   lldb_set_intra_blk_cnt_ascend, LLDB_INVALID_REGNUM
 };
- 
+
 static_assert(sizeof(g_su_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_su_registers,
               "Invalid size of g_su_regnums_ascend950");
- 
+
 static const uint32_t g_mte_regnums_ascend950[] = {
   lldb_mte_warn_ascend, lldb_l0_set_value_mte_ascend,
   lldb_padding_mte_ascend, lldb_pad_val_outtoub_ascend, lldb_pad_val_outtol1_ascend,
@@ -181,46 +149,12 @@ static const uint32_t g_mte_regnums_ascend950[] = {
   lldb_mte2_nz_para_ascend, lldb_mte2_src_para_ascend, lldb_pad_cnt_nddma_ascend,
   lldb_pad_val_nddma_ascend, lldb_loop0_stride_nddma_ascend, lldb_loop1_stride_nddma_ascend,
   lldb_loop2_stride_nddma_ascend, lldb_loop3_stride_nddma_ascend, lldb_loop4_stride_nddma_ascend,
-  lldb_pcie_rd_ctrl_ascend, lldb_pcie_wr_ctrl_ascend, lldb_xgmma_dtc_ascend,
-  lldb_xgamma_lut_inv_0_ascend, lldb_xgamma_lut_inv_1_ascend, lldb_xgamma_lut_inv_2_ascend,
-  lldb_xgamma_lut_inv_3_ascend, lldb_xgamma_lut_inv_4_ascend, lldb_xgamma_lut_inv_5_ascend,
-  lldb_xgamma_lut_inv_6_ascend, lldb_xgamma_lut_inv_7_ascend, lldb_xgamma_lut_inv_8_ascend,
-  lldb_xgamma_lut_inv_9_ascend, lldb_xgamma_lut_inv_10_ascend, lldb_xgamma_lut_inv_11_ascend,
-  lldb_xgamma_lut_inv_12_ascend, lldb_xgamma_lut_inv_13_ascend, lldb_xgamma_lut_inv_14_ascend,
-  lldb_xgamma_lut_inv_15_ascend, lldb_xgamma_lut_inv_16_ascend, lldb_xgamma_lut_inv_17_ascend,
-  lldb_xgamma_lut_inv_18_ascend, lldb_xgamma_lut_inv_19_ascend, lldb_xgamma_lut_inv_20_ascend,
-  lldb_xgamma_lut_inv_21_ascend, lldb_xgamma_lut_inv_22_ascend, lldb_xgamma_lut_inv_23_ascend,
-  lldb_xgamma_lut_inv_24_ascend, lldb_xgamma_lut_inv_25_ascend, lldb_xgamma_lut_inv_26_ascend,
-  lldb_xgamma_lut_inv_27_ascend, lldb_xgamma_lut_inv_28_ascend, lldb_xgamma_lut_inv_29_ascend,
-  lldb_xgamma_lut_inv_30_ascend, lldb_xgamma_lut_inv_31_ascend, lldb_xgamma_lut_inv_32_ascend,
-  lldb_xgamma_lut_inv_33_ascend, lldb_xgamma_lut_imp_0_ascend, lldb_xgamma_lut_imp_1_ascend,
-  lldb_xgamma_lut_imp_2_ascend, lldb_xgamma_lut_imp_3_ascend, lldb_xgamma_lut_imp_4_ascend,
-  lldb_xgamma_lut_imp_5_ascend, lldb_xgamma_lut_imp_6_ascend, lldb_xgamma_lut_imp_7_ascend,
-  lldb_xgamma_lut_imp_8_ascend, lldb_xgamma_lut_imp_9_ascend, lldb_xgamma_lut_imp_10_ascend,
-  lldb_xgamma_lut_imp_11_ascend, lldb_xgamma_lut_imp_12_ascend, lldb_xgamma_lut_imp_13_ascend,
-  lldb_xgamma_lut_imp_14_ascend, lldb_xgamma_lut_imp_15_ascend, lldb_xgamma_lut_imp_16_ascend,
-  lldb_xgamma_lut_imp_17_ascend, lldb_xgamma_lut_imp_18_ascend, lldb_xgamma_lut_imp_19_ascend,
-  lldb_xgamma_lut_imp_20_ascend, lldb_xgamma_lut_imp_21_ascend, lldb_xgamma_lut_imp_22_ascend,
-  lldb_xgamma_lut_imp_23_ascend, lldb_xgamma_lut_imp_24_ascend, lldb_xgamma_lut_imp_25_ascend,
-  lldb_xgamma_lut_imp_26_ascend, lldb_xgamma_lut_imp_27_ascend, lldb_xgamma_lut_imp_28_ascend,
-  lldb_xgamma_lut_imp_29_ascend, lldb_xgamma_lut_imp_30_ascend, lldb_xgamma_lut_imp_31_ascend,
-  lldb_xgamma_lut_imp_32_ascend, lldb_xgamma_lut_imp_33_ascend, lldb_xgamma_lut_imp_34_ascend,
-  lldb_xgamma_lut_imp_35_ascend, lldb_xgamma_lut_imp_36_ascend, lldb_xgamma_lut_imp_37_ascend,
-  lldb_xgamma_lut_imp_38_ascend, lldb_xgamma_lut_imp_39_ascend, lldb_xgamma_lut_imp_40_ascend,
-  lldb_xgamma_lut_imp_41_ascend, lldb_xgamma_lut_imp_42_ascend, lldb_xgamma_lut_imp_43_ascend,
-  lldb_xgamma_lut_imp_44_ascend, lldb_xgamma_lut_imp_45_ascend, lldb_xgamma_lut_imp_46_ascend,
-  lldb_xgamma_lut_imp_47_ascend, lldb_xgamma_lut_imp_48_ascend, lldb_xgamma_lut_imp_49_ascend,
-  lldb_xgamma_lut_imp_50_ascend, lldb_xgamma_lut_imp_51_ascend, lldb_xgamma_lut_imp_52_ascend,
-  lldb_xgamma_lut_imp_53_ascend, lldb_xgamma_lut_imp_54_ascend, lldb_xgamma_lut_imp_55_ascend,
-  lldb_xgamma_lut_imp_56_ascend, lldb_xgamma_lut_imp_57_ascend, lldb_xgamma_lut_imp_58_ascend,
-  lldb_xgamma_lut_imp_59_ascend, lldb_xgamma_lut_imp_60_ascend, lldb_xgamma_lut_imp_61_ascend,
-  lldb_xgamma_lut_imp_62_ascend, lldb_xgamma_lut_imp_63_ascend, lldb_xgamma_lut_imp_64_ascend,
-  lldb_xgamma_lut_imp_65_ascend, LLDB_INVALID_REGNUM
+  lldb_pcie_rd_ctrl_ascend, lldb_pcie_wr_ctrl_ascend, LLDB_INVALID_REGNUM
 };
- 
+
 static_assert(sizeof(g_mte_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_mte_registers,
               "Invalid size of g_mte_regnums_ascend950");
- 
+
 static const uint32_t g_vecrb_regnums_ascend950[] = {
   lldb_vreg0_ascend, lldb_vreg1_ascend, lldb_vreg2_ascend,
   lldb_vreg3_ascend, lldb_vreg4_ascend, lldb_vreg5_ascend, lldb_vreg6_ascend,
@@ -277,10 +211,10 @@ static const uint32_t g_vecrb_regnums_ascend950[] = {
   lldb_vec_core_id_ascend, lldb_vthreaddim_x_ascend, lldb_vthreaddim_y_ascend, lldb_vthreaddim_z_ascend,
   lldb_simt_pc_ascend, lldb_mrf_ascend, lldb_p_register_ascend, lldb_execmask_ascend, LLDB_INVALID_REGNUM
 };
- 
+
 static_assert(sizeof(g_vecrb_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_vecrb_registers,
               "Invalid size of g_vecrb_regnums_ascend950");
- 
+
 static const uint32_t g_l1_regnums_ascend950[] = {
   lldb_fmatrix_ascend, lldb_padding_l1_ascend, lldb_l0_set_value_l1_ascend, lldb_l1_3d_size_ascend,
   lldb_l3d_rpt_ascend, lldb_fmatrix_dual_0_ascend, lldb_fmatrix_dual_1_ascend, lldb_fmatrix_b_ascend,
@@ -289,11 +223,11 @@ static const uint32_t g_l1_regnums_ascend950[] = {
   lldb_fix_clip_relu_ascend, lldb_loop4_para_ascend, lldb_channel_para_ascend, lldb_elt_antiq_para_ascend,
   lldb_l1_warn_ascend, LLDB_INVALID_REGNUM
 };
- 
+
 static const RegisterSet g_reg_sets_ascend950[k_num_register_sets_default] = {
   {"Registers", "register", k_num_su_registers,
    g_su_regnums_ascend950}};
- 
+
 static constexpr uint64_t SU_ID = 1UL;
 static constexpr uint64_t MTE_ID = 2UL;
 static constexpr uint64_t VEC_ID = 3UL;
@@ -301,7 +235,7 @@ static constexpr uint64_t CUBE_ID = 4UL;
 static constexpr uint64_t BIU_ID = 5UL;
 static constexpr uint64_t L1_ID = 6UL;
 static constexpr uint64_t ID_OFFSET = 52UL;
- 
+
 // The array should be POD type.
 static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_GPR(GPR0, x0, LLDB_INVALID_REGNUM), SU_ID << ID_OFFSET | 0, MIX_MASK},
@@ -348,21 +282,22 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_REG(FFTS_BASE_ADDR, lldb_ffts_base_addr_ascend), SU_ID << ID_OFFSET | 75, MIX_MASK},
   {ASCEND_REG(KICK_START_PC, lldb_kick_start_pc_ascend), SU_ID << ID_OFFSET | 76, MIX_MASK},
   {ASCEND_REG(SU_WARN_STATUS_0, lldb_su_warn_status_0_ascend), SU_ID << ID_OFFSET | 77, MIX_MASK},
-  {ASCEND_REG(PB_SLOT_OFFSET, lldb_pb_slot_offset_ascend), SU_ID << ID_OFFSET | 128, AIV_MASK},
-  {ASCEND_REG(PB_SLOT_ID, lldb_pb_slot_id_ascend), SU_ID << ID_OFFSET | 129, AIV_MASK},
-  {ASCEND_REG(PB_SLOT_OCCUPY_BITMAP, lldb_pb_slot_occupy_bitmap_ascend), SU_ID << ID_OFFSET | 130, AIV_MASK},
-  {ASCEND_REG(VEC_EVENT_TABLE, lldb_vec_event_table_ascend), SU_ID << ID_OFFSET | 131, AIV_MASK},
-  {ASCEND_REG(CUBE_EVENT_TABLE, lldb_cube_event_table_ascend), SU_ID << ID_OFFSET | 132, AIC_MASK},
-  {ASCEND_REG(FIXP_EVENT_TABLE, lldb_fixp_event_table_ascend), SU_ID << ID_OFFSET | 133, AIC_MASK},
+  {ASCEND_REG(SU_WARN_STATUS_1, lldb_su_warn_status_1_ascend), SU_ID << ID_OFFSET | 78, MIX_MASK},
+  {ASCEND_REG(PB_SLOT_OFFSET, lldb_pb_slot_offset_ascend), SU_ID << ID_OFFSET | 128, MIX_MASK},
+  {ASCEND_REG(PB_SLOT_ID, lldb_pb_slot_id_ascend), SU_ID << ID_OFFSET | 129, MIX_MASK},
+  {ASCEND_REG(PB_SLOT_OCCUPY_BITMAP, lldb_pb_slot_occupy_bitmap_ascend), SU_ID << ID_OFFSET | 130, MIX_MASK},
+  {ASCEND_REG(VEC_EVENT_TABLE, lldb_vec_event_table_ascend), SU_ID << ID_OFFSET | 131, MIX_MASK},
+  {ASCEND_REG(CUBE_EVENT_TABLE, lldb_cube_event_table_ascend), SU_ID << ID_OFFSET | 132, MIX_MASK},
+  {ASCEND_REG(FIXP_EVENT_TABLE, lldb_fixp_event_table_ascend), SU_ID << ID_OFFSET | 133, MIX_MASK},
   {ASCEND_REG(SCALAR_EVENT_TABLE, lldb_scalar_event_table_ascend), SU_ID << ID_OFFSET | 134, MIX_MASK},
-  {ASCEND_REG(MTE1_EVENT_TABLE, lldb_mte1_event_table_ascend), SU_ID << ID_OFFSET | 135, AIC_MASK},
+  {ASCEND_REG(MTE1_EVENT_TABLE, lldb_mte1_event_table_ascend), SU_ID << ID_OFFSET | 135, MIX_MASK},
   {ASCEND_REG(MTE2_EVENT_TABLE, lldb_mte2_event_table_ascend), SU_ID << ID_OFFSET | 136, MIX_MASK},
-  {ASCEND_REG(MTE3_EVENT_TABLE, lldb_mte3_event_table_ascend), SU_ID << ID_OFFSET | 137, AIV_MASK},
+  {ASCEND_REG(MTE3_EVENT_TABLE, lldb_mte3_event_table_ascend), SU_ID << ID_OFFSET | 137, MIX_MASK},
   {ASCEND_REG(GLB_GET_CNT, lldb_glb_get_cnt_ascend), SU_ID << ID_OFFSET | 5UL << 48, MIX_MASK},
   {ASCEND_REG(GLB_REL_CNT, lldb_glb_rel_cnt_ascend), SU_ID << ID_OFFSET | 5UL << 48 | 1UL << 47, MIX_MASK},
   {ASCEND_REG(SET_CROSS_CORE_CNT, lldb_set_cross_core_cnt_ascend), SU_ID << ID_OFFSET | 6UL << 48, MIX_MASK},
   {ASCEND_REG(SET_INTRA_BLK_CNT, lldb_set_intra_blk_cnt_ascend), SU_ID << ID_OFFSET | 6UL << 48 | 1UL << 47, MIX_MASK},
- 
+
   {ASCEND_REG(MTE_WARN, lldb_mte_warn_ascend), MTE_ID << ID_OFFSET | 1UL << 48, MIX_MASK},
   {ASCEND_REG(L0_SET_VALUE_MTE, lldb_l0_set_value_mte_ascend), MTE_ID << ID_OFFSET | 2UL << 48, AIC_MASK},
   {ASCEND_REG(PADDING_MTE, lldb_padding_mte_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 1, AIC_MASK},
@@ -388,107 +323,6 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_REG(LOOP4_STRIDE_NDDMA, lldb_loop4_stride_nddma_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 28, AIV_MASK},
   {ASCEND_REG(PCIE_RD_CTRL, lldb_pcie_rd_ctrl_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 29, AIV_MASK},
   {ASCEND_REG(PCIE_WR_CTRL, lldb_pcie_wr_ctrl_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 30, AIV_MASK},
-  {ASCEND_REG(XGMMA_DTC, lldb_xgmma_dtc_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 32, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_0, lldb_xgamma_lut_inv_0_ascend), MTE_ID << ID_OFFSET | 5UL << 48, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_1, lldb_xgamma_lut_inv_1_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 1, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_2, lldb_xgamma_lut_inv_2_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 2, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_3, lldb_xgamma_lut_inv_3_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 3, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_4, lldb_xgamma_lut_inv_4_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 4, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_5, lldb_xgamma_lut_inv_5_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 5, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_6, lldb_xgamma_lut_inv_6_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 6, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_7, lldb_xgamma_lut_inv_7_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 7, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_8, lldb_xgamma_lut_inv_8_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 8, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_9, lldb_xgamma_lut_inv_9_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 9, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_10, lldb_xgamma_lut_inv_10_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 10, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_11, lldb_xgamma_lut_inv_11_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 11, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_12, lldb_xgamma_lut_inv_12_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 12, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_13, lldb_xgamma_lut_inv_13_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 13, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_14, lldb_xgamma_lut_inv_14_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 14, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_15, lldb_xgamma_lut_inv_15_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 15, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_16, lldb_xgamma_lut_inv_16_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 16, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_17, lldb_xgamma_lut_inv_17_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 17, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_18, lldb_xgamma_lut_inv_18_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 18, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_19, lldb_xgamma_lut_inv_19_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 19, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_20, lldb_xgamma_lut_inv_20_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 20, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_21, lldb_xgamma_lut_inv_21_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 21, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_22, lldb_xgamma_lut_inv_22_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 22, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_23, lldb_xgamma_lut_inv_23_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 23, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_24, lldb_xgamma_lut_inv_24_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 24, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_25, lldb_xgamma_lut_inv_25_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 25, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_26, lldb_xgamma_lut_inv_26_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 26, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_27, lldb_xgamma_lut_inv_27_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 27, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_28, lldb_xgamma_lut_inv_28_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 28, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_29, lldb_xgamma_lut_inv_29_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 29, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_30, lldb_xgamma_lut_inv_30_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 30, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_31, lldb_xgamma_lut_inv_31_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 31, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_32, lldb_xgamma_lut_inv_32_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 32, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_INV_33, lldb_xgamma_lut_inv_33_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 33, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_0, lldb_xgamma_lut_imp_0_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 34, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_1, lldb_xgamma_lut_imp_1_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 35, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_2, lldb_xgamma_lut_imp_2_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 36, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_3, lldb_xgamma_lut_imp_3_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 37, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_4, lldb_xgamma_lut_imp_4_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 38, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_5, lldb_xgamma_lut_imp_5_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 39, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_6, lldb_xgamma_lut_imp_6_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 40, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_7, lldb_xgamma_lut_imp_7_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 41, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_8, lldb_xgamma_lut_imp_8_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 42, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_9, lldb_xgamma_lut_imp_9_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 43, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_10, lldb_xgamma_lut_imp_10_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 44, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_11, lldb_xgamma_lut_imp_11_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 45, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_12, lldb_xgamma_lut_imp_12_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 46, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_13, lldb_xgamma_lut_imp_13_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 47, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_14, lldb_xgamma_lut_imp_14_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 48, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_15, lldb_xgamma_lut_imp_15_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 49, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_16, lldb_xgamma_lut_imp_16_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 50, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_17, lldb_xgamma_lut_imp_17_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 51, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_18, lldb_xgamma_lut_imp_18_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 52, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_19, lldb_xgamma_lut_imp_19_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 53, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_20, lldb_xgamma_lut_imp_20_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 54, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_21, lldb_xgamma_lut_imp_21_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 55, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_22, lldb_xgamma_lut_imp_22_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 56, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_23, lldb_xgamma_lut_imp_23_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 57, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_24, lldb_xgamma_lut_imp_24_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 58, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_25, lldb_xgamma_lut_imp_25_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 59, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_26, lldb_xgamma_lut_imp_26_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 60, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_27, lldb_xgamma_lut_imp_27_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 61, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_28, lldb_xgamma_lut_imp_28_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 62, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_29, lldb_xgamma_lut_imp_29_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 63, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_30, lldb_xgamma_lut_imp_30_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 64, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_31, lldb_xgamma_lut_imp_31_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 65, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_32, lldb_xgamma_lut_imp_32_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 66, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_33, lldb_xgamma_lut_imp_33_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 67, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_34, lldb_xgamma_lut_imp_34_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 68, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_35, lldb_xgamma_lut_imp_35_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 69, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_36, lldb_xgamma_lut_imp_36_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 70, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_37, lldb_xgamma_lut_imp_37_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 71, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_38, lldb_xgamma_lut_imp_38_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 72, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_39, lldb_xgamma_lut_imp_39_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 73, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_40, lldb_xgamma_lut_imp_40_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 74, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_41, lldb_xgamma_lut_imp_41_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 75, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_42, lldb_xgamma_lut_imp_42_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 76, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_43, lldb_xgamma_lut_imp_43_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 77, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_44, lldb_xgamma_lut_imp_44_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 78, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_45, lldb_xgamma_lut_imp_45_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 79, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_46, lldb_xgamma_lut_imp_46_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 80, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_47, lldb_xgamma_lut_imp_47_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 81, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_48, lldb_xgamma_lut_imp_48_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 82, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_49, lldb_xgamma_lut_imp_49_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 83, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_50, lldb_xgamma_lut_imp_50_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 84, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_51, lldb_xgamma_lut_imp_51_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 85, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_52, lldb_xgamma_lut_imp_52_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 86, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_53, lldb_xgamma_lut_imp_53_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 87, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_54, lldb_xgamma_lut_imp_54_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 88, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_55, lldb_xgamma_lut_imp_55_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 89, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_56, lldb_xgamma_lut_imp_56_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 90, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_57, lldb_xgamma_lut_imp_57_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 91, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_58, lldb_xgamma_lut_imp_58_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 92, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_59, lldb_xgamma_lut_imp_59_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 93, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_60, lldb_xgamma_lut_imp_60_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 94, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_61, lldb_xgamma_lut_imp_61_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 95, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_62, lldb_xgamma_lut_imp_62_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 96, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_63, lldb_xgamma_lut_imp_63_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 97, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_64, lldb_xgamma_lut_imp_64_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 98, MIX_MASK},
-  {ASCEND_REG(XGAMMA_LUT_IMP_65, lldb_xgamma_lut_imp_65_ascend), MTE_ID << ID_OFFSET | 5UL << 48 | 99, MIX_MASK},
  
   {ASCEND_REG_32B(VREG0, lldb_vreg0_ascend), VEC_ID << ID_OFFSET | 2UL << 48, AIV_MASK},
   {ASCEND_REG_32B(VREG1, lldb_vreg1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 16, AIV_MASK},
@@ -733,14 +567,14 @@ static_assert(sizeof(REGISTER_950_INFO) / sizeof(DeviceRegisterInfo) == k_num_re
               "REGISTER_950_INFO size is invalid");
  
 const RegExtractor &RegisterInfoPOSIX_ascend950::GetRegExtractor() {
-  static RegExtractor instance(REGISTER_950_INFO, k_num_su_registers);
+  static RegExtractor instance(REGISTER_950_INFO, k_num_registers_ascend);
   LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
             instance.raw_register_infos.size());
   return instance;
 }
  
 RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch)
-  : RegisterInfoPOSIX_ascend(target_arch, k_num_su_registers,
+  : RegisterInfoPOSIX_ascend(target_arch, k_num_registers_ascend,
     k_last_gpr_ascend - k_first_gpr_ascend + 1,
     GetRegExtractor().raw_register_infos.data(),
     GetRegExtractor().register_map) {
