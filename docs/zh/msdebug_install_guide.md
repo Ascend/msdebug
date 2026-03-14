@@ -64,6 +64,9 @@ git config --global credential.helper store
 "mindstudio-debugger_<version>_<arch>.run" successfully created.
 ```
 
+> [!NOTE]  说明 
+> 生成run包依赖pigz库，一般系统自带，```pigz --version```如果没有显示版本，可自行下载。
+
 ### 安装软件包 
 
 1. 安装软件包前需给run包添加可执行权限。进入run包保存路径，执行如下命令，增加可执行权限。
