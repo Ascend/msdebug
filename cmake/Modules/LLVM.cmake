@@ -53,6 +53,7 @@ ExternalProject_Add(llvm_project
         -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,${LIBEDIT_INSTALL_DIR}/lib
         -DCURSES_NCURSES_LIBRARY=${NCURSES_INSTALL_DIR}/lib/libncurses.so
         -DTerminfo_LIBRARIES=${NCURSES_INSTALL_DIR}/lib/libtinfo.so
+        -DCURSES_LIBRARY=${NCURSES_INSTALL_DIR}/lib/libtinfo.so
         -DCURSES_INCLUDE_PATH=${NCURSES_INSTALL_DIR}/include
         -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
         -DHISTEDIT_FILE=${LIBEDIT_INSTALL_DIR}/include/histedit.h
