@@ -117,12 +117,6 @@ protected:
   static bool RendezvousBreakpointHit(
       void *baton, lldb_private::StoppointCallbackContext *context,
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
-#ifdef MS_DEBUGGER
-  /// Callback routine which updates the current list of loaded modules from runtime_stub 
-  static bool RendezvousKernelLaunchBreakpointHit(
-      void *baton, lldb_private::StoppointCallbackContext *context,
-      lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
-#endif
 
   /// Indicates whether the initial set of modules was reported added.
   bool m_initial_modules_added;

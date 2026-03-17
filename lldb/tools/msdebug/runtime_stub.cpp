@@ -290,27 +290,29 @@ static string GetEscapedBytes(const vector<char> &raw) {
 int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash,
                        const std::vector<char> &elf, uint64_t pcAddr)
 {
+  int32_t deviceId;
+  GetDeviceId(&deviceId);
+  static std::mutex mtx;
   static unordered_set<std::string> sentBinaries;
+  string sendKey = kernelHash + std::to_string(deviceId);
   string cutKernelName = kernelName;
   if (cutKernelName.length() > KERNEL_NAME_SIZE) {
     cutKernelName.resize(KERNEL_NAME_SIZE);
   }
   std::string buf = "$kernel_name:" + cutKernelName + ";";
-  bool needSendBinary = false;
-  if (sentBinaries.find(kernelHash) == sentBinaries.end()) {
-    buf += "kernel_hash:" + kernelHash + ";";
-    std::stringstream ss;
-    ss << std::hex << pcAddr;
-    buf += "pc_base_addr:" + ss.str() + ";";
-    buf += "kernel_binary:" + GetEscapedBytes(elf) + ";";
-    sentBinaries.insert(kernelHash);
-    needSendBinary = true;
+  {
+    std::unique_lock<std::mutex> lk(mtx);
+    if (sentBinaries.find(sendKey) == sentBinaries.end()) {
+      buf += "kernel_hash:" + kernelHash + ";";
+      std::stringstream ss;
+      ss << std::hex << pcAddr;
+      buf += "pc_base_addr:" + ss.str() + ";";
+      buf += "kernel_binary:" + GetEscapedBytes(elf) + ";";
+      sentBinaries.insert(sendKey);
+    }
   }
   buf += "#";
   auto ret = SendInfoAndWaitForReply(buf);
-  if (needSendBinary) {
-    MSBreakOnLaunch();
-  }
   return ret;
 }
 
@@ -802,16 +804,6 @@ rtError_t rtStreamSynchronizeWithTimeout(rtStream_t stream, int32_t timeout)
         RT_STUB_LOG_ERROR("rtStreamSynchronizeWithTimeout failed. ret=%d\n", ret);
     }
     return ret;
-}
-
-/*
- * This function is an empty stub used by the tool for internal breakpoints. 
- * When a breakpoint is hit in this function, the debugger will update the kernel binary,
- * match the preset breakpoints, and apply them. Additionally, this function must not be inlined.
- */
-void MSBreakOnLaunch()
-{
-    RT_STUB_LOG_INFO("Enter MSBreakOnLaunch\n");
 }
 }
 #endif

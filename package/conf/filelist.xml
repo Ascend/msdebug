@@ -40,6 +40,7 @@
         <file value="libtinfo.so.5"/>
         <file value="libruntime_stub.so"/>
         <file value="libpanel.so.5"/>
+        <file value="libform.so.5"/>
         <file value="libncurses.so.5"/>
         <file value="liblldb.so.19.1.7"/>
         <file value="liblldb.so.19.1"/>

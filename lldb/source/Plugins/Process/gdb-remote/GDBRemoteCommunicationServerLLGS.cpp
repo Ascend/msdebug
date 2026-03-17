@@ -850,9 +850,27 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
   //     InitializeRegisters(force);
   // }
 
+#ifdef MS_DEBUGGER
+  bool break_in_device = false;
+  ThreadStopInfo stop_info;
+  for (NativeThreadProtocol &thread : process.Threads()) {
+    if (thread.GetStopReason(stop_info, description)) {
+      if (stop_info.still_break_in_device) {
+        break_in_device = true;
+        break;
+      }
+    }
+  }
+#endif
   // Output the T packet with the thread
   response.PutChar('T');
   int signum = tid_stop_info.signo;
+#ifdef MS_DEBUGGER
+  // If we hit internal breakpoint, set other threads to 0, otherwise, client will stop.
+  if (thread.GetID() != process.GetID() && stop_info.internal_break) {
+    signum = 0;
+  }
+#endif
   LLDB_LOG(
       log,
       "pid {0}, tid {1}, got signal signo = {2}, reason = {3}, exc_type = {4}",
@@ -883,16 +901,6 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     response.PutChar(';');
   }
 #ifdef MS_DEBUGGER
-  bool break_in_device = false;
-  ThreadStopInfo stop_info;
-  for (NativeThreadProtocol &thread : process.Threads()) {
-    if (thread.GetStopReason(stop_info, description)) {
-      if (stop_info.still_break_in_device) {
-        break_in_device = true;
-        break;
-      }
-    }
-  }
   if (stop_info.internal_break) {
     const char *reason_str = GetStopReasonString(tid_stop_info.reason);
     if (reason_str != nullptr) {

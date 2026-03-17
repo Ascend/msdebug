@@ -55,6 +55,9 @@ if (MS_DEBUGGER)
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
           "${NCURSES_LIB_DIR}/libpanel.so.5"
           "${CMAKE_INSTALL_PREFIX}/lib/libpanel.so.5"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${NCURSES_LIB_DIR}/libform.so.5"
+          "${CMAKE_INSTALL_PREFIX}/lib/libform.so.5"
       COMMENT "Copying library files without symlinks"
       VERBATIM
   )

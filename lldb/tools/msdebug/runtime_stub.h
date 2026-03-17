@@ -114,7 +114,6 @@ VISIBILITY_EXPORT rtError_t rtDevBinaryRegister(const rtDevBinary_t *bin, void *
 VISIBILITY_EXPORT rtError_t rtRegisterAllKernel(const rtDevBinary_t *bin, void **handle);
 VISIBILITY_EXPORT rtError_t rtGetTaskIdAndStreamID(uint32_t *taskId, uint32_t *streamId);
 VISIBILITY_EXPORT rtError_t rtStreamSynchronizeWithTimeout(rtStream_t stream, int32_t timeout);
-VISIBILITY_EXPORT __attribute__((noinline)) void MSBreakOnLaunch();
 }
 
 #endif

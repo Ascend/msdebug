@@ -387,25 +387,6 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
   m_dyld_bid = dyld_break->GetID();
   return true;
 }
-#ifdef MS_DEBUGGER
-
-bool DynamicLoaderPOSIXDYLD::RendezvousKernelLaunchBreakpointHit(
-    void *baton, StoppointCallbackContext *context, user_id_t break_id,
-    user_id_t break_loc_id) {
-  if (!baton)
-    return false;
-  Log *log = GetLog(LLDBLog::DynamicLoader);
-  DynamicLoaderPOSIXDYLD *const dyld_instance =
-      static_cast<DynamicLoaderPOSIXDYLD *>(baton);
-  LLDB_LOGF(log, "DynamicLoaderPOSIXDYLD::%s called for pid %" PRIu64,
-            __FUNCTION__,
-            dyld_instance->m_process ? dyld_instance->m_process->GetID()
-                                     : LLDB_INVALID_PROCESS_ID);
-  dyld_instance->RefreshDeviceModules();
-  // Don't stop at internal breakpoints; return false to continue execution.
-  return false;
-}
-#endif
 
 bool DynamicLoaderPOSIXDYLD::RendezvousBreakpointHit(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
