@@ -168,6 +168,18 @@ bool needsNormalization(const llvm::StringRef &path) {
 
 void FileSpec::SetFile(llvm::StringRef pathname) { SetFile(pathname, m_style); }
 
+#ifdef MS_DEBUGGER
+static bool ContainsSymlinkDir(llvm::StringRef p) {
+    while (!p.empty()) {
+        if (llvm::sys::fs::is_symlink_file(p)) {
+            return true;
+        }
+        p = llvm::sys::path::parent_path(p);
+    }
+    return false;
+}
+#endif
+
 // Update the contents of this object with a new path. The path will be split
 // up into a directory and filename and stored as uniqued string values for
 // quick comparison and efficient memory usage.
@@ -179,10 +191,10 @@ void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
     return;
 
   llvm::SmallString<128> resolved(pathname);
-#ifdef ASCEND_DEBUGGER
+#ifdef MS_DEBUGGER
   // The following remove_dotsfunction has a bug when handling relative paths with symbolic links.
   // Therefore, we perform a realpathhere; if it fails, fall back to the original path.
-  if (llvm::sys::fs::real_path(pathname.str(), resolved)) {
+  if (needsNormalization(pathname) && ContainsSymlinkDir(pathname) && llvm::sys::fs::real_path(pathname.str(), resolved)) {
     resolved = pathname;
   }
 #endif
