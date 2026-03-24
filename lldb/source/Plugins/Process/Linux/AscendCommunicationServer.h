@@ -38,20 +38,29 @@ private:
   std::atomic<bool> m_is_running;
 };
 
+class HandleResult : public Status {
+  public:
+    HandleResult() : Status() { };
+    HandleResult(const Status& status) : Status(status) { }
+    const std::string &GetMessage() const {
+      return m_string;
+    }
+};
+
 class MsgHandler {
 public:
   virtual ~MsgHandler() = default;
-  virtual Status Parse(const std::string& msg) = 0;
-  virtual Status Handle() = 0;
+  virtual HandleResult Parse(const std::string& msg) = 0;
+  virtual HandleResult Handle() = 0;
 };
 
 class DeviceHandler : public MsgHandler {
 public:
-  using HandlerFunc = std::function<Status(const DeviceInfoMsg&)>;
+  using HandlerFunc = std::function<HandleResult(const DeviceInfoMsg&)>;
 
   DeviceHandler(const HandlerFunc& handler) : m_handler(handler) {}
-  Status Parse(const std::string& msg) override;
-  Status Handle() override { return m_handler(m_device_info); }
+  HandleResult Parse(const std::string& msg) override;
+  HandleResult Handle() override { return m_handler(m_device_info); }
 
 private:
   DeviceInfoMsg m_device_info{};
@@ -60,11 +69,11 @@ private:
 
 class KernelHandler : public MsgHandler {
 public:
-  using HandlerFunc = std::function<Status(const KernelInfoMsg&)>;
+  using HandlerFunc = std::function<HandleResult(const KernelInfoMsg&)>;
 
   KernelHandler(const HandlerFunc& handler) : m_handler(handler) {}
-  Status Parse(const std::string& msg) override;
-  Status Handle() override { return m_handler(m_kernel_info); }
+  HandleResult Parse(const std::string& msg) override;
+  HandleResult Handle() override { return m_handler(m_kernel_info); }
 
 private:
   KernelInfoMsg m_kernel_info{};
@@ -73,11 +82,11 @@ private:
 
 class StreamHandler : public MsgHandler {
 public:
-  using HandlerFunc = std::function<Status(uint32_t)>;
+  using HandlerFunc = std::function<HandleResult(uint32_t)>;
 
   StreamHandler(const HandlerFunc& handler) : m_handler(handler) {}
-  Status Parse(const std::string& msg) override;
-  Status Handle() override { return m_handler(m_stream_id); }
+  HandleResult Parse(const std::string& msg) override;
+  HandleResult Handle() override { return m_handler(m_stream_id); }
 
 private:
   uint32_t m_stream_id = 0;
@@ -87,7 +96,7 @@ private:
 class MsgParser {
 public:
   void Register(const std::string& prefix, std::shared_ptr<MsgHandler> handler);
-  Status ParseMessage(const std::string& msg) const;
+  HandleResult ParseMessage(const std::string& msg) const;
 
 private:
   struct HandlerEntry {

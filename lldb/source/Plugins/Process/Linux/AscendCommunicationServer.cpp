@@ -158,7 +158,7 @@ void AscendCommunicationServer::SetMsgHandlerHook(ClientMsgHandlerHook &&hook) {
   m_msg_handler_hook = hook;
 }
 
-Status DeviceHandler::Parse(const std::string& msg) {
+HandleResult DeviceHandler::Parse(const std::string& msg) {
   Status error;
   std::smatch matches;
   if (std::regex_search(msg, matches, std::regex("device_id:(\\d+);tgid:(\\d+);soc_version:([^;]+);"))) {
@@ -183,7 +183,7 @@ static void ShowKernelHashReceived(const void *data, size_t num_bytes) {
   LLDB_LOG(log, "Got device binary {0} bytes from remote, hash={1}", num_bytes, hash_ss.str());
 }
 
-Status KernelHandler::Parse(const std::string& msg) {
+HandleResult KernelHandler::Parse(const std::string& msg) {
   Log *log = GetLog(POSIXLog::Process);
   Status error;
   StringExtractorGDBRemote packet = StringExtractorGDBRemote(msg);
@@ -237,7 +237,7 @@ Status KernelHandler::Parse(const std::string& msg) {
   return error;
 }
 
-Status StreamHandler::Parse(const std::string& msg) {
+HandleResult StreamHandler::Parse(const std::string& msg) {
   Status error;
   std::smatch matches;
   if (std::regex_search(msg, matches, std::regex("stream_id:(\\d+);"))) {
@@ -254,7 +254,7 @@ void MsgParser::Register(const std::string& prefix, std::shared_ptr<MsgHandler> 
   };
 }
 
-Status MsgParser::ParseMessage(const std::string& msg) const {
+HandleResult MsgParser::ParseMessage(const std::string& msg) const {
   for (const auto& pair: m_handlers) {
     const auto &prefix = pair.first;
     const auto &entry = pair.second;

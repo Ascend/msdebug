@@ -976,6 +976,14 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
         if (len > cstr_len)
           len = cstr_len;
 
+#ifdef MS_DEBUGGER
+        // Do not print data of uint8_t* pointers that are of gm/ub memory types.
+        // Because they are not readable string
+        if (compiler_type.GetAddressClass() != 0) {
+          break;
+        }
+#endif
+
         for (size_t offset = 0; offset < bytes_read; offset++)
           s.Printf("%c", *data.PeekData(offset, 1));
 

@@ -109,7 +109,8 @@ struct LLDBErrorCodeInfo {
 const LLDBErrorCodeInfo ErrorTables[] = {
   {OPEN_KO_ERR, "Initialize msdebug failed, maybe device is already occupied by another msdebug program."},
   {SET_BREAKPOINT_ERR, "Set breakpoint failed."},
-  {INIT_DEBUG_MODE_ERR, "Initialize debug mode failed."},
+  {INIT_DEBUG_MODE_ERR, "Initialize debug mode failed. "
+   "Profiling or Coredump cannot be enabled while debugging. Please disable them and retry."},
   {INTERNAL_DEBUGGER_ERR, "There is a msdebug internal problem."},
   {UNSUPPORTED_SOC_TYPE_ERR, "This soc type is unsupported."},
   {INVALID_DEVICE_INFO_ERR, "Invalid device info value."},
