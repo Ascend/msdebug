@@ -58,7 +58,7 @@ endforeach()
 
 if(LLDB_SOURCE_DIR AND MS_DEBUGGER)
   get_source_info("${LLDB_SOURCE_DIR}" revision repository)
-  set(version "1.1.0")
+  set(version "26.0.0")
   if(version AND revision)
     string(SUBSTRING ${revision} 0 7 revision)
     set(version "${version}-${revision}")
