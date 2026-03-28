@@ -104,7 +104,7 @@ Status AscendProcessLinux::InitDeviceContext(const int device_id, const std::str
   return error;
 }
 
-Status AscendProcessLinux::HandleStubDeviceInfo(const DeviceInfoMsg& device_info_msg) {
+HandleResult AscendProcessLinux::HandleStubDeviceInfo(const DeviceInfoMsg& device_info_msg) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "Process device id");
   Status error;
@@ -125,10 +125,13 @@ Status AscendProcessLinux::HandleStubDeviceInfo(const DeviceInfoMsg& device_info
     LLDB_LOG(log, "device id do not match, client device id: {0}, set device id: {1}", m_client_device_id,
              device_info_msg.device_id);
   }
+  if (error.Success()) {
+    error.SetExpressionErrorWithFormat(ExpressionResults::eExpressionCompleted, "Debugger focus on device %d", device_info_msg.device_id);
+  }
   return error;
 }
 
-Status AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kernel_info_msg) {
+HandleResult AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kernel_info_msg) {
   Log *log = GetLog(POSIXLog::Process);
   Status final_error;
   do {
@@ -201,7 +204,7 @@ Status AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kernel_info
   return final_error;
 }
 
-Status AscendProcessLinux::HandleStreamId(uint32_t stream_id) {
+HandleResult AscendProcessLinux::HandleStreamId(uint32_t stream_id) {
   Log *log = GetLog(POSIXLog::Process);
   if (m_device_context == nullptr) {
     LLDB_LOG(log, "{0} device context is not initialized!", __FUNCTION__);
@@ -267,12 +270,15 @@ void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg
   // 让这个处理函数变成串行, 因为很多地方用到了m_client_socket，并行逻辑会乱
   std::lock_guard<std::mutex> guard(m_socket_mutex);
   m_client_socket = client_socket;
-  Status error = m_parser.ParseMessage(msg);
+  HandleResult result = m_parser.ParseMessage(msg);
   std::string reply = "$ok;";
-  if (error.Fail()) {
+  if (result.Fail()) {
     StreamString temp;
-    temp.Printf("$fail:%x;", error.GetError());
+    temp.Printf("$fail:%x;", result.GetError());
     reply = temp.GetString().data();
+  } else if (result.GetMessage().length()) {
+    reply += result.GetMessage();
+    reply += ";";
   }
   size_t send_bytes = reply.size();
   if (client_socket->Write(reply.data(), send_bytes).Fail()) {

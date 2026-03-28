@@ -92,9 +92,9 @@ private:
 
   void RegisterParsers();
   void HandleMsg(Socket *client_socket, const std::string &msg);
-  Status HandleStubDeviceInfo(const DeviceInfoMsg& device_info_msg);
-  Status HandleStubKernelInfo(const KernelInfoMsg& kernel_info_msg);
-  Status HandleStreamId(uint32_t stream_id);
+  HandleResult HandleStubDeviceInfo(const DeviceInfoMsg& device_info_msg);
+  HandleResult HandleStubKernelInfo(const KernelInfoMsg& kernel_info_msg);
+  HandleResult HandleStreamId(uint32_t stream_id);
 
   std::shared_ptr<AscendCommunicationServer> m_server;
   const Socket *m_client_socket = nullptr;

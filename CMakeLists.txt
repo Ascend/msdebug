@@ -14,6 +14,23 @@ project(MindStudio-Debugger)
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
 set(PROJECT_BUILD_DIR "${CMAKE_BINARY_DIR}" CACHE PATH "Root build directory")
 
+if(CMAKE_GENERATOR STREQUAL "Ninja")
+    # 获取 ninja 路径
+    if(CMAKE_MAKE_PROGRAM)
+        message(STATUS "Ninja path: ${CMAKE_MAKE_PROGRAM}")
+        # 获取版本
+        execute_process(
+            COMMAND ${CMAKE_MAKE_PROGRAM} --version
+            OUTPUT_VARIABLE NINJA_VERSION_OUTPUT
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        # 提取版本号
+        string(REGEX REPLACE "^([0-9]+\\.[0-9]+\\.[0-9]+).*$" "\\1"
+               DETECTED_NINJA_VERSION "${NINJA_VERSION_OUTPUT}")
+        message(STATUS "Detect Ninja version: ${DETECTED_NINJA_VERSION}")
+    endif()
+endif()
+
 # 检查是否可用 ccache
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)

@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import traceback
+import shutil
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -43,6 +44,11 @@ class BuildManager:
         logging.info("Running: %s", " ".join(command_sequence))
         subprocess.run(command_sequence, timeout=timeout_seconds, check=True, cwd=cwd, env=env)
 
+    def _get_cmake_generator(self):
+        if shutil.which("ninja") is not None:
+            return "Ninja"
+        return "Unix Makefiles"
+
     def run(self):
         os.chdir(self.project_root)
 
@@ -58,12 +64,11 @@ class BuildManager:
             os.chdir(unit_test_build_dir)
 
             self._execute_command([
-                "cmake", "-G", "Ninja",
+                "cmake", "-G", self._get_cmake_generator(),
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DENABLE_LLDB_TESTS=ON",
                 ".."
             ])
-            self._execute_command(["ninja"])
         else:
             # -------------------- 产品构建 --------------------
             product_build_dir = self.project_root / "build"
@@ -71,12 +76,13 @@ class BuildManager:
             os.chdir(product_build_dir)
 
             self._execute_command([
-                "cmake", "-G", "Ninja",
+                "cmake", "-G", self._get_cmake_generator(),
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DENABLE_LLDB_TESTS=OFF",
                 ".."
             ])
-            self._execute_command(["ninja"])
+        # 自动选择ninja还是make构建
+        self._execute_command(["cmake", "--build", "."])
 
 
 if __name__ == "__main__":

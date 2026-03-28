@@ -21,6 +21,7 @@ git config --global credential.helper store
 
 - gcc版本应大于7.4.0。
 - CMake版本应大于3.20.2，小于3.31.10。
+- 安装git-lfs
 
 ## 安装步骤
 

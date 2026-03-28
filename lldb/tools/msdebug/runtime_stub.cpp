@@ -139,6 +139,11 @@ int32_t SendInfoAndWaitForReply(const std::string &buf)
     }
 
     if (reply.substr(0, 4) == "$ok;") {
+        if (reply.length() > 5) {
+            // printf return message, remove last ";"
+            string printInfo = reply.substr(4, reply.length() - 5);
+            RT_STUB_LOG_INFO("%s\n", printInfo.c_str());
+        }
         return ret;
     }
     static const std::string startString("$fail:");

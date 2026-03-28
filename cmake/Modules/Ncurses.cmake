@@ -28,6 +28,8 @@ add_custom_command(
     OUTPUT ${NCURSES_SOURCE_DIR}/configure
     COMMENT "Extract ncurses component from ${NCURSES_TAR_FILE}"
     # 跳过最外层目录，直接将内容解压到当前目录
+    COMMAND git lfs install
+    COMMAND git lfs pull
     COMMAND tar xf ${NCURSES_TAR_FILE} --strip-components=1
     DEPENDS ${NCURSES_TAR_FILE}
     WORKING_DIRECTORY ${NCURSES_SOURCE_DIR}
