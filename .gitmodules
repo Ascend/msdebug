@@ -9,4 +9,4 @@
 [submodule "third-party/ncurses"]
 	path = third-party/ncurses
 	url = https://gitcode.com/src-openeuler/ncurses.git
-	branch = openEuler-24.03-LTS-SP1-release
+    branch = master
