@@ -9,7 +9,7 @@
 **前期准备**
 
 - 单击[链接](https://gitcode.com/Ascend/mstt/tree/master/sample)获取样例工程，为进行算子调试做准备。
-- 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](./msdebug_user_guide.md)。
+- 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
 
@@ -296,7 +296,7 @@
     ```
 
     > [!NOTE] 说明   
-    > 后续调试过程可参考[导入调试信息](./msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](./msdebug_user_guide.md#内存与变量打印功能介绍)及[核切换功能介绍](./msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
+    > 后续调试过程可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 ## 调试PyTorch接口调用的算子
 
@@ -319,7 +319,7 @@
     >    ```
 
 - 已参考《[Ascend Extension for PyTorch 软件安装指南](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)》，完成PyTorch框架和torch\_npu插件的安装。
-- 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](./msdebug_user_guide.md)。
+- 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
 
@@ -351,7 +351,7 @@
     > [!NOTE] 说明   
     > PyTorch接入工程的样例工程目录如下：
 >
-    > ```tex
+    > ```text
     > PytorchInvocation
     > ├── op_plugin_patch  
     > ├── README.md        //使用PyTorch调用方式调用AddCustom算子工程的注册样例
@@ -446,9 +446,9 @@
     ```
 
     > [!NOTE] 说明 
-    > 其他调试操作可参考[导入调试信息](./msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](./msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](./msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](./msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
+    > 其他调试操作可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
-10. 删除断点，具体操作请参见[断点设置功能介绍](./msdebug_user_guide.md#断点设置功能介绍)。
+10. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
 11. 调试完以后，执行q命令并输入Y或y结束调试。
 
     ```bash
@@ -465,7 +465,7 @@
 **前期准备**<a id="前期准备"></a>
 
 - 单击[链接](https://gitcode.com/cann/catlass)获取样例工程，为进行算子调试做准备。
-- 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](./msdebug_user_guide.md)。
+- 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
 
@@ -577,7 +577,7 @@
         ```
 
     > [!NOTE] 说明   
-    > 其他调试操作可参考[内存与变量打印功能介绍](./msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](./msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](./msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
+    > 其他调试操作可参考[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 6. 查询并删除断点，恢复程序运行。
 
