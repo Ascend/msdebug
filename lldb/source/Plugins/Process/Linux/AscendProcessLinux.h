@@ -94,17 +94,17 @@ private:
   void HandleMsg(Socket *client_socket, const std::string &msg);
   HandleResult HandleStubDeviceInfo(const DeviceInfoMsg& device_info_msg);
   HandleResult HandleStubKernelInfo(const KernelInfoMsg& kernel_info_msg);
-  HandleResult HandleStreamId(uint32_t stream_id);
 
+private:
   std::shared_ptr<AscendCommunicationServer> m_server;
   const Socket *m_client_socket = nullptr;
   int m_socket_fd;
   InterruptPosInfo m_pos_info{};
-  uint16_t m_thread_dim[3]{};
   std::shared_ptr<DeviceContext> m_device_context;
   std::vector<CoreInfo> m_cores_info;
+  std::vector<std::function<Status(void)>> m_lazy_calls;
   std::string m_kernel_name;
-  uint32_t m_stream_id {};
+  int32_t m_stream_id {};
   pid_t m_tgid {0};
   int32_t m_client_device_id {-1};
   std::set<uint32_t> m_device_ids;

@@ -81,7 +81,7 @@ void GDBRemoteRegisterContext::UpdateDeviceRegIfNeeded() {
   // 初始化device侧的寄存器缓存，加载寄存器信息
   if (IsStopInDevice() && m_device_reg_info == nullptr) {
     auto &gdb_process = static_cast<ProcessGDBRemote &>(*m_thread.GetProcess());
-    gdb_process.UpdateDeviceRegisterInfo(m_device_reg_info, true);
+    gdb_process.UpdateDeviceRegisterInfo(m_device_reg_info, false);
     if (m_device_reg_info == nullptr) {
        Log *log(GetLog(GDBRLog::Thread | GDBRLog::Packets));
        LLDB_LOG(log, "{0} failed: {1}", __FUNCTION__, "failed to load device register info");

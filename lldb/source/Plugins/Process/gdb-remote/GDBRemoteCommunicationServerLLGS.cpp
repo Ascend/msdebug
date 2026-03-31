@@ -4752,35 +4752,8 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
       if (value.getAsInteger(10, reg_num)) {
         return SendIllFormedResponse(packet, "qDeviceRegisterValue failed, register value is invalid.");
       }
-      ThreadStopInfo stop_info;
-      std::string description;
-      auto *main_thread = m_current_process->GetThreadByID(m_current_process->GetID());
       const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_num);
-      // make special judgement to obtain the PC when ctrl-c in the device
-      if (main_thread && main_thread->GetStopReason(stop_info, description)) {
-        static constexpr uint32_t PC_REG_NUM = 64;
-        if (stop_info.still_break_in_device && stop_info.reason == StopReason::eStopReasonSignal &&
-            reg_num == PC_REG_NUM) {
-          uint64_t reg_value = 0;
-          status = m_current_process->GetStoppedCorePC(reg_value);
-          if (status.Fail()) {
-            LLDB_LOG(GetLog(LLDBLog::Thread), "qDeviceRegisterValue error: {0}", status.AsCString());
-            return SendErrorResponse(status);
-          }
-
-          for (size_t i = 0; i < 8; ++i) {
-            uint8_t byte = static_cast<uint8_t>(reg_value >> (i * 8));
-            response.PutHex8(byte);
-          }
-          return SendPacketNoLock(response.GetString());
-
-        } else {
-          status = m_current_process->ReadDeviceRegisterValue(reg_info, reg_value);
-        }
-      } else {
-        return SendIllFormedResponse(packet,
-                                   "qDeviceRegisterValue failed, thread is not exist or get stop reason failed");
-      }
+      status = m_current_process->ReadDeviceRegisterValue(reg_info, reg_value);
     } else {
       return SendIllFormedResponse(packet, "qDeviceRegisterValue failed to parse the register type.");
     }

@@ -350,7 +350,7 @@ int32_t SetDevicePost(int32_t device)
     return SendDeviceInfo(device, socVersion, tgid);
 }
 
-void LaunchKernelPre(aclrtFuncHandle funcHandle)
+void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)
 {
     // 打印launch info
     std::string kernelName = GetKernelNameFromStubFunc(funcHandle);
@@ -366,17 +366,16 @@ void LaunchKernelPre(aclrtFuncHandle funcHandle)
     }
     const auto *binHandle = MapManager::Instance().GetHandle(funcHandle);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(binHandle);
-    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+    int32_t streamId{};
+    auto ret = aclrtStreamGetIdImpl(stream, &streamId);
+    if (ret != ACL_SUCCESS) {
+      RT_STUB_LOG_WARNING("Get stream id failed, use streamId=0");
+    }
+    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
 }
 
 void LaunchKernelPost(aclrtStream stream)
 {
-    int32_t streamId{0};
-    auto ret = aclrtStreamGetIdImpl(stream, &streamId);
-    if (ret != ACL_SUCCESS) {
-      return;
-    }
-    SendStreamId(streamId);
     aclrtSynchronizeStreamImpl(stream);
 }
 
@@ -491,7 +490,7 @@ aclError aclrtLaunchKernelWithConfigImpl(aclrtFuncHandle funcHandle,
 {
     using FuncType = decltype(&aclrtLaunchKernelWithConfigImpl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, stream, cfg, argsHandle, reserve);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);
@@ -505,7 +504,7 @@ aclError aclrtLaunchKernelWithHostArgsImpl(aclrtFuncHandle funcHandle,
 {
     using FuncType = decltype(&aclrtLaunchKernelWithHostArgsImpl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, stream, cfg, hostArgs, argsSize, placeHolderArray, placeHolderNum);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);
@@ -518,7 +517,7 @@ aclError aclrtLaunchKernelV2Impl(aclrtFuncHandle funcHandle, uint32_t blockDim,
 {
     using FuncType = decltype(&aclrtLaunchKernelV2Impl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, argsData, argsSize, cfg, stream);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);
@@ -531,7 +530,7 @@ aclError aclrtLaunchKernelImpl(aclrtFuncHandle funcHandle,
 {
     using FuncType = decltype(&aclrtLaunchKernelImpl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, argsData, argsSize, stream);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);

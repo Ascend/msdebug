@@ -79,6 +79,7 @@ enum MSDEBUG_ERROR_CODE {
     ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR = 0x20005, // aclrtGetFunctionAddrImpl 返回异常
     ACLRT_STREAM_GET_ID_IMPL_FAILED_ERR = 0x20006, // aclrtStreamGetIdImpl返回异常
     ACLRT_GET_DEVICE_IMPL_FAILED_ERR = 0x20007, // aclrtGetDeviceImpl返回异常
+    RT_GET_STREAM_ID_FAILED_ERR = 0x20008, // rtGetStreamId返回异常
 
     // 其他错误
     LLDB_REPLY_NOT_RECOGNIZED_ERR = 0x20100, // lldb的回复字符串异常

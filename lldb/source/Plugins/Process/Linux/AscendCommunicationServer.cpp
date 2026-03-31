@@ -191,7 +191,7 @@ HandleResult KernelHandler::Parse(const std::string& msg) {
   StringRef value;
   m_kernel_info = KernelInfoMsg();
   // binary can not use key value to parse, binary may contains random char
-  constexpr int max_colon = 3;
+  constexpr int max_colon = 4;
   int num_colon = 0;
   // we should not change index after max_colon times get from packet
   while (num_colon < max_colon && packet.GetNameColonValue(key, value) ) {
@@ -201,11 +201,13 @@ HandleResult KernelHandler::Parse(const std::string& msg) {
       m_kernel_info.kernel_hash = value;
     } else if (key.compare("pc_base_addr") == 0) {
       value.getAsInteger(16, m_kernel_info.pc_base_addr);
+    } else if (key.compare("stream_id") == 0) {
+      value.getAsInteger(16, m_kernel_info.stream_id);
     }
     num_colon++;
   }
-  // only kernel name updated
-  if (num_colon == 1) {
+  // only kernel name and stream_id updated
+  if (num_colon == 2) {
     return error;
   }
   if (num_colon != max_colon) {
@@ -234,17 +236,6 @@ HandleResult KernelHandler::Parse(const std::string& msg) {
   }
   m_kernel_info.elf.assign(data, data + num_bytes);
   ShowKernelHashReceived(data, num_bytes);
-  return error;
-}
-
-HandleResult StreamHandler::Parse(const std::string& msg) {
-  Status error;
-  std::smatch matches;
-  if (std::regex_search(msg, matches, std::regex("stream_id:(\\d+);"))) {
-    m_stream_id = std::stoi(matches[1]);
-  } else {
-    error.SetError(INVALID_STREAM_ID_ERR, lldb::eErrorTypeGeneric);
-  }
   return error;
 }
 

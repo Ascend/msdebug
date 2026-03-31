@@ -17,14 +17,14 @@ Ascend310PDeviceContext::Ascend310PDeviceContext(const ::pid_t pid, const uint32
 }
 
 Status Ascend310PDeviceContext::ReadRegister(const RegisterInfo *reg_info,
-                                             uint32_t core_id, CoreType core_type, RegisterValue &value) {
+                                             const InterruptPosInfo &pos_info, RegisterValue &value) {
   Status error;
     const auto &register_map = RegisterInfoPOSIX_ascend310P::GetRegExtractor().register_map;
     if (reg_info && reg_info->kinds[eRegisterKindLLDB] < register_map.size() &&
       register_map.find(reg_info->name) != register_map.end()) {
     const DeviceRegisterInfo &device_reg_info = register_map.at(reg_info->name);
     uint64_t addr = device_reg_info.addr;
-    error = DeviceContext::ReadRegister(addr, reg_info, core_id, core_type, value);
+    error = DeviceContext::ReadRegister(addr, reg_info, pos_info.core_id, pos_info.core_type, value);
     if (error.Fail()) {
       return error;
     }

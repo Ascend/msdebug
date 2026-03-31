@@ -375,8 +375,10 @@ static size_t SplitCommaSeparatedRegisterNumberString(
 #ifdef MS_DEBUGGER
 void ProcessGDBRemote::UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamicRegisterInfo> &device_registers,
                                                 bool force) {
-  if (!force && m_device_register_info_sp)
+  if (!force && m_device_register_info_sp) {
+    device_registers = m_device_register_info_sp;
     return;
+  }
 
   m_device_register_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>();
 

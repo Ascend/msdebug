@@ -81,9 +81,11 @@ DynamicLoaderPOSIXDYLD::~DynamicLoaderPOSIXDYLD() {
     m_dyld_bid = LLDB_INVALID_BREAK_ID;
   }
 #ifdef MS_DEBUGGER
-  if (m_kernel_launch_bid != LLDB_INVALID_BREAK_ID) {
-    m_process->GetTarget().RemoveBreakpointByID(m_kernel_launch_bid);
-    m_kernel_launch_bid = LLDB_INVALID_BREAK_ID;
+  if (!m_vf_call_bid_list.empty()) {
+    for (auto bid: m_vf_call_bid_list) {
+      m_process->GetTarget().RemoveBreakpointByID(bid);
+    }
+    m_vf_call_bid_list.clear();
   }
 #endif
 }
@@ -511,7 +513,84 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
   m_process->GetTarget().ModulesDidLoad(new_modules);
   LLDB_LOG(log, "Device module did loaded at {0:x}, size is {1}, device_module_file_spec={2}",
            info.pc_base_addr, info.binary.size(), device_module->GetFileSpec());
+  AddRendezvousVFCallBreakpoint(device_module, info.pc_base_addr);
 }
+
+bool DynamicLoaderPOSIXDYLD::RendezvousVFCallBreakpointHit(
+    void *baton, StoppointCallbackContext *context, user_id_t break_id,
+    user_id_t break_loc_id) {
+  if (!baton)
+    return false;
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  DynamicLoaderPOSIXDYLD *const dyld_instance =
+      static_cast<DynamicLoaderPOSIXDYLD *>(baton);
+  LLDB_LOGF(log, "DynamicLoaderPOSIXDYLD::%s called for pid %" PRIu64,
+            __FUNCTION__,
+            dyld_instance->m_process ? dyld_instance->m_process->GetID()
+                                     : LLDB_INVALID_PROCESS_ID);
+  // Don't stop at internal breakpoints; return false to continue execution.
+  return false;
+}
+
+void DynamicLoaderPOSIXDYLD::AddRendezvousVFCallBreakpoint(ModuleSP device_module, const uint64_t base_pc) {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  auto text_section = device_module->GetSectionList()->FindSectionByName(ConstString(".text"));
+  DataExtractor data;
+  text_section->GetSectionData(data);
+  const size_t data_byte_size = data.GetByteSize();
+  const std::vector<std::pair<uint64_t, uint64_t>> vf_encoding_infos = {
+  // 63-53, ..., 36-21, ...
+  // 0001 0101 111x xxxx xxxx xxxx xxx0 0101 0001 0101 010x xxxx xxxx
+      {0xffe0001fffe00000, 0x15e0000515400000}, // simd_vf mask, value
+  // 63-53, ..., 36-21, ...
+  // 0001 0101 111x xxxx xxxx xxxx xxx1 1100 0001 0101 001x xxxx xxxx
+      {0xffe0001fffe00000, 0x15e0001c15200000}, // simt_vf mask, value
+  };
+  std::vector<lldb::addr_t> vf_call_pc_list;
+  uint64_t pc = 0;
+  constexpr size_t vf_call_bytes = 8;
+  constexpr size_t smallest_instr_bytes = 4;
+  while (pc + vf_call_bytes < data_byte_size) {
+    lldb::offset_t data_offset = pc;
+    uint64_t opcode = data.GetU64(&data_offset);
+    for (const auto &par: vf_encoding_infos) {
+      if ((opcode & par.first) == par.second) {
+        vf_call_pc_list.push_back(pc);
+        break;
+      }
+    }
+    pc += smallest_instr_bytes;
+  }
+
+  LLDB_LOG(log, "got {0} vf_call pc in {1} bytes", vf_call_pc_list.size(), data_byte_size);
+  if (log && vf_call_pc_list.size() > 0) {
+    std::stringstream ss;
+    for (size_t i = 0; i < vf_call_pc_list.size(); i++) {
+      ss << "0x" << std::hex << vf_call_pc_list[i];
+      if (i + 1 < vf_call_pc_list.size()) {
+        ss << ",";
+      }
+    }
+    LLDB_LOG(log, "got vf pc list={0}", ss.str());
+  }
+  Target &target = m_process->GetTarget();
+  for (auto break_addr: vf_call_pc_list) {
+      // pc of simt_vf + 4
+    auto dyld_break = target.CreateBreakpoint(break_addr + base_pc + smallest_instr_bytes, true, false);
+    if (dyld_break->GetNumResolvedLocations() != 1) {
+      LLDB_LOG(log, "Rendezvoud vf_call breakpoint has abnormal number of"
+               " resolved locations {0}. It's supposed to be exactly 1",
+               dyld_break->GetNumResolvedLocations()); 
+      target.RemoveBreakpointByID(dyld_break->GetID());
+      continue;
+    }
+    BreakpointLocationSP location = dyld_break->GetLocationAtIndex(0);
+    dyld_break->SetCallback(RendezvousVFCallBreakpointHit, this, true);
+    dyld_break->SetBreakpointKind("device-binary-vf-call-event");
+    m_vf_call_bid_list.push_back(dyld_break->GetID());
+  }
+}
+
 #endif
 
 void DynamicLoaderPOSIXDYLD::RefreshModules() {

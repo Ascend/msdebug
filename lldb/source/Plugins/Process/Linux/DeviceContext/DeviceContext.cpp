@@ -505,6 +505,7 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
   if (error.Fail()) {
     return error;
   }
+
   reg_value.SetFromMemoryData(*reg_info, buffer_sp->GetBytes(), 
                               reg_info->byte_size, eByteOrderLittle, error);
   return error;
@@ -541,7 +542,7 @@ Status DeviceContext::GetCoresInfo(std::vector<CoreInfo> &cores_info) {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
   cores_info.clear();
-  CoreInfoParam param;
+  CoreInfoParam param{};
   param.info_idx = 0;
   CoreInfo core_info;
   error = BaseSqCqComm(CmdType::GET_CORES_INFO, (uint8_t*)&param, sizeof(CoreInfoParam),
@@ -753,4 +754,27 @@ DeviceContext::~DeviceContext() {
     close(m_drv_fd);
   }
 }
+
+void InterruptPosInfo::Reset() {
+  core_id = 0;
+  core_type = CoreType::UNKNOWN_CORE_TYPE;
+  pos_type = InterruptPosType::STARS_SU_INTERRUPT;
+  thread_pos = ThreadPos{};
+  pc = -1;
+  thread_info = ThreadInfo{};
+}
+
+void InterruptPosInfo::Update(const InterruptEvent &event) {
+  core_id = event.core_id;
+  core_type = (CoreType)event.core_type;
+  pos_type = event.pos_type;
+  pc = event.pc;
+  thread_info = event.thread_info;
+  if (thread_info.thread_dim_x && thread_info.thread_dim_y && thread_info.thread_dim_z) {
+    thread_pos.x = thread_info.thread_id % thread_info.thread_dim_x;
+    thread_pos.y = thread_info.thread_id / thread_info.thread_dim_x % thread_info.thread_dim_y;
+    thread_pos.z = thread_info.thread_id / thread_info.thread_dim_x / thread_info.thread_dim_y;
+  }
+}
+
 #endif // ifdef MS_DEBUGGER

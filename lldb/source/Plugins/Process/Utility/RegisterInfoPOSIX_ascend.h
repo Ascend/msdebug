@@ -50,6 +50,51 @@ enum DWARF_ASCEND_REGNUM {
   dwarf_x30_ascend,
   dwarf_x31_ascend,
   dwarf_pc_ascend = 128,
+  // simt
+  dwarf_r0_ascend = 265,
+  dwarf_r1_ascend = 266,
+  dwarf_r2_ascend = 267,
+  dwarf_r3_ascend = 268,
+  dwarf_r4_ascend = 269,
+  dwarf_r5_ascend = 270,
+  dwarf_r6_ascend = 271,
+  dwarf_r7_ascend = 272,
+  dwarf_r8_ascend = 273,
+  dwarf_r9_ascend = 274,
+  dwarf_r10_ascend = 275,
+  dwarf_r11_ascend = 276,
+  dwarf_r12_ascend = 277,
+  dwarf_r13_ascend = 278,
+  dwarf_r14_ascend = 279,
+  dwarf_r15_ascend = 280,
+  dwarf_r16_ascend = 281,
+  dwarf_r17_ascend = 282,
+  dwarf_r18_ascend = 283,
+  dwarf_r19_ascend = 284,
+  dwarf_r20_ascend = 285,
+  dwarf_rx_max_id = dwarf_r20_ascend,
+  // sreg
+  dwarf_s0_ascend = 393,
+  dwarf_s1_ascend,
+  dwarf_s2_ascend,
+  dwarf_s3_ascend,
+  dwarf_s4_ascend,
+  dwarf_s5_ascend,
+  dwarf_s6_ascend,
+  dwarf_s7_ascend,
+  dwarf_s8_ascend,
+  dwarf_s9_ascend,
+  dwarf_s10_ascend,
+  dwarf_s11_ascend,
+  dwarf_s12_ascend,
+  dwarf_s13_ascend,
+  dwarf_s14_ascend,
+  dwarf_s15_ascend,
+  dwarf_s16_ascend,
+  dwarf_s17_ascend,
+  dwarf_s18_ascend,
+  dwarf_s19_ascend,
+  dwarf_s20_ascend,
 };
 
 // RegisterKind: EHFrame, DWARF, Generic, Process Plugin, LLDB
@@ -59,6 +104,14 @@ enum DWARF_ASCEND_REGNUM {
        {dwarf_##lower_reg##_ascend, dwarf_##lower_reg##_ascend,           \
         kind3, LLDB_INVALID_REGNUM, lldb_##lower_reg##_ascend},           \
        nullptr, nullptr,                                                  \
+  }
+
+#define ASCEND_GPR_4B(reg, lower_reg)                                         \
+  {                                                                           \
+    #reg, nullptr, 4, 0, eEncodingUint, eFormatHex,                           \
+       {dwarf_##lower_reg##_ascend, dwarf_##lower_reg##_ascend,               \
+        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##lower_reg##_ascend}, \
+       nullptr, nullptr,                                                      \
   }
 
 #define ASCEND_GPR_ALT(reg, lower_reg, alt, kind3)                        \
@@ -84,7 +137,6 @@ enum DWARF_ASCEND_REGNUM {
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, kind5},                 \
        nullptr, nullptr,                                                  \
   }
-
 
 #define ASCEND_REG_16B(reg, kind5)                                         \
   {                                                                       \

@@ -63,6 +63,13 @@ struct DebugRecvInfo {
   uint8_t recv_msg[44];
 };
 
+struct ThreadInfo {
+  uint16_t thread_dim_x;
+  uint16_t thread_dim_y;
+  uint16_t thread_dim_z;
+  uint16_t thread_id;
+};
+
 struct InterruptEvent {
   uint8_t core_type;
   InterruptPosType pos_type;
@@ -70,12 +77,7 @@ struct InterruptEvent {
   CoreStatus status;
   uint32_t core_id;
   uint64_t pc;
-  uint16_t thread_dim_x; // pos_type == 2才有效
-  uint16_t thread_dim_y;
-  uint16_t thread_dim_z;
-  uint16_t thread_x; // pos_type == 2才有效
-  uint16_t thread_y;
-  uint16_t thread_z;
+  ThreadInfo thread_info;
 };
 
 struct TsDeviceInfo {
@@ -112,6 +114,14 @@ struct InvalidCacheParam {
   uint64_t virt_addr;
   CoreMaskInfo core_info;
 };
+
+// ============ ts END ==================
+ 
+struct ThreadPos {
+  uint16_t x;
+  uint16_t y;
+  uint16_t z;
+};
  
 struct InterruptPosInfo {
   CoreType core_type;
@@ -119,12 +129,23 @@ struct InterruptPosInfo {
   bool single_warp_run;
   uint32_t core_id;
   InterruptPosType pos_type{InterruptPosType::STARS_SU_INTERRUPT};
-  uint16_t thread_id_x;
-  uint16_t thread_id_y;
-  uint16_t thread_id_z;
+  ThreadPos thread_pos;
+  uint64_t pc;
+  ThreadInfo thread_info;
+
+  void Update(const InterruptEvent &event);
+
+  void Reset();
+
+  uint16_t GetWarpNum() const {
+    return (thread_info.thread_dim_x * thread_info.thread_dim_y * thread_info.thread_dim_z + 31U) / 32U;
+  }
+
+  uint16_t GetWarpId() const {
+    return thread_info.thread_id / 32U;
+  }
 };
-// ============ ts END ==================
- 
+
 class DeviceContext {
 public:
 
@@ -155,8 +176,7 @@ public:
     return Status("Unsupport hardware breakpoint.");
   }
 
-  virtual Status ReadRegister(const RegisterInfo *reg_info,
-                              uint32_t core_id, CoreType core_type, RegisterValue &value) = 0;
+  virtual Status ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info, RegisterValue &value) = 0;
   virtual Status ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
                               uint32_t core_id, CoreType core_type, RegisterValue &value);
   virtual Status ReadRegisterList(std::vector<std::string> &reg_list, uint32_t core_id, CoreType core_type);

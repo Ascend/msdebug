@@ -21,7 +21,7 @@ public:
   Status CheckRegisterAddr(CoreType core_type, uint64_t addr) override;
  
   Status ReadRegister(const RegisterInfo *reg_info,
-                      uint32_t core_id, CoreType core_type, RegisterValue &value) override;
+                      const InterruptPosInfo &pos_info, RegisterValue &value) override;
 
   MemType GetStackMemType() const override;
 
@@ -38,6 +38,13 @@ public:
       lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const override;
  
   Status SetHardwareBreakpoint(lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const override;
+
+private:
+  Status ReadRXReg(const RegisterInfo *reg_info, uint64_t base_addr,
+                   const InterruptPosInfo &pos, RegisterValue &value);
+
+  Status ReadSimtPC(const RegisterInfo *reg_info, uint64_t base_addr,
+                    const InterruptPosInfo &pos, RegisterValue &value);
 private:
   SocType m_soc_type;
 };

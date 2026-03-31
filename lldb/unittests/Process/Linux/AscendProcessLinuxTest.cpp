@@ -48,7 +48,7 @@ public:
     Status EnableDebugMode() override { return Status(); }
 
     Status ReadRegister(const RegisterInfo *reg_info,
-                        uint32_t core_id, CoreType core_type,
+                        const InterruptPosInfo &pos_info,
                         RegisterValue &value) override {
         return Status("Not implemented");
     }

@@ -40,7 +40,7 @@ typedef rtError_t (*rtKernelGetAddrAndPrefCntFunc)(void *, const uint64_t,
 typedef rtError_t (*rtGetSocVersion)(char *, const uint32_t);
 typedef rtError_t (*rtDevBinaryRegisterFunc)(const rtDevBinary_t *, void **);
 typedef rtError_t (*rtRegisterAllKernelFunc)(const rtDevBinary_t *, void **);
-typedef rtError_t (*rtGetTaskIdAndStreamIDFunc)(uint32_t *taskId, uint32_t *streamId);
+typedef rtError_t (*rtGetStreamId)(rtStream_t stm, int32_t *streamId);
 typedef rtError_t (*rtStreamSynchronizeWithTimeoutFunc)(rtStream_t stream, int32_t timeout);
 typedef rtError_t (*rtStreamSynchronizeFunc)(rtStream_t stream);
 typedef rtError_t (*rtGetVisibleDeviceIdByLogicDeviceIdFunc)(const int32_t, int32_t * const);
@@ -85,8 +85,8 @@ std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
                 {"rtDevBinaryRegister", RT_DEV_BIN_REG_NOT_FOUND_ERR, nullptr}},
             {"rtRegisterAllKernel",
                 {"rtRegisterAllKernel", RT_REG_ALL_KERNEL_NOT_FOUND_ERR, nullptr}},
-            {"rtGetTaskIdAndStreamID",
-                {"rtGetTaskIdAndStreamID", RT_GET_TASK_ID_AND_STREAM_ID_NOT_FOUND_ERR, nullptr}},
+            {"rtGetStreamId",
+                {"rtGetStreamId", RT_GET_TASK_ID_AND_STREAM_ID_NOT_FOUND_ERR, nullptr}},
             {"rtStreamSynchronizeWithTimeout",
                 {"rtStreamSynchronizeWithTimeout", RT_STREAM_SYNC_WITH_TIMEOUT_NOT_FOUND_ERR, nullptr}},
             {"rtStreamSynchronize",
@@ -225,17 +225,16 @@ static int32_t SetDevicePost(int32_t device)
     return SendDeviceInfo(device, socVersion, tgid);
 }
 
-static rtError_t GetStreamID(uint32_t &streamId)
+static rtError_t GetStreamID(rtStream_t stream, int32_t &streamId)
 {
-  rtGetTaskIdAndStreamIDFunc func = (rtGetTaskIdAndStreamIDFunc)GetStubFuncPtr("rtGetTaskIdAndStreamID");
-  uint32_t taskId;
-  int32_t ret = func(&taskId, &streamId);
+  rtGetStreamId func = (rtGetStreamId)GetStubFuncPtr("rtGetStreamId");
+  auto ret = func(stream, &streamId);
   if (ret != 0) {
       RT_STUB_LOG_ERROR("Get stream id failed!\n");
       PrintErrorCode(RT_KERNEL_GET_ADDR_AND_PREF_CNT_FAILED_ERR);
       return ret;
   }
-  RT_STUB_LOG_INFO("rtGetTaskIdAndStreamID done. streamId=%u, taskId=%u\n", streamId, taskId);
+  RT_STUB_LOG_INFO("rtGetStreamId done. streamId=%d\n", streamId);
   return ret;
 }
 
@@ -261,10 +260,6 @@ int32_t SendStreamId(uint32_t streamId)
 
 static void LaunchKernelPost(rtStream_t stream)
 {
-    uint32_t streamId{0};
-    if (GetStreamID(streamId) == 0) {
-      SendStreamId(streamId);
-    }
     rtStreamSynchronize(stream);
 }
 
@@ -293,7 +288,7 @@ static string GetEscapedBytes(const vector<char> &raw) {
 }
 
 int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash,
-                       const std::vector<char> &elf, uint64_t pcAddr)
+                       const std::vector<char> &elf, uint64_t pcAddr, int32_t stream_id)
 {
   int32_t deviceId;
   GetDeviceId(&deviceId);
@@ -304,7 +299,7 @@ int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelH
   if (cutKernelName.length() > KERNEL_NAME_SIZE) {
     cutKernelName.resize(KERNEL_NAME_SIZE);
   }
-  std::string buf = "$kernel_name:" + cutKernelName + ";";
+  std::string buf = "$kernel_name:" + cutKernelName + ";$stream_id:" + to_string(stream_id) + ";";
   {
     std::unique_lock<std::mutex> lk(mtx);
     if (sentBinaries.find(sendKey) == sentBinaries.end()) {
@@ -669,8 +664,10 @@ rtError_t rtKernelLaunch(const void *stubFunc, uint32_t blockDim,
     const void *handle = MapManager::Instance().GetHandle(stubFunc);
     uint64_t pcStartAddr = GetPcStartAddrStatic(stubFunc);
 
+    int32_t streamId;
+    GetStreamID(stream, streamId);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
 
     rtError_t result = func(stubFunc, blockDim, args, argsSize, smDesc, stream);
     if (result == 0) {
@@ -695,8 +692,10 @@ rtError_t rtKernelLaunchWithFlagV2(const void *stubFunc, uint32_t blockDim, rtAr
     const void *handle = MapManager::Instance().GetHandle(stubFunc);
     uint64_t pcStartAddr = GetPcStartAddrStatic(stubFunc);
 
+    int32_t streamId;
+    GetStreamID(stm, streamId);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
 
     rtError_t result = func(stubFunc, blockDim, argsInfo, smDesc, stm, flags, cfgInfo);
     if (result == 0) {
@@ -729,7 +728,9 @@ rtError_t rtKernelLaunchWithHandleV2(void *hdl, const uint64_t tilingKey,
 
     if (pcStartAddr) {
       const auto &kernelInfo = MapManager::Instance().GetKernelInfo(hdl);
-      SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+      int32_t streamId;
+      GetStreamID(stm, streamId);
+      SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
     }
 
     rtError_t result = func(hdl, tilingKey, blockDim, argsInfo, smDesc, stm, cfgInfo);

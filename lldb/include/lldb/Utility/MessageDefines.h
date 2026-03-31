@@ -82,6 +82,7 @@ struct KernelInfoMsg {
   std::string kernel_name;
   std::string kernel_hash;
   lldb::addr_t pc_base_addr;
+  int32_t stream_id;
   std::vector<char> elf;
 };
 

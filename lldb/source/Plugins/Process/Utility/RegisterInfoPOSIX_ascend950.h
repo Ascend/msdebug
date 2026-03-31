@@ -13,6 +13,8 @@ public:
   Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) override;
   static const RegExtractor &GetRegExtractor();
   static uint64_t GetDbgAddr(uint64_t addr);
+
+  static bool IsSimtPC(const RegisterInfo *reg_info);
  
 protected:
   RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch, uint32_t register_info_count,

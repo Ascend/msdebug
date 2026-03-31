@@ -77,6 +77,18 @@ const AscendProcessLinux &AscendThreadLinux::GetProcess() const {
   return static_cast<const AscendProcessLinux &>(m_process);
 }
 
+static void SetStopInfoDetails(ThreadStopInfo &stop_info, const InterruptEvent &event) {
+  stop_info.details.device.break_addr = event.pc;
+  stop_info.details.device.core_id = event.core_id;
+  stop_info.details.device.core_type = event.core_type;
+  stop_info.details.device.pos_type = static_cast<uint8_t>(event.pos_type);
+  InterruptPosInfo pos;
+  pos.Update(event);
+  stop_info.details.device.thread_x = pos.thread_pos.x;
+  stop_info.details.device.thread_y = pos.thread_pos.y;
+  stop_info.details.device.thread_z = pos.thread_pos.z;
+}
+
 void AscendThreadLinux::SetStoppedByDeviceBreakpoint(const InterruptEvent &event) {
   if (m_state == StateType::eStateStepping)
     m_step_workaround.reset();
@@ -86,11 +98,9 @@ void AscendThreadLinux::SetStoppedByDeviceBreakpoint(const InterruptEvent &event
   m_state = new_state;
   m_stop_description.clear();
 
+  SetStopInfoDetails(m_stop_info, event);
   m_stop_info.reason = StopReason::eStopReasonDeviceBreakpoint;
   m_stop_info.signo = SIGTRAP;
-  m_stop_info.details.device.break_addr = event.pc;
-  m_stop_info.details.device.core_id = event.core_id;
-  m_stop_info.details.device.core_type = event.core_type;
   m_stop_info.still_break_in_device = true;
 }
 
@@ -144,29 +154,17 @@ void AscendThreadLinux::SetStopped(bool use_reg) {
 void AscendThreadLinux::SetDeviceStoppedByTrace(const InterruptEvent &param) {
   SetStopped();
 
+  SetStopInfoDetails(m_stop_info, param);
   m_stop_info.reason = StopReason::eStopReasonTrace;
   m_stop_info.signo = SIGTRAP;
-  m_stop_info.details.device.break_addr = param.pc;
-  m_stop_info.details.device.core_id = param.core_id;
-  m_stop_info.details.device.core_type = param.core_type;
-  m_stop_info.details.device.pos_type = static_cast<uint8_t>(param.pos_type);
-  m_stop_info.details.device.thread_x = param.thread_x;
-  m_stop_info.details.device.thread_y = param.thread_y;
-  m_stop_info.details.device.thread_z = param.thread_z;
 }
 
 void AscendThreadLinux::SetStoppedByDeviceCtrlC(const InterruptEvent &event) {
   Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "AscendThreadLinux::%s called", __FUNCTION__);
+  SetStopInfoDetails(m_stop_info, event);
   m_stop_info.reason = StopReason::eStopReasonSignal;
   m_stop_info.signo = SIGSTOP;
-  m_stop_info.details.device.break_addr = event.pc;
-  m_stop_info.details.device.core_id = event.core_id;
-  m_stop_info.details.device.core_type = event.core_type;
-  m_stop_info.details.device.pos_type = static_cast<uint8_t>(event.pos_type);
-  m_stop_info.details.device.thread_x = event.thread_x;
-  m_stop_info.details.device.thread_y = event.thread_y;
-  m_stop_info.details.device.thread_z = event.thread_z;
   m_stop_info.still_break_in_device = true;
 }
 

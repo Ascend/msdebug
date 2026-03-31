@@ -20,7 +20,7 @@ public:
   Status CheckRegisterAddr(CoreType core_type, uint64_t addr) override;
 
   Status ReadRegister(const RegisterInfo *reg_info,
-                      uint32_t core_id, CoreType core_type, RegisterValue &value) override;
+                      const InterruptPosInfo &pos_info, RegisterValue &value) override;
 
   MemType GetStackMemType() const override;
 
