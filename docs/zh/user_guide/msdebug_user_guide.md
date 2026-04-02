@@ -10,11 +10,11 @@ MindStudio Debugger（算子调试工具，msDebug）是一款面向昇腾设备
 
 - Kernel直调算子开发：Kernel直调。
 
-    Kernel直调的场景，详细信息可参考《Ascend C算子开发指南》中“Kernel直调算子开发 \>  [Kernel直调](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)”章节。具体操作请参见[上板调试Vector算子](../best_practices/basic_cases.md#上板调试vector算子)。
+    Kernel直调的场景，详细信息可参考《Ascend C算子开发指南》中“[基于样例工程完成Kernel直调](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)”章节。具体操作请参见[上板调试Vector算子](../best_practices/basic_cases.md#上板调试vector算子)。
 
 - 工程化算子开发：单算子API调用。
 
-    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \>  [单算子API调用](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)”章节。具体操作请参见[调用Ascend CL单算子](../best_practices/basic_cases.md#调用ascend-cl单算子)。
+    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \>  [单算子API调用](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)”章节。具体操作请参见[调用Ascend CL单算子](../best_practices/basic_cases.md#调用ascend-cl单算子)。
 
 - AI框架算子适配：PyTorch框架。
 
@@ -469,7 +469,7 @@ Process 2625643 stopped
 - 在对源码文件进行打点时，可能会出现找不到实际位置的告警，类似如下提示，在算子运行后，会自动找到实际位置，并自动设置断点。
 
     ```bash
-    (msdebug) b /home/xx/op_host/matmul_leakyrelu_kernel.cpp:24
+    (msdebug) b /home/xx/op_kernel/matmul_leakyrelu_kernel.cpp:24
     Breakpoint 1: no locations (pending on future shared library load).
     WARNING:  Unable to resolve breakpoint to any actual locations.
     (msdebug)
@@ -1239,7 +1239,7 @@ Current stop state of all blocks:
 客户现场发生硬件异常时，需要反复压测复现问题，定位效率低。为了解决该问题，系统检测到潜在的硬件异常时，会自动触发一个dump操作，捕获当前的状态信息。msDebug工具通过对异常算子dump文件的解析，即使在没有主动压测的情况下也能收集到足够的数据用于问题分析。通过上述功能，不仅提高了硬件异常问题的定位效率，还减少因反复压测给用户带来的不便。
 
 > [!NOTE] 说明   
-> 当前仅解析异常算子dump文件功能支持昇腾950代际产品。
+> 当前msDebug工具仅“解析异常算子dump文件功能”支持昇腾950代际产品，其他功能暂不支持昇腾950代际产品。
 
 ### 注意事项
 
