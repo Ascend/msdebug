@@ -71,6 +71,8 @@ private:
 
   Status ParseKernelInfo(const lldb::SectionSP& section, ConstString section_name);
 
+  Status ParseHostKernelObject(const lldb::SectionSP& section, ConstString section_name);
+
   template<typename T>
   Status ParseRegData(const lldb::SectionSP& section, uint64_t core_id);
 
@@ -89,6 +91,7 @@ private:
   device_core::SummaryInfo m_summary_info;
   SectionList m_section_list;
   std::string m_kernel_name{""};
+  std::shared_ptr<ModuleSpec> m_device_module_spec{};
 };
 }
 

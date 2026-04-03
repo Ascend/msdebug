@@ -31,6 +31,7 @@ static const ConstString LOCAL_AUXINFO_NAME{".ascend.auxinfo.local."};
 static const ConstString REGS_NAME{".ascend.regs."};
 static const ConstString GLOBAL_NAME{".ascend.global"};
 static const ConstString KERNEL_INFO_NAME{".ascend.kernel_info"};
+static const ConstString HOST_KERNEL_OBJECT{".ascend.host_kernel_object"};
 
 llvm::StringRef ProcessElfCoreDevice::GetPluginDescriptionStatic() {
   return "ELF core device dump plug-in.";
@@ -92,7 +93,18 @@ Status ProcessElfCoreDevice::UpdateTargetKernel() {
   auto &target = GetTarget();
   auto executable_module = target.GetExecutableModule();
   if (!executable_module) {
-    // input kernel object file is an option
+    // Get kernel file from section of .ascend.host_kernel_object
+    if (m_device_module_spec) {
+      ModuleSP dev_module;
+      ModuleList::GetSharedModule(*m_device_module_spec, dev_module, nullptr, nullptr, nullptr);
+      if (!dev_module) {
+        error.SetErrorString("Get dev_module by .ascend.host_kernel_object failed");
+        return error;
+      }
+      LLDB_LOG(log, "Found kernel object from core file", __FUNCTION__);
+      target.SetExecutableModule(dev_module);
+      return error;
+    }
     return error;
   }
   auto *object_file = executable_module->GetObjectFile();
@@ -255,6 +267,7 @@ Status ProcessElfCoreDevice::ParseSection() {
       {LOCAL_AUXINFO_NAME, &ProcessElfCoreDevice::ParseLocalAuxInfo},
       {REGS_NAME, &ProcessElfCoreDevice::ParseRegs},
       {KERNEL_INFO_NAME, &ProcessElfCoreDevice::ParseKernelInfo},
+      {HOST_KERNEL_OBJECT, &ProcessElfCoreDevice::ParseHostKernelObject},
   };
   Status error;
   for (auto section : m_section_list) {
@@ -493,6 +506,18 @@ Status ProcessElfCoreDevice::ParseRegs(const SectionSP& section, ConstString sec
     m_thread_data.emplace_back(ThreadData{DataExtractor(), {}, 0, SIGSEGV, SIGSEGV, 0, ""});
   }
   return error;
+}
+
+Status ProcessElfCoreDevice::ParseHostKernelObject(const SectionSP& section, ConstString section_name) {
+  Status error;
+  DataExtractor data;
+  section->GetSectionData(data);
+  DataBufferSP data_buf;
+  data_buf.reset(new DataBufferHeap(data.GetDataStart(), data.GetByteSize()));
+  FileSpec fspec{"device_debugdata"};
+  m_device_module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
+  m_device_module_spec->GetArchitecture().GetTriple().setArch(llvm::Triple::hiipu64);
+  return Status();
 }
 
 Status ProcessElfCoreDevice::ParseKernelInfo(const SectionSP& section, ConstString section_name) {
