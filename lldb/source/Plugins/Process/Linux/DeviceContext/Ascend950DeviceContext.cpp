@@ -6,6 +6,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend950.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/StreamString.h"
  
 using namespace lldb_private;
 using namespace lldb;
@@ -79,6 +81,53 @@ Ascend950DeviceContext::Ascend950DeviceContext(const ::pid_t pid, const uint32_t
   m_soc_type = SocType::ASCEND950;
 }
 
+Status Ascend950DeviceContext::ReadSXReg(const RegisterInfo *reg_info,
+                                         const InterruptPosInfo &pos, RegisterValue &value) {
+  Log *log = GetLog(LLDBLog::Process);
+
+  auto reg_group = RegisterInfoPOSIX_ascend950::GetSRegGroup(reg_info);
+  Status error;
+  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
+  DataBufferHeap buffer;
+  for (uint8_t i = 0; i < reg_group.num; i++) {
+    const RegisterInfo *base_reg_info = RegisterInfoPOSIX_ascend950::GetRegisterInfoAt(i + reg_group.start_reg_num);
+    RegisterValue tmp_value;
+    if (base_reg_info && register_map.find(base_reg_info->name) != register_map.end()) {
+      const DeviceRegisterInfo &device_reg_info = register_map.at(base_reg_info->name);
+      error = DeviceContext::ReadRegister(device_reg_info.addr,
+                                          base_reg_info, pos.core_id, pos.core_type, tmp_value);
+      if (error.Fail()) {
+        return error;
+      }
+      const uint8_t *value_data = static_cast<const uint8_t *>(tmp_value.GetBytes());
+      uint8_t value_bytes = 4;
+      if (reg_group.half_type == 1) {
+        value_bytes = 2;
+      } else if (reg_group.half_type == 2) {
+        value_data += 2;
+        value_bytes = 2;
+      }
+      // little order
+      buffer.AppendData(value_data, value_bytes);
+    }
+  }
+  value.SetBytes(buffer.GetBytes(), reg_info->byte_size, lldb::eByteOrderLittle);
+  if (log) {
+    StreamString ss;
+    ss << "0x";
+    uint8_t *cur_data = buffer.GetBytes();
+    for (size_t i = 0; i < std::min(reg_info->byte_size, 8U); i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "Read register {0} with start_reg={1}, group_num={2}, half_type={3}, "
+             "first {4} byte value: {5}",
+             reg_info->name, reg_group.start_reg_num,
+             reg_group.num, reg_group.half_type,
+             std::min(reg_info->byte_size, 8U), ss.GetString());
+  }
+  return error;
+}
+
 Status Ascend950DeviceContext::ReadRXReg(const RegisterInfo *reg_info, uint64_t base_addr,
                                          const InterruptPosInfo &pos, RegisterValue &value) {
   Log *log = GetLog(LLDBLog::Process);
@@ -133,6 +182,11 @@ Status Ascend950DeviceContext::ReadRegister(const RegisterInfo *reg_info,
     if (RegisterInfoPOSIX_ascend950::IsSimtPC(reg_info)) {
       return ReadSimtPC(reg_info, addr, pos_info, value);
     }
+    // Read S0~S60
+    if (RegisterInfoPOSIX_ascend950::IsSReg(reg_info)) {
+      return ReadSXReg(reg_info, pos_info, value);
+    }
+
     error = DeviceContext::ReadRegister(addr, reg_info, pos_info.core_id, pos_info.core_type, value);
     if (error.Fail()) {
       return error;

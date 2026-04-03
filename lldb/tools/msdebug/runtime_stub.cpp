@@ -299,7 +299,7 @@ int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelH
   if (cutKernelName.length() > KERNEL_NAME_SIZE) {
     cutKernelName.resize(KERNEL_NAME_SIZE);
   }
-  std::string buf = "$kernel_name:" + cutKernelName + ";$stream_id:" + to_string(stream_id) + ";";
+  std::string buf = "$kernel_name:" + cutKernelName + ";stream_id:" + to_string(stream_id) + ";";
   {
     std::unique_lock<std::mutex> lk(mtx);
     if (sentBinaries.find(sendKey) == sentBinaries.end()) {

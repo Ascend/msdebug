@@ -202,7 +202,7 @@ HandleResult KernelHandler::Parse(const std::string& msg) {
     } else if (key.compare("pc_base_addr") == 0) {
       value.getAsInteger(16, m_kernel_info.pc_base_addr);
     } else if (key.compare("stream_id") == 0) {
-      value.getAsInteger(16, m_kernel_info.stream_id);
+      value.getAsInteger(10, m_kernel_info.stream_id);
     }
     num_colon++;
   }

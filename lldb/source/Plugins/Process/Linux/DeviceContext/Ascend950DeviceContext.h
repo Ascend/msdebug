@@ -45,6 +45,8 @@ private:
 
   Status ReadSimtPC(const RegisterInfo *reg_info, uint64_t base_addr,
                     const InterruptPosInfo &pos, RegisterValue &value);
+
+  Status ReadSXReg(const RegisterInfo *reg_info, const InterruptPosInfo &pos, RegisterValue &value);
 private:
   SocType m_soc_type;
 };

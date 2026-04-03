@@ -489,7 +489,8 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
                                    RegisterValue &reg_value) {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
-  WritableDataBufferSP buffer_sp(new DataBufferHeap(reg_info->byte_size, 0));
+  constexpr uint8_t max_bytes = 32;
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(max_bytes, 0));
   RegisterParam param;
   param.core_id = core_id;
   param.core_type = static_cast<uint8_t>(core_type);
@@ -500,7 +501,7 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
   }
   error = BaseSqCqComm(CmdType::READ_REGISTER, (const uint8_t *)&param, sizeof(param),
                        (uint8_t *)buffer_sp->GetBytes(), buffer_sp->GetByteSize());
-  LLDB_LOGF(log, "Read Register core_id=%d addr=%" PRIu64 " core_type=%d",
+  LLDB_LOG(log, "Read Register core_id={0} addr={1:x} core_type={2}",
             core_id, addr, int(core_type));
   if (error.Fail()) {
     return error;
@@ -508,6 +509,17 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
 
   reg_value.SetFromMemoryData(*reg_info, buffer_sp->GetBytes(), 
                               reg_info->byte_size, eByteOrderLittle, error);
+  if (log) {
+    StreamString ss;
+    ss << "0x";
+    uint8_t *cur_data = buffer_sp->GetBytes();
+    for (size_t i = 0; i < std::min(reg_info->byte_size, 8U); i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "Read register {0}, first {1} byte value: {2}",
+             reg_info->name,
+             std::min(reg_info->byte_size, 8U), ss.GetString());
+  }
   return error;
 }
 
