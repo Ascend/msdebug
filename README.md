@@ -20,6 +20,12 @@
 
 MindStudio Debugger（算子调试工具，msDebug）是基于 LLVM 编译器基础设施构建、面向昇腾设备的算子调试工具，用于调试在 NPU 侧运行的算子程序，为开发者提供关键调试能力，包括读取昇腾设备内存与寄存器、暂停与恢复程序执行状态等。
 
+<div align="center">
+  <h4>▶️ 核心能力快速演示</h4>
+  <img src="./docs/zh/figures/demo-msdebug.gif" alt="快速演示" width="600">
+  <p><sup>图示：算子上板调试断点设置、变量打印、单步调试等操作演示</sup></p>
+</div>
+
 ## ⚙️ 功能介绍
 
 msDebug工具支持调试所有的昇腾算子，包含Ascend C算子（Vector、Cube以及Mix融合算子）程序，用户可根据实际情况进行选择，支持的功能如下：
