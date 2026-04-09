@@ -320,6 +320,8 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
         { MemoryTypeHelpTextCallback, true }, nullptr },
     { lldb::eArgTypeAscendCoreIndex, "ascend-core-id", lldb::CompletionType::eNoCompletion, {},
         { nullptr, false }, "The ID for ascend aicore or aivector." },
+    { lldb::eArgTypeAscendThreadIndex, "ascend-thread-id", lldb::CompletionType::eNoCompletion, {},
+ 	    { nullptr, false }, "The ID for ascend thread." },
 #endif
     // clang-format on
 };

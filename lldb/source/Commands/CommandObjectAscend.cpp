@@ -17,6 +17,7 @@
 #include "lldb/Utility/AscendVerification.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility//MessageDefines.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Target/StopInfo.h"
@@ -55,6 +56,35 @@ static bool CheckStringValid(const std::string &arg, CommandReturnObject &result
     return false;
   }
   return true;
+}
+
+static Status GetCoreInfo(Process *process, const uint8_t core_id, const CoreType core_type, CoreInfo &info) {
+  std::vector<CoreInfo> infos;
+  Status error = process->GetCoresInfo(infos);
+
+  if (error.Fail()) {
+    return error;
+  }
+
+  if (infos.empty()) {
+    error.SetErrorStringWithFormat("empty cores info.");
+    return error;
+  }
+
+  for (uint32_t i = 0; i < infos.size(); ++i) {
+    CoreInfo core_info = infos[i];
+
+    if (core_info.core_id == core_id && 
+        core_info.core_type == core_type) {
+      info = core_info;
+      return error;
+    }
+  }
+
+  error.SetErrorStringWithFormat("failed to get core info. no matched core id");
+
+  return error;
+
 }
 
 inline uint32_t CalcBitNum(const vector<uint64_t> &bitmaps) {
@@ -683,6 +713,83 @@ protected:
   }
 };
 
+class CommandObjectAscendInfoThreads : public CommandObjectParsed {
+public:
+  explicit CommandObjectAscendInfoThreads(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "ascend info threads",
+                            "show threads overall info.  "
+                            "",
+                            "ascend info threads",
+                            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                            eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
+                            eCommandProcessMustBePausedInDevice) {}
+
+  ~CommandObjectAscendInfoThreads() override = default;
+
+protected:
+
+struct ThreadRange {
+  ThreadPos start_thread;
+  ThreadPos end_thread;
+  uint32_t thread_count;
+  uint64_t pc;
+  /* data */
+};
+
+struct ActivateThread {
+  uint32_t linear_idx; // 线程的索引
+  uint64_t pc;
+  /* data */
+};
+
+  ThreadPos LinearIdxToThreadIdx(uint32_t linear_idx, const ThreadPos &thread_dim) {
+    ThreadPos pos;
+    pos.x = linear_idx % thread_dim.x;
+    pos.y = (linear_idx / thread_dim.x) % thread_dim.y;
+    pos.z = linear_idx / (thread_dim.x * thread_dim.y);
+    return pos;
+  }
+  
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Stream &strm = result.GetOutputStream();
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (process == nullptr) {
+      result.AppendError("Failed to get process info");
+      return;
+    }
+    
+    if (!process->IsStopInSimtKernel()) {
+      result.AppendError("The ascend info threads command can only run on in simt kernel.");
+      return;
+    }
+
+    DeviceStopInfo stop_info; // 获取当前core_id
+    process->GetDeviceStopInfoCached(stop_info);
+
+
+    CoreInfo core_info;
+    Status error = GetCoreInfo(process, stop_info.core_id, stop_info.core_type, core_info);
+
+    if (error.Fail()) {
+      result.AppendErrorWithFormatv("Get core info failed: {0}", error);
+      return;
+    }
+
+    strm << "  PC                Thread\n*";
+
+    std::stringstream ss;
+    ss << " 0x" << std::hex << core_info.pc << "   ";
+    ss << std::dec <<" (" << stop_info.thread_idx_x << "," << stop_info.thread_idx_y << ","
+        << stop_info.thread_idx_z << ")";
+    ss << std::endl;
+    strm << ss.str();
+    
+    strm.EOL();
+    strm.Flush();
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+};
+
 // CommandObjectAscendInfo
 
 class CommandObjectAscendInfo : public CommandObjectMultiword {
@@ -696,6 +803,7 @@ public:
     LoadSubCommand("stream", CommandObjectSP(new CommandObjectAscendInfoStream(interpreter)));
     LoadSubCommand("blocks", CommandObjectSP(new CommandObjectAscendInfoBlocks(interpreter)));
     LoadSubCommand("summary", CommandObjectSP(new CommandObjectAscendInfoSummary(interpreter)));
+    LoadSubCommand("threads", CommandObjectSP(new CommandObjectAscendInfoThreads(interpreter)));
   }
 
   ~CommandObjectAscendInfo() override = default;
@@ -923,6 +1031,239 @@ protected:
   }
 };
 
+class CommandObjectAscendThread : public CommandObjectParsed {
+public:
+  explicit CommandObjectAscendThread(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "ascend thread",
+                            "change the id of the focused ascend thread.  "
+                            "",
+                            "ascend thread <thread id> | ascend thread (x,y,z) | ascend thread x y z",
+                            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                            eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
+                            eCommandProcessMustBePausedInDeviceOrCoredump) {
+    CommandArgumentEntry arg;
+    CommandArgumentData thread_idx_arg;
+
+    thread_idx_arg.arg_type = eArgTypeAscendThreadIndex;
+    thread_idx_arg.arg_repetition = eArgRepeatPlain;
+    arg.push_back(thread_idx_arg);
+    m_arguments.push_back(arg);
+  }
+
+  ~CommandObjectAscendThread() override = default;
+
+protected:
+
+  bool CheckThreadIdxValid(const ThreadPos &thread_idx, const ThreadPos &thread_dim) {
+    // 校验用户输入的x,y,z三维是否符合thread_dim的要求
+    if (thread_idx.x >= thread_dim.x || 
+        thread_idx.y >= thread_dim.y ||
+        thread_idx.z >= thread_dim.z
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool CheckThreadIdxValid(const uint32_t linear_idx, const ThreadPos &thread_dim) {
+    // 校验用户输入的线性线程ID是否符合thread_dim的要求
+    return linear_idx < (thread_dim.x * thread_dim.y * thread_dim.z);
+  }
+
+  uint32_t ComputeLinearIdx(const ThreadPos &thread_idx, const ThreadPos &thread_dim) {
+    // 获取线程的线性ID
+    return thread_idx.x + thread_idx.y * thread_dim.x + thread_idx.z * thread_dim.x * thread_dim.y;
+  }
+
+  Status GetWarpInfo(Process *process, WarpInfo &info) {
+    std::vector<WarpInfo> warps_info;
+    Status error = process->GetWarpsInfo(warps_info);
+
+    if (error.Fail()) {
+      return error;
+    }
+
+    if (warps_info.empty()) {
+      error.SetErrorStringWithFormat("empty warps info.");
+      return error;
+    }
+
+    for (uint32_t i = 0; i < warps_info.size(); ++i) {
+      WarpInfo warp_info = warps_info[i];
+
+      if (warp_info.warp_id == info.warp_id) {
+        info = warp_info;
+        return error;
+      }
+    }
+
+    error.SetErrorStringWithFormat("failed to get warp info. no matched warp id");
+
+    return error;
+
+  }
+
+  bool GetLinearIdx(Args &command, CommandReturnObject &result, uint32_t &linear_idx, const ThreadPos &thread_dim) {
+    // 解析参数，校验参数并获取用户的线性ID
+    std::string arg0 = command.GetArgumentAtIndex(0);
+
+    if (arg0[0] == '(') { // (x,y,z)
+      size_t pos1 = arg0.find(',');
+      size_t pos2 = arg0.find(',', pos1 + 1);
+      size_t end_pos = arg0.find(')');
+
+      if (pos1 == std::string::npos || pos2 == std::string::npos || 
+          end_pos == std::string::npos) {
+        result.AppendErrorWithFormat("Invalid format, expected (x, y, z)");
+        return false;
+      }
+
+      std::string x_str = arg0.substr(1, pos1 - 1);
+      std::string y_str = arg0.substr(pos1 + 1, pos2 - pos1 - 1);
+      std::string z_str = arg0.substr(pos2 + 1, end_pos - pos2 - 1);
+
+      uint32_t x, y, z;
+
+      if (!llvm::to_integer(x_str, x) || !llvm::to_integer(y_str, y) ||
+          !llvm::to_integer(z_str, z)) {
+        result.AppendErrorWithFormat("Invalid thread idx in (x,y,z) format and must be an integer");
+        return false;
+      }
+
+      ThreadPos thread_idx = {x, y, z};
+      if (!CheckThreadIdxValid(thread_idx, thread_dim)) {
+        result.AppendErrorWithFormat("input thread is invalid and exceeds the value range indicated by thread_dim.");
+        return false;
+      }
+
+      linear_idx = ComputeLinearIdx(thread_idx, thread_dim);
+    } else if (command.GetArgumentCount() == 3) { // x y z
+      ThreadPos thread_idx;
+
+      if (!llvm::to_integer(arg0.c_str(), thread_idx.x)) {
+        result.AppendErrorWithFormat("Invalid thread x index and must be an integer.");
+        return false;
+      }
+      if (!llvm::to_integer(command.GetArgumentAtIndex(1), thread_idx.y)) {
+        result.AppendErrorWithFormat("Invalid thread y index and must be an integer.");
+        return false;
+      }
+      if (!llvm::to_integer(command.GetArgumentAtIndex(2), thread_idx.z)) {
+        result.AppendErrorWithFormat("Invalid thread z index and must be an integer.");
+        return false;
+      }
+      if (!CheckThreadIdxValid(thread_idx, thread_dim)) {
+        result.AppendErrorWithFormat("input thread is invalid and exceeds the value range indicated by thread_dim.");
+        return false;
+      }
+
+      linear_idx = ComputeLinearIdx(thread_idx, thread_dim);
+    } else { // 线性ID
+      if (!llvm::to_integer(arg0.c_str(), linear_idx)) {
+        result.AppendErrorWithFormat("Invalid thread x index and must be an integer.");
+        return false;
+      }
+      if (!CheckThreadIdxValid(linear_idx, thread_dim)) {
+        result.AppendErrorWithFormat("input thread is invalid and exceeds the value range indicated by thread_dim.");
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  uint16_t GetWarpId(uint16_t linear_idx) const {
+    constexpr uint32_t WARP_SIZE = 32;
+    return linear_idx / WARP_SIZE;
+  }
+
+  bool ThreadIsActive(const uint32_t linear_idx, const WarpInfo &warp_info) {
+    constexpr uint32_t WARP_SIZE = 32;
+    uint32_t thread_in_warp = linear_idx % WARP_SIZE;
+    return (warp_info.exec_mask & (1U << thread_in_warp)) != 0;
+  }
+
+
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Stream &strm = result.GetOutputStream();
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (process == nullptr) {
+      result.AppendError("Failed to get process info");
+      return;
+    } else if (command.GetArgumentCount() != 1 && command.GetArgumentCount() != 3) {
+      result.AppendErrorWithFormat(
+          "'%s' takes exactly one thread index argument:\nUsage: %s\n",
+          m_cmd_name.c_str(), m_cmd_syntax.c_str());
+      return;
+    }
+
+    if (!process->IsStopInSimtKernel()) {
+      result.AppendError("The ascend info threads command can only run on in simt kernel.");
+      return;
+    }
+
+    Thread *thread = m_exe_ctx.GetThreadPtr();
+    if (thread == nullptr) {
+      result.AppendError("Failed to get thread info");
+      return;
+    }
+    
+    DeviceStopInfo stop_info;
+    process->GetDeviceStopInfoCached(stop_info);
+
+    CoreInfo core_info;
+
+    Status error = GetCoreInfo(process, stop_info.core_id, stop_info.core_type, core_info);
+    if (error.Fail()) {
+      result.AppendErrorWithFormat("Failed to get core info.");
+      return;
+    }
+    
+    ThreadPos thread_dim = {
+      core_info.thread_dim_x,
+      core_info.thread_dim_y,
+      core_info.thread_dim_z,
+    };
+
+    uint32_t linear_idx;
+
+    if (!GetLinearIdx(command, result, linear_idx, thread_dim)) {
+      return;
+    }
+
+    WarpInfo warp_info;
+    warp_info.warp_id = GetWarpId(linear_idx);
+
+    error = GetWarpInfo(process, warp_info);
+    if (error.Fail()) {
+      result.AppendErrorWithFormat("Failed to get warp info.");
+      return;
+    }
+    // 判断线程是否是活跃线程，不是活跃线程则不支持切换
+    if (!ThreadIsActive(linear_idx, warp_info)) {
+      result.AppendErrorWithFormat("the thread is not active.");
+      return;
+    }
+
+    error = process->SetThreadOnFocus(linear_idx);
+    if (error.Fail()) {
+      result.AppendErrorWithFormat("Failed to switch focus to ascend thread %d", linear_idx);
+      return;
+    }
+    // update core info cache in client
+    stop_info.thread_idx_x = linear_idx % thread_dim.x;
+    stop_info.thread_idx_y = (linear_idx / thread_dim.x) % thread_dim.y;
+    stop_info.thread_idx_z = linear_idx / (thread_dim.x * thread_dim.y);
+    process->SetDeviceStopInfoCached(stop_info);
+    // 切换线程后，刷新与线程相关的寄存器缓存
+    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    reg_ctx_sp->InvalidateSimtRegisters();
+    ShowInfoWhenStopped(*process, *thread, strm);
+  }
+};
+
 // CommandObjectMultiwordAscend
 
 CommandObjectMultiwordAscend::CommandObjectMultiwordAscend(
@@ -944,6 +1285,8 @@ CommandObjectMultiwordAscend::CommandObjectMultiwordAscend(
                  CommandObjectSP(new CommandObjectAscendAiv(interpreter)));
   LoadSubCommand("device",
                  CommandObjectSP(new CommandObjectAscendDevice(interpreter)));
+  LoadSubCommand("thread",
+ 	                  CommandObjectSP(new CommandObjectAscendThread(interpreter)));
 }
 
 CommandObjectMultiwordAscend::~CommandObjectMultiwordAscend() = default;

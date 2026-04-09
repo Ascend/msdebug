@@ -117,12 +117,6 @@ struct InvalidCacheParam {
 
 // ============ ts END ==================
  
-struct ThreadPos {
-  uint16_t x;
-  uint16_t y;
-  uint16_t z;
-};
- 
 struct InterruptPosInfo {
   CoreType core_type;
   bool single_core_run;
@@ -182,6 +176,12 @@ public:
   virtual Status ReadRegisterList(std::vector<std::string> &reg_list, uint32_t core_id, CoreType core_type);
   virtual Status GetDeviceInfo(DeviceInfo &device_info);
   virtual Status GetCoresInfo(std::vector<CoreInfo> &cores_info);
+  virtual Status GetWarpsInfo(std::vector<WarpInfo> &warps_info, const InterruptPosInfo &m_pos_info) const {
+    return Status("Unsupport query warps info.");
+  }
+  virtual Status GetWarpInfo(WarpInfo &info, uint16_t warp_id, const InterruptPosInfo &m_pos_info) const {
+    return Status("Unsupport query warp info.");
+  }
   virtual Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) = 0;
   virtual Status GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) = 0;
   virtual Status CheckRegisterAddr(CoreType core_type, uint64_t addr) = 0;

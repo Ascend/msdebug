@@ -4415,8 +4415,22 @@ uint8_t GDBRemoteCommunicationClient::SendDeviceRuningMode(bool IsSingleCoreRun,
 uint8_t GDBRemoteCommunicationClient::SendDeviceAicOnFocusPacket(int32_t core_id,
   std::chrono::seconds timeout) {
   StreamString temp;
-  temp.Printf("qDeviceAic%d;", core_id);
+  temp.Printf("vDeviceAic%d;", core_id);
   std::string packet = temp.GetString().data();
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendDeviceThreadOnFocusPacket(const int32_t linear_idx,
+  std::chrono::seconds timeout) {
+  StreamString temp;
+  temp.Printf("vDeviceThread%d;", linear_idx);
+  std::string packet = temp.GetString().data();
+
   StringExtractorGDBRemote response;
   PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
   if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
@@ -4428,7 +4442,7 @@ uint8_t GDBRemoteCommunicationClient::SendDeviceAicOnFocusPacket(int32_t core_id
 uint8_t GDBRemoteCommunicationClient::SendDeviceAivOnFocusPacket(int32_t core_id,
   std::chrono::seconds timeout) {
   StreamString temp;
-  temp.Printf("qDeviceAiv%d;", core_id);
+  temp.Printf("vDeviceAiv%d;", core_id);
   std::string packet = temp.GetString().data();
 
   StringExtractorGDBRemote response;
@@ -4554,6 +4568,84 @@ uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoCoresPacket(
     LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: core_id=%u "
       "core_type=%d total_num=%u pc=%#lx status=%u", __FUNCTION__,
       (uint32_t)(core_info.core_id), int(core_info.core_type), core_info.total_num, core_info.pc, core_info.status);
+    return 0;
+  }
+  return UINT8_MAX;
+}
+
+inline uint8_t ParseWarpInfoFromResponse(StringExtractorGDBRemote &response, 
+                                         std::vector<WarpInfo> &warps_info) {
+  warps_info.clear();
+  WarpInfo current_warp;
+  bool have_warp_id = false;
+  llvm::StringRef key, value;
+
+  while(response.GetNameColonValue(key, value)) {
+    if (key == "warp_id") {
+      // 当碰到新的warp_id，说明上一个warp信息已经解析完毕
+      if (have_warp_id) {
+        warps_info.push_back(current_warp);
+        current_warp = WarpInfo{};
+      }
+
+      if (value.getAsInteger(16, current_warp.warp_id)) {
+        return 1;
+      }
+      have_warp_id = true;
+    } else if (key == "core_id") {
+      if (value.getAsInteger(16, current_warp.core_id)) {
+        return 2;
+      }
+    } else if (key == "warp_num") {
+      if (value.getAsInteger(16, current_warp.warp_num)) {
+        return 3;
+      }
+    } else if (key == "simt_pc") {
+      if (value.getAsInteger(16, current_warp.simt_pc)) {
+        return 4;
+      }
+    } else if (key == "exec_mask") {
+      if (value.getAsInteger(16, current_warp.exec_mask)) {
+        return 5;
+      }
+    }
+  }
+
+  if (have_warp_id) {
+    warps_info.push_back(current_warp);
+  }
+
+  return 0;
+}
+
+uint8_t GDBRemoteCommunicationClient::SendAndWaitGDBAscendInfoWarpsPacket(
+  std::vector<WarpInfo> &warps_info, std::chrono::seconds timeout) {
+  Log *log(GetLog(GDBRLog::Process));
+  StreamString temp;
+  temp.Printf("qDeviceWarpsInfo");
+  std::string packet = temp.GetString().data();
+
+  StringExtractorGDBRemote response;
+  PacketResult packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsNormalResponse()) {
+    if (response.GetBytesLeft() < 1) {
+      LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: qDeviceWarpsInfo response empty", __FUNCTION__);
+      return UINT8_MAX;
+    }
+
+    warps_info.clear();
+
+    uint8_t ret = ParseWarpInfoFromResponse(response, warps_info);
+
+    if (ret != 0) {
+      LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: parse failed, error=%u", __FUNCTION__, ret);
+      return ret;
+    }
+
+    for (const auto &warp_info : warps_info) {
+      LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: core_id=%u warp_id=%u warp_num=%u simt_pc=%#lx exec_mask=%#x",
+                __FUNCTION__, warp_info.core_id, warp_info.warp_id, warp_info.warp_num, warp_info.simt_pc, warp_info.exec_mask);
+    }
     return 0;
   }
   return UINT8_MAX;

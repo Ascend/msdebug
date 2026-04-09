@@ -77,16 +77,19 @@ const AscendProcessLinux &AscendThreadLinux::GetProcess() const {
   return static_cast<const AscendProcessLinux &>(m_process);
 }
 
-static void SetStopInfoDetails(ThreadStopInfo &stop_info, const InterruptEvent &event) {
+void AscendThreadLinux::SetStopInfoDetails(ThreadStopInfo &stop_info, const InterruptEvent &event) {
   stop_info.details.device.break_addr = event.pc;
   stop_info.details.device.core_id = event.core_id;
   stop_info.details.device.core_type = event.core_type;
   stop_info.details.device.pos_type = static_cast<uint8_t>(event.pos_type);
+  
   InterruptPosInfo pos;
   pos.Update(event);
+  
   stop_info.details.device.thread_x = pos.thread_pos.x;
   stop_info.details.device.thread_y = pos.thread_pos.y;
   stop_info.details.device.thread_z = pos.thread_pos.z;
+  
 }
 
 void AscendThreadLinux::SetStoppedByDeviceBreakpoint(const InterruptEvent &event) {
@@ -134,6 +137,12 @@ Status AscendThreadLinux::RequestStop() {
             __FUNCTION__);
 
   return Status();
+}
+
+void AscendThreadLinux::SetStopThreadIdx(uint16_t x, uint16_t y, uint16_t z) {
+  m_stop_info.details.device.thread_x = x;
+  m_stop_info.details.device.thread_y = y;
+  m_stop_info.details.device.thread_z = z;
 }
 
 void AscendThreadLinux::SetStopped(bool use_reg) {

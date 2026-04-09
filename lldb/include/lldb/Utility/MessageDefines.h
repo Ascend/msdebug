@@ -68,6 +68,22 @@ struct CoreInfo {
   uint16_t reserve1;
 };
 
+#pragma pack(4)
+struct WarpInfo {
+  uint8_t core_id;
+  uint8_t warp_id;
+  uint8_t warp_num;
+  uint64_t simt_pc;
+  uint32_t exec_mask;
+};
+#pragma pack()
+
+struct ThreadPos {
+  uint16_t x;
+  uint16_t y;
+  uint16_t z;
+};
+
 static_assert(sizeof(CoreInfo) <= 64,
     "CoreInfo param size must less than params in DebugSendInfo");
 
@@ -113,6 +129,10 @@ struct DeviceStopInfo {
   SocType soc_type;
   // used by coredump currently
   std::string stop_description;
+
+  uint16_t thread_idx_x;
+  uint16_t thread_idx_y;
+  uint16_t thread_idx_z;
 };
 
 // Message from lldb-client to lldb-server

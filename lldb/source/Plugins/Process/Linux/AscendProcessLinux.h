@@ -27,6 +27,7 @@ public:
   explicit AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
           const ArchSpec &arch, Manager &manager,
           llvm::ArrayRef<::pid_t> tids, const std::string& socket_path = "");
+  void TryUpdateThreadIndex(InterruptEvent &event);
   void HandleProcessState(const DebugRecvInfo &info);
   AscendThreadLinux* GetThreadByID(lldb::tid_t tid);
   AscendThreadLinux* GetCurrentThread();
@@ -35,6 +36,7 @@ public:
   Status SingleStep();
   void SetAicOnFocus(const uint32_t &core_id) override;
   void SetAivOnFocus(const uint32_t &core_id) override;
+  void SetThreadOnFocus(const uint32_t &linear_id) override;
   void SetSingleCoreRunFlag(bool isSingleCoreRun) override;
 
   /* Behavior:
@@ -49,11 +51,12 @@ public:
   Status GetDeviceInfo(DeviceInfo &info) override;
   Status GetCoresInfo(std::vector<CoreInfo> &info) override;
   Status GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache = false) override;
+  Status GetWarpsInfo(std::vector<WarpInfo> &warps_info) override;
   Status GetStoppedCorePC(lldb::addr_t &pc) override;
   Status GetKernelInfo(KernelInfo &info) override;
 
   Status ReadDeviceRegisterList(std::vector<std::string> &reg_list) override;
-  Status ReadDeviceRegisterValue(const RegisterInfo *reg_info, RegisterValue &value);
+  Status ReadDeviceRegisterValue(const RegisterInfo *reg_info, RegisterValue &value) override;
 
   Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size, size_t &bytes_read,
                                const MemoryReaderParamForServer &param) override;

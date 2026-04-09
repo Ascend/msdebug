@@ -311,12 +311,19 @@ public:
     int32_t core_id, // Core id on focus in device
     std::chrono::seconds timeout); // Time to wait for an interrup
 
+  uint8_t SendDeviceThreadOnFocusPacket(
+    const int32_t linear_idx, // thread id on focus in device
+    std::chrono::seconds timeout); // Time to wait for an interrup
+  
   uint8_t SendAndWaitGDBAscendInfoDevicePacket(
       DeviceInfo &device_info,     // ascend device info
       std::chrono::seconds timeout); // Time to wait for an interrup);
 
   uint8_t SendAndWaitGDBAscendInfoCoresPacket(
       CoreInfo &core_info,     // ascend cores info
+      std::chrono::seconds timeout); // Time to wait for an interrup);
+  uint8_t SendAndWaitGDBAscendInfoWarpsPacket(
+      std::vector<WarpInfo> &warps_info,     // ascend warps info
       std::chrono::seconds timeout); // Time to wait for an interrup);
   uint8_t SendAndWaitGDBAscendInfoKernelPacket(
       KernelInfo &kernel_info,     // ascend kernel info

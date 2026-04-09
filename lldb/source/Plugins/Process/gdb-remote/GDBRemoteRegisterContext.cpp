@@ -77,6 +77,21 @@ void GDBRemoteRegisterContext::SetAllDeviceRegisterValid(bool b) {
     *pos = b;
 }
 
+void GDBRemoteRegisterContext::InvalidateSimtRegisters() {
+  const size_t num_regs = m_device_reg_valid.size();
+
+  for (size_t i = 0; i < num_regs; ++i) {
+    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(i);
+    if (reg_info && reg_info->name) {
+      llvm::StringRef name(reg_info->name);
+      // 当断点在smit中时，切换线程需要刷新相关寄存器的缓存
+      if (name.starts_with("R") || name.starts_with("SR")) {
+        m_device_reg_valid[i] = false;
+      }
+    }
+  }
+}
+
 void GDBRemoteRegisterContext::UpdateDeviceRegIfNeeded() {
   // 初始化device侧的寄存器缓存，加载寄存器信息
   if (IsStopInDevice() && m_device_reg_info == nullptr) {

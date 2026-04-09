@@ -189,8 +189,16 @@ public:
     return;
   }
 
+  void SetThreadOnFocus(const uint32_t &linear_id) override {
+    return;
+  }
+
   void SetSingleCoreRunFlag(bool isSingleCoreRun) override {
     return;
+  }
+
+  bool GetSingleCoreRunFlag() override {
+    return false;
   }
 
   Status GetDeviceInfo(DeviceInfo &info) override {
@@ -198,6 +206,10 @@ public:
   }
 
   Status GetCoresInfo(std::vector<CoreInfo> &cores_info) override {
+    return Status();
+  }
+
+  Status GetWarpsInfo(std::vector<WarpInfo> &warps_info) override {
     return Status();
   }
 

@@ -58,6 +58,8 @@ public:
 
   bool IsStopInDevice() const;
 
+  virtual void InvalidateSimtRegisters(){};
+
 #endif
   virtual bool RegisterWriteCausesReconfigure(const llvm::StringRef name) {
     return false;

@@ -2540,6 +2540,12 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         stop_info.core_id = UINT32_MAX;
       } else if (key.compare("kernel_name") == 0) {
         stop_info.kernel_name = value.str();
+      }else if (key.compare("thread_x") == 0) {
+        value.getAsInteger(16, stop_info.thread_idx_x);
+      } else if (key.compare("thread_y") == 0) {
+        value.getAsInteger(16, stop_info.thread_idx_y);
+      } else if (key.compare("thread_z") == 0) {
+        value.getAsInteger(16, stop_info.thread_idx_z);
       } else if (key.compare("soc_type") == 0) {
         int integer_value;
         if(!value.getAsInteger(RADIX_HEX, integer_value)) {
@@ -5685,6 +5691,16 @@ Status ProcessGDBRemote::SetAivOnFocus(const uint32_t &core_id)
   return error;
 }
 
+Status ProcessGDBRemote::SetThreadOnFocus(const uint32_t &linear_idx)
+{
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendDeviceThreadOnFocusPacket(linear_idx, std::chrono::seconds(3));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d sending changing thread on focus", error_no);
+  }
+  return error;
+}
+
 Status ProcessGDBRemote::GetDeviceInfo(DeviceInfo &info)
 {
   Status error;
@@ -5718,6 +5734,19 @@ Status ProcessGDBRemote::GetCoresInfo(std::vector<CoreInfo> &info)
       error.SetErrorStringWithFormat("error: %d get cores info", error_no);
       break;
     }
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::GetWarpsInfo(std::vector<WarpInfo> &warps_info)
+{
+  Status error;
+  static constexpr uint32_t DURATION_SEC = 3;
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBAscendInfoWarpsPacket(warps_info,
+                                                                    std::chrono::seconds(DURATION_SEC));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d get warps info", error_no);
+    return error;
   }
   return error;
 }

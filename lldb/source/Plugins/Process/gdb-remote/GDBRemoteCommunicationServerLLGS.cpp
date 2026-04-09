@@ -259,20 +259,26 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_qDeviceRegisterList,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceRegisterList);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_qDeviceAic,
-      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceAic);
+      StringExtractorGDBRemote::eServerPacketType_vDeviceAic,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceAic);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vDeviceSingleCoreRun,
       &GDBRemoteCommunicationServerLLGS::Handle_vDeviceSingleCoreRun);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_qDeviceAiv,
-      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceAiv);
+      StringExtractorGDBRemote::eServerPacketType_vDeviceAiv,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceAiv);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vDeviceThread,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceThread);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qDeviceInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceInfo);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qDeviceCoresInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceCoresInfo);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceWarpsInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceWarpsInfo);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qDeviceKernelInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceKernelInfo);
@@ -4292,12 +4298,12 @@ std::string StringJoin(const T &ids) {
 }
 
 GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
-    Handle_qDeviceAic(
+    Handle_vDeviceAic(
     StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Thread);
 
   // Parse core id on focus
-  packet.SetFilePos(strlen("qDeviceAic"));
+  packet.SetFilePos(strlen("vDeviceAic"));
   uint32_t core_id = packet.GetU32(UINT32_MAX, 0);
   if (core_id == UINT32_MAX || !m_current_process) {
     return SendErrorResponse(68);
@@ -4312,12 +4318,12 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
 }
 
 GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
-    Handle_qDeviceAiv(
+    Handle_vDeviceAiv(
     StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Thread);
 
   // Parse core id on focus
-  packet.SetFilePos(strlen("qDeviceAiv"));
+  packet.SetFilePos(strlen("vDeviceAiv"));
   uint32_t core_id = packet.GetU32(UINT32_MAX, 0);
   if (core_id == UINT32_MAX || !m_current_process) {
     return SendErrorResponse(68);
@@ -4328,6 +4334,26 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
     __FUNCTION__, packet.GetStringRef().data(), core_id);
   StreamGDBRemote response;
   response.PutHex64(core_id);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_vDeviceThread(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+
+  // Parse core id on focus
+  packet.SetFilePos(strlen("vDeviceThread"));
+  uint32_t linear_id = packet.GetU32(UINT32_MAX, 0);
+  if (linear_id == UINT32_MAX || !m_current_process) {
+    return SendErrorResponse(68);
+  }
+  m_current_process->SetThreadOnFocus(linear_id);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s linear_id=%d parsed out",
+    __FUNCTION__, packet.GetStringRef().data(), linear_id);
+  StreamGDBRemote response;
+  response.PutHex64(linear_id);
   return SendPacketNoLock(response.GetString());
 }
 
@@ -4424,6 +4450,42 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
 
   StreamGDBRemote response;
   AddCoresInfoToResponse(info, response);
+
+  PacketResult result;
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s response=%s size=%lu",
+    __FUNCTION__, response.GetString().data(), response.GetSize());
+  result = SendPacketNoLock(response.GetString());
+  return result;
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceWarpsInfo(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s",
+    __FUNCTION__, packet.GetStringRef().data());
+
+  std::vector<WarpInfo> warps_info;
+  if (!m_current_process) {
+    return SendErrorResponse(68);
+  }
+  Status status = m_current_process->GetWarpsInfo(warps_info);
+  if (status.Fail()) {
+    LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s GetWarpsInfo failed", __FUNCTION__);
+    return SendErrorResponse(status);
+  }
+
+  StreamGDBRemote response;
+
+  for (const auto &warp_info : warps_info) {
+    response.Printf("warp_id:%x;", warp_info.warp_id);
+    response.Printf("core_id:%x;", warp_info.core_id);
+    response.Printf("warp_num:%x;", warp_info.warp_num);
+    response.Printf("simt_pc:%lx;", warp_info.simt_pc);
+    response.Printf("exec_mask:%x;", warp_info.exec_mask);
+  }
 
   PacketResult result;
   LLDB_LOGF(log,

@@ -64,6 +64,7 @@ static std::map<CmdType, std::string> CMD_TO_STRING = {
     {CmdType::GET_CORES_INFO, "GET_CORES_INFO"},
     {CmdType::READ_REGISTER, "READ_REGISTER"},
     {CmdType::READ_LOCAL_MEMORY, "READ_LOCAL_MEMORY"},
+    {CmdType::GET_WARP_INFO, "GET_WARP_INFO"},
     {CmdType::TASK_KILL, "TASK_KILL"}
 };
 

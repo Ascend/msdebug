@@ -27,11 +27,14 @@ public:
   void SetStopped(bool use_reg = true);
   Status RequestStop();
   Status SingleStep(uint32_t signo) override;
+  void SetStopThreadIdx(uint16_t x, uint16_t y, uint16_t z);
   void SetStoppedByDeviceBreakpoint(const InterruptEvent &event);
   void SetDeviceStoppedByTrace(const InterruptEvent &param);
   void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr) override;
   void SetStoppedByDeviceCtrlC(const InterruptEvent &event);
   void SetStoppedByInternalBreakpoint();
+  void SetStopInfoDetails(ThreadStopInfo &stop_info, const InterruptEvent &event);
+
 private:
   std::unique_ptr<NativeRegisterContextLinux> m_device_reg_context_up;
 };

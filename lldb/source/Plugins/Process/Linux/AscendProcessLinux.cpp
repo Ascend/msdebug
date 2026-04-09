@@ -601,6 +601,44 @@ Status AscendProcessLinux::WriteDeviceMemory(lldb::addr_t addr, const void *buf,
   return Status();
 }
 
+void AscendProcessLinux::TryUpdateThreadIndex(InterruptEvent &event) {
+  // 计算在warp里面的位置
+  uint8_t thread_in_warp = m_pos_info.thread_info.thread_id % 32;
+
+  // 计算属于哪个warp
+  uint8_t warp_id = m_pos_info.thread_info.thread_id / 32;
+
+  std::vector<WarpInfo> warps_info;
+  Status error = GetWarpsInfo(warps_info);
+  if (error.Fail() || warps_info.empty()) {
+    return;
+  }
+
+  WarpInfo warp_info{};
+  bool has_warp = false;
+  for (auto warp : warps_info) {
+    if (warp.warp_id == warp_id) {
+      warp_info = warp;
+      has_warp = true;
+      break;
+    }
+  }
+
+  if (!has_warp) {
+    return;
+  }
+
+  bool active = (warp_info.exec_mask & (1U << thread_in_warp)) != 0;
+  bool single_core_run = m_pos_info.single_core_run;
+
+  if (active && single_core_run) {
+    event.thread_info = m_pos_info.thread_info;
+  }
+
+  return;
+
+}
+
 void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
   Status error;
@@ -612,6 +650,7 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
               param->thread_info.thread_id);
     InterruptEvent event = *param;
     std::lock_guard<std::mutex> guard(m_status_mtx);
+    TryUpdateThreadIndex(event);
     if (param->status == CoreStatus::BRKPT) {
       MonitorBreakpoint(event);
     } else if (param->status == CoreStatus::SINGLE_STEP) {
@@ -737,6 +776,33 @@ void AscendProcessLinux::SetAivOnFocus(const uint32_t &core_id) {
   m_pos_info.core_type = CoreType::AIV;
 }
 
+void AscendProcessLinux::SetThreadOnFocus(const uint32_t &linear_idx) {
+  m_pos_info.thread_info.thread_id = linear_idx;
+
+  uint16_t dim_x = m_pos_info.thread_info.thread_dim_x;
+  uint16_t dim_y = m_pos_info.thread_info.thread_dim_y;
+
+  m_pos_info.thread_pos.x = linear_idx % dim_x;
+  m_pos_info.thread_pos.y = (linear_idx / dim_x) % dim_y;
+  m_pos_info.thread_pos.z = linear_idx / (dim_x * dim_y);
+
+  for (const auto &thread_up : m_threads) {
+    AscendThreadLinux *thread = GetThreadByID(thread_up->GetID());
+    if (!thread) {
+      continue;
+    }
+    if (thread_up->GetID() != GetID()) {
+      continue;
+    }
+    // 同时更新线程的id
+    thread->SetStopThreadIdx(m_pos_info.thread_pos.x,
+                             m_pos_info.thread_pos.y,
+                             m_pos_info.thread_pos.z);
+    
+  }
+
+}
+
 void AscendProcessLinux::SetSingleCoreRunFlag(bool isSingleCoreRun) {
   m_pos_info.single_core_run = isSingleCoreRun;
 }
@@ -790,6 +856,13 @@ Status AscendProcessLinux::GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool
   }
   info = m_cores_info[idx];
   return error;
+}
+
+Status AscendProcessLinux::GetWarpsInfo(std::vector<WarpInfo> &warps_info) {
+  if (m_device_context == nullptr) {
+    return Status("device context is null!");
+  }
+  return m_device_context->GetWarpsInfo(warps_info, m_pos_info);
 }
 
 Status AscendProcessLinux::GetStoppedCorePC(addr_t &pc) {

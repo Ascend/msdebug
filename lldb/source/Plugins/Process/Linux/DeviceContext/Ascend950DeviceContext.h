@@ -39,6 +39,9 @@ public:
  
   Status SetHardwareBreakpoint(lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const override;
 
+  Status GetWarpsInfo(std::vector<WarpInfo> &warps_info, const InterruptPosInfo &m_pos_info) const override;
+  Status GetWarpInfo(WarpInfo &info, uint16_t warp_id, const InterruptPosInfo &m_pos_info) const override;
+
 private:
   Status ReadRXReg(const RegisterInfo *reg_info, uint64_t base_addr,
                    const InterruptPosInfo &pos, RegisterValue &value);

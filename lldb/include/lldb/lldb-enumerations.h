@@ -675,6 +675,7 @@ enum CommandArgumentType {
 #ifdef MS_DEBUGGER
   eArgTypeMemoryType,
   eArgTypeAscendCoreIndex,
+  eArgTypeAscendThreadIndex,
 #endif
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
