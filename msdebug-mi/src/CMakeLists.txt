@@ -148,7 +148,7 @@ if(MS_DEBUGGER)
       ${CMAKE_CURRENT_BINARY_DIR}/msdebug-mi
       ${CMAKE_CURRENT_BINARY_DIR}/msdebug-mi.bin
     COMMAND 
-      ${CMAKE_COMMAND} -E copy $<TARGET_FILE:lldb-mi> ${CMAKE_CURRENT_BINARY_DIR}/msdebug-mi &&
+    ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/msdebug_mi_script.sh" ${CMAKE_CURRENT_BINARY_DIR}/msdebug-mi &&
       ${CMAKE_COMMAND} -E copy $<TARGET_FILE:lldb-mi> ${CMAKE_CURRENT_BINARY_DIR}/msdebug-mi.bin
     DEPENDS 
       lldb-mi
