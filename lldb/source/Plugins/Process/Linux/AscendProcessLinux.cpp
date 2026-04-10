@@ -650,7 +650,9 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
               param->thread_info.thread_id);
     InterruptEvent event = *param;
     std::lock_guard<std::mutex> guard(m_status_mtx);
-    TryUpdateThreadIndex(event);
+    if (event.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
+      TryUpdateThreadIndex(event);
+    }
     if (param->status == CoreStatus::BRKPT) {
       MonitorBreakpoint(event);
     } else if (param->status == CoreStatus::SINGLE_STEP) {
