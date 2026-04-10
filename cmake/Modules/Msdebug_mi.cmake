@@ -49,6 +49,6 @@ ExternalProject_Add(msdebug_mi_project
     USES_TERMINAL_BUILD TRUE    
     BUILD_COMMAND ${BUILD_COMMAND}
     INSTALL_COMMAND ${INSTALL_COMMAND}
-    BUILD_ALWAYS OFF
+    BUILD_ALWAYS ON
     DEPENDS llvm_project
 )
