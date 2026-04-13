@@ -380,7 +380,7 @@ public:
     std::string path = file.GetPath();
 
     if(FileSystem::Instance().IsSymlink(path)){
-      error.SetErrorStringWithFormat("\"%s\" is a soft link, which is not supported.", path.c_str());
+      printf("Warning : The path %s is a soft link, which may cause security problems.\n", path.c_str());
     }
     return error;
   }
@@ -436,9 +436,7 @@ public:
 
       // 不允许其他或用户组可写
       if (permissions & (lldb::eFilePermissionsWorldWrite | lldb::eFilePermissionsGroupWrite)) {
-        error.SetErrorStringWithFormat("Risky action, \"%s\" is writable by any other users or groups.",
-                                       parentFile.GetPath().c_str());
-        return error;
+        printf("Warning : The path %s is in the same groups or in the other groups have write permission, which may cause security problems.\n", parentFile.GetPath().c_str());
       }
     } else {
       error.SetErrorStringWithFormat(
