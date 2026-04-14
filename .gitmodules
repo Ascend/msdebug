@@ -1,7 +1,7 @@
 [submodule "third-party/makeself"]
 	path = third-party/makeself
 	url = https://gitcode.com/cann-src-third-party/makeself.git
-	branch = master
+	branch = v2.5.0.x
 [submodule "third-party/libedit"]
 	path = third-party/libedit
 	url = https://gitcode.com/src-openeuler/libedit.git
