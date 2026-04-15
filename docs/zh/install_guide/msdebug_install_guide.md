@@ -8,8 +8,7 @@ MindStudio工具链是集成到CANN包中发布的，msDebug在`{install_cann_pa
 
 ### 方式一：依据 CANN 官方文档安装
 
-请参考<a href="https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst" target="_blank">《CANN安装官方文档》</a>，
-按文档逐步安装和配置。
+请参考《[CANN 官方安装指南](https://www.hiascend.com/cann/download)》，按文档逐步完成安装与配置。
 
 ### 方式二：使用CANN官方容器镜像
 

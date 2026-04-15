@@ -14,13 +14,13 @@
 
 当打印对象a为Tensor类型且以值传递作为函数入参时会出现该问题。
 
-```bash
+```cpp
 void Foo(const LocalTensor<float> a); // 该写法变量a打印失败
 ```
 
 若需打印该变量，可修改代码使对象a以引用传递作为函数入参，修复该问题。
 
-```bash
+```cpp
 void Foo(const LocalTensor<float> &a); // 该写法变量a可正常打印
 ```
 

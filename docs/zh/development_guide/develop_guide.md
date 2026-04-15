@@ -4,11 +4,11 @@
 
 ## 1. 预备知识
 
-请参考[《msDebug架构设计文档》](./architecture.md)学习代码框架及核心流程介绍。
+请参考《[msDebug架构设计文档](./architecture.md)》学习代码框架及核心流程介绍。
 
 ## 2. 开发环境准备
 
-请按照以下文档进行环境配置：[《算子工具开发环境安装指导》](https://gitcode.com/Ascend/msot/blob/master/docs/zh/common/dev_env_setup.md)。
+请按照以下文档进行环境配置：《[算子工具开发环境安装指导](https://gitcode.com/Ascend/msot/blob/master/docs/zh/common/dev_env_setup.md)》。
 
 ## 3. 编译打包
 
