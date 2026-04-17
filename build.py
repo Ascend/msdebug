@@ -56,8 +56,9 @@ class BuildManager:
     def run(self):
         os.chdir(self.project_root)
 
-        logging.info("--build-version: %s", self.parsed_arguments.build_version)
-        subprocess.run(['sed', '-i', f"s/^Version=.*/Version={self.parsed_arguments.build_version}/", "./package/conf/version.info"], check=True)
+        if self.parsed_arguments.build_version != None:
+            logging.info("--build-version: %s", self.parsed_arguments.build_version)
+            subprocess.run(['sed', '-i', f"s/^Version=.*/Version={self.parsed_arguments.build_version}/", "./package/conf/version.info"], check=True)
         # 在非 local 场景下按需更新依赖；在 local 场景下仅使用本地已有代码，不更新依赖。
         if 'local' not in self.parsed_arguments.command:
             from download_dependencies import DependencyManager
