@@ -55,9 +55,14 @@ static bool g_isInited = false;
 static std::mutex g_initMtx;
 static std::mutex g_initStubFunc;
 static void *g_handle = nullptr;
-static std::map<const void *, std::string> g_stubFuncPtrNameMap;
 
-std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
+static std::map<const void *, std::string>& GetStubFuncToNameMap()
+{
+    static std::map<const void *, std::string> inst{};
+    return inst;
+}
+
+static std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
 {
     static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
     std::lock_guard<std::mutex> lk(g_initStubFunc);
@@ -441,8 +446,9 @@ static string GetFullStubName(void *binHandle, const char *stubName, const void 
 
 static std::string GetKernelNameFromStubFunc(const void *stubFunc)
 {
-    auto it = g_stubFuncPtrNameMap.find(stubFunc);
-    if (it == g_stubFuncPtrNameMap.end()) {
+    const auto &stubNameMap = GetStubFuncToNameMap();
+    auto it = stubNameMap.find(stubFunc);
+    if (it == stubNameMap.end()) {
         RT_STUB_LOG_INFO("StubFunc is not found in map\n");
     } else {
         return it->second;
@@ -647,7 +653,7 @@ rtError_t rtFunctionRegister(void *binHandle, const void *stubFunc,
     // stubName validation verification
     rtFunctionRegisterFunc func = (rtFunctionRegisterFunc)GetStubFuncPtr(__FUNCTION__);
     RT_STUB_LOG_INFO("rtFunctionRegister stubFunc_addr=0x%lx\n", (uint64_t)stubFunc);
-    g_stubFuncPtrNameMap[stubFunc] = GetFullStubName(binHandle, stubName, devFunc);
+    GetStubFuncToNameMap()[stubFunc] = GetFullStubName(binHandle, stubName, devFunc);
     MapManager::Instance().AddFuncHandleMap(stubFunc, binHandle);
     return func(binHandle, stubFunc, stubName, devFunc, funcMode);
 }
