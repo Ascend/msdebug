@@ -26,8 +26,19 @@ typedef pid_t (*drvDeviceGetBareTgidFunc)(void);
 void *GetStubFuncPtr(const std::string funcName);
 void *g_handle = nullptr;
 void *g_drvHandle = nullptr;
-std::map<const void *, std::string> g_stubFuncPtrNameMap;
-std::map<const aclrtBinary, rtDevBinary_t> g_devBinaryMap;
+
+static std::map<const void *, std::string> &GetStubFuncPtrNameMap()
+{
+    static std::map<const void *, std::string> inst{};
+    return inst;
+}
+
+static std::map<const aclrtBinary, rtDevBinary_t> &GetDevBinaryMap()
+{
+    static std::map<const aclrtBinary, rtDevBinary_t> inst{};
+    return inst;
+}
+
 
 std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
 {
@@ -222,8 +233,9 @@ void StubInit()
 
 std::string GetKernelNameFromStubFunc(const void *stubFunc)
 {
-    auto it = g_stubFuncPtrNameMap.find(stubFunc);
-    if (it == g_stubFuncPtrNameMap.end()) {
+    const auto &stubFuncNameMap = GetStubFuncPtrNameMap();
+    auto it = stubFuncNameMap.find(stubFunc);
+    if (it == stubFuncNameMap.end()) {
         RT_STUB_LOG_INFO("stubFunc is not found in map\n");
     } else {
         return it->second;
@@ -413,7 +425,7 @@ aclrtBinary aclrtCreateBinaryImpl(const void *data, size_t dataLen)
     using FuncType = decltype(&aclrtCreateBinaryImpl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
     aclrtBinary ret = func(data, dataLen);
-    auto &bin = g_devBinaryMap[ret];
+    auto &bin = GetDevBinaryMap()[ret];
     bin.data = data;
     bin.length = dataLen;
     return ret;
@@ -421,7 +433,7 @@ aclrtBinary aclrtCreateBinaryImpl(const void *data, size_t dataLen)
 
 aclError aclrtBinaryLoadImpl(aclrtBinary const binary, aclrtBinHandle *binHandle)
 {
-    auto &bin = g_devBinaryMap[binary];
+    auto &bin = GetDevBinaryMap()[binary];
     string hash{};
     if (bin.data) {
         // calculate before register, may be changed after register
@@ -465,7 +477,7 @@ aclError aclrtBinaryGetFunctionImpl(aclrtBinHandle const binHandle,
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
     auto ret = func(binHandle, kernelName, funcHandle);
     if (ret == ACL_SUCCESS && *funcHandle) {
-        g_stubFuncPtrNameMap[*funcHandle] = kernelName;
+        GetStubFuncPtrNameMap()[*funcHandle] = kernelName;
         MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
     }
     return ret;
@@ -478,7 +490,7 @@ aclError aclrtBinaryGetFunctionByEntryImpl(aclrtBinHandle binHandle, uint64_t fu
     auto ret = func(binHandle, funcEntry, funcHandle);
     if (ret == ACL_SUCCESS && *funcHandle) {
         std::string kernelName = GetKernelNameByTilingKey(static_cast<const void *>(binHandle), funcEntry);
-        g_stubFuncPtrNameMap[*funcHandle] = kernelName;
+        GetStubFuncPtrNameMap()[*funcHandle] = kernelName;
         MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
     }
     return ret;
