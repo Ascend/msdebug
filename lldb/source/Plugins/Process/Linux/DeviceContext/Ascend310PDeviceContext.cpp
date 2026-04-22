@@ -14,24 +14,7 @@ using namespace lldb;
 Ascend310PDeviceContext::Ascend310PDeviceContext(const ::pid_t pid, const uint32_t device_id):
   DeviceContext(pid, device_id) {
   m_soc_type = SocType::ASCEND310P;
-}
-
-Status Ascend310PDeviceContext::ReadRegister(const RegisterInfo *reg_info,
-                                             const InterruptPosInfo &pos_info, RegisterValue &value) {
-  Status error;
-    const auto &register_map = RegisterInfoPOSIX_ascend310P::GetRegExtractor().register_map;
-    if (reg_info && reg_info->kinds[eRegisterKindLLDB] < register_map.size() &&
-      register_map.find(reg_info->name) != register_map.end()) {
-    const DeviceRegisterInfo &device_reg_info = register_map.at(reg_info->name);
-    uint64_t addr = device_reg_info.addr;
-    error = DeviceContext::ReadRegister(addr, reg_info, pos_info.core_id, pos_info.core_type, value);
-    if (error.Fail()) {
-      return error;
-    }
-  } else {
-    error.SetErrorString("reg_info is null or reg_num in reg_info is invalid");
-  }
-  return error;
+  m_reg_info_up = std::make_unique<RegisterInfoPOSIX_ascend310P>(ArchSpec("hiipu64"));
 }
 
 Status Ascend310PDeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
@@ -60,7 +43,7 @@ Status Ascend310PDeviceContext::GetRegisterList(std::vector<std::string> &reg_li
   return error;
 }
 
-Status Ascend310PDeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) {
+Status Ascend310PDeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) const {
   Status error;
   const auto &register_map = RegisterInfoPOSIX_ascend310P::GetRegExtractor().register_map;
   for (const auto &item : register_map) {

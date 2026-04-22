@@ -12,21 +12,13 @@
 #include "lldb/lldb-private-types.h"
 #include <condition_variable>
 #include <lldb/Host/Socket.h>
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend.h"
 #include <mutex>
 
 
 namespace lldb_private {
 
 // ===== need to stay in namespace ts START ====
-enum class CoreStatus {
-  UNKNOWN = 0,
-  RUNNING = 1,
-  BRKPT = 2,
-  SINGLE_STEP = 3,
-  EXCEPTION = 4,
-  TASK_KILLED = 5
-};
-
 enum class CmdType {
     ENABLE_DEBUG_MODE = 0,
     DISABLE_DEBUG_MODE = 1,
@@ -61,23 +53,6 @@ struct DebugRecvInfo {
   uint32_t return_val;
   uint32_t msg_id;
   uint8_t recv_msg[44];
-};
-
-struct ThreadInfo {
-  uint16_t thread_dim_x;
-  uint16_t thread_dim_y;
-  uint16_t thread_dim_z;
-  uint16_t thread_id;
-};
-
-struct InterruptEvent {
-  uint8_t core_type;
-  InterruptPosType pos_type;
-  uint8_t reserve[2];
-  CoreStatus status;
-  uint32_t core_id;
-  uint64_t pc;
-  ThreadInfo thread_info;
 };
 
 struct TsDeviceInfo {
@@ -117,30 +92,7 @@ struct InvalidCacheParam {
 
 // ============ ts END ==================
  
-struct InterruptPosInfo {
-  CoreType core_type;
-  bool single_core_run;
-  bool single_warp_run;
-  uint32_t core_id;
-  InterruptPosType pos_type{InterruptPosType::STARS_SU_INTERRUPT};
-  ThreadPos thread_pos;
-  uint64_t pc;
-  ThreadInfo thread_info;
-
-  void Update(const InterruptEvent &event);
-
-  void Reset();
-
-  uint16_t GetWarpNum() const {
-    return (thread_info.thread_dim_x * thread_info.thread_dim_y * thread_info.thread_dim_z + 31U) / 32U;
-  }
-
-  uint16_t GetWarpId() const {
-    return thread_info.thread_id / 32U;
-  }
-};
-
-class DeviceContext {
+class DeviceContext : public RegisterDataInterface {
 public:
 
 class Factory {
@@ -170,9 +122,13 @@ public:
     return Status("Unsupport hardware breakpoint.");
   }
 
-  virtual Status ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info, RegisterValue &value) = 0;
-  virtual Status ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
-                              uint32_t core_id, CoreType core_type, RegisterValue &value);
+  // used by AscendProcessLinux 
+  Status ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info, RegisterValue &value) const;
+
+  // implement RegisterDataInterface, just read data from driver
+  Status ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
+                      uint32_t core_id, CoreType core_type, RegisterValue &value) const override;
+
   virtual Status ReadRegisterList(std::vector<std::string> &reg_list, uint32_t core_id, CoreType core_type);
   virtual Status GetDeviceInfo(DeviceInfo &device_info);
   virtual Status GetCoresInfo(std::vector<CoreInfo> &cores_info);
@@ -184,7 +140,9 @@ public:
   }
   virtual Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) = 0;
   virtual Status GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) = 0;
-  virtual Status CheckRegisterAddr(CoreType core_type, uint64_t addr) = 0;
+
+  // some register may be unavaliable in aiv or aic, so we need do a check
+  virtual Status CheckRegisterAddr(CoreType core_type, uint64_t addr) const = 0;
   virtual void SetBreakpointCallback(const Callback &callback);
 
   virtual bool StartListenThread();
@@ -222,6 +180,7 @@ protected:
   std::condition_variable m_cv;
   Status m_init_err;
   const Socket *m_client_socket = nullptr;
+  std::unique_ptr<RegisterInfoPOSIX_ascend> m_reg_info_up;
 
 private:
   lldb::thread_result_t RunListenThread();

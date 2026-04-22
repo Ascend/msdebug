@@ -4,13 +4,17 @@
 #ifdef MS_DEBUGGER
 #include "RegisterInfoPOSIX_ascend950.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/StreamString.h"
 using namespace lldb_private;
 using namespace lldb;
+using namespace std;
  
 constexpr uint8_t AIC_MASK = 1U << static_cast<int>(CoreType::AIC);
 constexpr uint8_t AIV_MASK = 1U << static_cast<int>(CoreType::AIV);
 constexpr uint8_t MIX_MASK = AIC_MASK | AIV_MASK;
  
+namespace {
 enum LLDB_ASCEND_RENUM {
   k_first_gpr_ascend,
   lldb_x0_ascend = k_first_gpr_ascend, lldb_x1_ascend, lldb_x2_ascend, lldb_x3_ascend,
@@ -42,19 +46,19 @@ enum LLDB_ASCEND_RENUM {
   lldb_loop2_stride_nddma_ascend, lldb_loop3_stride_nddma_ascend, lldb_loop4_stride_nddma_ascend,
   lldb_pcie_rd_ctrl_ascend, lldb_pcie_wr_ctrl_ascend,
   k_last_mte_reg_ascend = lldb_pcie_wr_ctrl_ascend,
-  lldb_vreg0_ascend, lldb_vreg1_ascend, lldb_vreg2_ascend,
-  lldb_vreg3_ascend, lldb_vreg4_ascend, lldb_vreg5_ascend, lldb_vreg6_ascend,
-  lldb_vreg7_ascend, lldb_vreg8_ascend, lldb_vreg9_ascend, lldb_vreg10_ascend,
-  lldb_vreg11_ascend, lldb_vreg12_ascend, lldb_vreg13_ascend, lldb_vreg14_ascend,
-  lldb_vreg15_ascend, lldb_vreg16_ascend, lldb_vreg17_ascend, lldb_vreg18_ascend,
-  lldb_vreg19_ascend, lldb_vreg20_ascend, lldb_vreg21_ascend, lldb_vreg22_ascend,
-  lldb_vreg23_ascend, lldb_vreg24_ascend, lldb_vreg25_ascend, lldb_vreg26_ascend,
-  lldb_vreg27_ascend, lldb_vreg28_ascend, lldb_vreg29_ascend, lldb_vreg30_ascend,
-  lldb_vreg31_ascend, lldb_preg0_ascend, lldb_preg1_ascend, lldb_preg2_ascend,
-  lldb_preg3_ascend, lldb_preg4_ascend, lldb_preg5_ascend, lldb_preg6_ascend,
-  lldb_preg7_ascend, lldb_uld_0_ascend, lldb_uld_1_ascend, lldb_uld_2_ascend,
-  lldb_uld_3_ascend, lldb_ust_data_0_ascend, lldb_ust_data_1_ascend, lldb_ust_data_2_ascend,
-  lldb_ust_data_3_ascend, lldb_ust_flag_0_ascend, lldb_ust_flag_1_ascend, lldb_ust_flag_2_ascend,
+  lldb_v0_ascend, lldb_v1_ascend, lldb_v2_ascend,
+  lldb_v3_ascend, lldb_v4_ascend, lldb_v5_ascend, lldb_v6_ascend,
+  lldb_v7_ascend, lldb_v8_ascend, lldb_v9_ascend, lldb_v10_ascend,
+  lldb_v11_ascend, lldb_v12_ascend, lldb_v13_ascend, lldb_v14_ascend,
+  lldb_v15_ascend, lldb_v16_ascend, lldb_v17_ascend, lldb_v18_ascend,
+  lldb_v19_ascend, lldb_v20_ascend, lldb_v21_ascend, lldb_v22_ascend,
+  lldb_v23_ascend, lldb_v24_ascend, lldb_v25_ascend, lldb_v26_ascend,
+  lldb_v27_ascend, lldb_v28_ascend, lldb_v29_ascend, lldb_v30_ascend,
+  lldb_v31_ascend, lldb_p0_ascend, lldb_p1_ascend, lldb_p2_ascend,
+  lldb_p3_ascend, lldb_p4_ascend, lldb_p5_ascend, lldb_p6_ascend,
+  lldb_p7_ascend, lldb_uld0_ascend, lldb_uld1_ascend, lldb_uld2_ascend,
+  lldb_uld3_ascend, lldb_ust0_ascend, lldb_ust1_ascend, lldb_ust2_ascend,
+  lldb_ust3_ascend, lldb_ust_flag_0_ascend, lldb_ust_flag_1_ascend, lldb_ust_flag_2_ascend,
   lldb_ust_flag_3_ascend, 
   // 32 bit
   lldb_sreg_first,
@@ -66,6 +70,15 @@ enum LLDB_ASCEND_RENUM {
   lldb_tpes20_ascend, lldb_tpes21_ascend, lldb_tpes22_ascend, lldb_tpes23_ascend,
   lldb_tpes24_ascend, lldb_tpes25_ascend, lldb_tpes26_ascend, lldb_tpes27_ascend,
   lldb_tpes28_ascend, lldb_tpes29_ascend, lldb_tpes30_ascend, lldb_tpes31_ascend,
+  // 32bit
+  lldb_s64_ascend, lldb_s65_ascend, lldb_s66_ascend, lldb_s67_ascend,
+  lldb_s68_ascend, lldb_s69_ascend, lldb_s70_ascend, lldb_s71_ascend,
+  lldb_s72_ascend, lldb_s73_ascend, lldb_s74_ascend, lldb_s75_ascend,
+  lldb_s76_ascend, lldb_s77_ascend, lldb_s78_ascend, lldb_s79_ascend,
+  lldb_s80_ascend, lldb_s81_ascend, lldb_s82_ascend, lldb_s83_ascend,
+  lldb_s84_ascend, lldb_s85_ascend, lldb_s86_ascend, lldb_s87_ascend,
+  lldb_s88_ascend, lldb_s89_ascend, lldb_s90_ascend, lldb_s91_ascend,
+  lldb_s92_ascend, lldb_s93_ascend, lldb_s94_ascend, lldb_s95_ascend,
   // 16bit, equal tpess0~tpess63
   lldb_s0_ascend, lldb_s1_ascend, lldb_s2_ascend, lldb_s3_ascend,
   lldb_s4_ascend, lldb_s5_ascend, lldb_s6_ascend, lldb_s7_ascend,
@@ -83,15 +96,6 @@ enum LLDB_ASCEND_RENUM {
   lldb_s52_ascend, lldb_s53_ascend, lldb_s54_ascend, lldb_s55_ascend,
   lldb_s56_ascend, lldb_s57_ascend, lldb_s58_ascend, lldb_s59_ascend,
   lldb_s60_ascend, lldb_s61_ascend, lldb_s62_ascend, lldb_s63_ascend,
-  // 32bit
-  lldb_s64_ascend, lldb_s65_ascend, lldb_s66_ascend, lldb_s67_ascend,
-  lldb_s68_ascend, lldb_s69_ascend, lldb_s70_ascend, lldb_s71_ascend,
-  lldb_s72_ascend, lldb_s73_ascend, lldb_s74_ascend, lldb_s75_ascend,
-  lldb_s76_ascend, lldb_s77_ascend, lldb_s78_ascend, lldb_s79_ascend,
-  lldb_s80_ascend, lldb_s81_ascend, lldb_s82_ascend, lldb_s83_ascend,
-  lldb_s84_ascend, lldb_s85_ascend, lldb_s86_ascend, lldb_s87_ascend,
-  lldb_s88_ascend, lldb_s89_ascend, lldb_s90_ascend, lldb_s91_ascend,
-  lldb_s92_ascend, lldb_s93_ascend, lldb_s94_ascend, lldb_s95_ascend,
   // 64bit
   lldb_tpesl0_ascend, lldb_tpesl1_ascend, lldb_tpesl2_ascend, lldb_tpesl3_ascend,
   lldb_tpesl4_ascend, lldb_tpesl5_ascend, lldb_tpesl6_ascend, lldb_tpesl7_ascend,
@@ -102,11 +106,11 @@ enum LLDB_ASCEND_RENUM {
   lldb_tpesll4_ascend, lldb_tpesll5_ascend, lldb_tpesll6_ascend, lldb_tpesll7_ascend,
   lldb_sreg_last = lldb_tpesll7_ascend,
 
-  lldb_va_0_ascend, lldb_va_1_ascend, lldb_va_2_ascend,
-  lldb_va_3_ascend, lldb_va_4_ascend, lldb_va_5_ascend, lldb_va_6_ascend,
-  lldb_va_7_ascend, lldb_areg_0_ascend, lldb_areg_1_ascend, lldb_areg_2_ascend,
-  lldb_areg_3_ascend, lldb_areg_4_ascend, lldb_areg_5_ascend, lldb_areg_6_ascend,
-  lldb_areg_7_ascend, lldb_mask_ascend, lldb_ar_ascend, lldb_vms4_sr_ascend,
+  lldb_va0_ascend, lldb_va1_ascend, lldb_va2_ascend,
+  lldb_va3_ascend, lldb_va4_ascend, lldb_va5_ascend, lldb_va6_ascend,
+  lldb_va7_ascend, lldb_a0_ascend, lldb_a1_ascend, lldb_a2_ascend,
+  lldb_a3_ascend, lldb_a4_ascend, lldb_a5_ascend, lldb_a6_ascend,
+  lldb_a7_ascend, lldb_mask_ascend, lldb_ar_ascend, lldb_vms4_sr_ascend,
   lldb_sqzn_ascend, lldb_vpc_ascend, lldb_vl_ascend, lldb_agu_am_const_0_ascend,
   lldb_agu_am_const_1_ascend, lldb_agu_am_const_2_ascend, lldb_agu_am_const_3_ascend, lldb_agu_am_const_4_ascend,
   lldb_agu_am_const_5_ascend, lldb_agu_am_const_6_ascend, lldb_agu_am_const_7_ascend, lldb_agu_am_const_8_ascend,
@@ -167,6 +171,47 @@ enum LLDB_ASCEND_RENUM {
   lldb_fix_clip_relu_ascend, lldb_loop4_para_ascend, lldb_channel_para_ascend, lldb_elt_antiq_para_ascend,
   lldb_l1_warn_ascend,
   k_last_l1_reg_ascend = lldb_l1_warn_ascend,
+  k_num_dbg_registers_ascend,
+  // Above registers is used for both coredump and onboard.
+  // If you add a new shared register, please insert it before this line.
+  lldb_sc_error_t0_0 = k_num_dbg_registers_ascend,
+  lldb_su_error_t0_0,
+  lldb_mte_error_t0_0,
+  lldb_mte_error_t1_0,
+  lldb_vec_error_t0_0,
+  lldb_vec_error_t0_2,
+  lldb_cube_error_t0_0,
+  lldb_cube_error_t0_1,
+  lldb_l1_error_t0_0,
+  lldb_l1_error_t0_1,
+
+  lldb_sc_err_info_t0_0,
+  lldb_sc_err_info_t0_1,
+
+  lldb_su_err_info_t0_0,
+  lldb_su_err_info_t0_1,
+  lldb_su_err_info_t0_2,
+  lldb_su_err_info_t0_3,
+
+  lldb_mte_err_info_t0_0,
+  lldb_mte_err_info_t0_1,
+  lldb_mte_err_info_t0_2,
+  lldb_mte_err_info_t1_0,
+  lldb_mte_err_info_t1_1,
+  lldb_mte_err_info_t1_2,
+
+  lldb_vec_err_info_t0_0,
+  lldb_vec_err_info_t0_1,
+  lldb_vec_err_info_t0_2,
+  lldb_vec_err_info_t0_3,
+  lldb_vec_err_info_t0_4,
+  lldb_vec_err_info_t0_5,
+
+  lldb_cube_err_info_t0_0,
+  lldb_cube_err_info_t0_1,
+
+  lldb_l1_err_info_t0_0,
+  lldb_l1_err_info_t0_1,
   k_num_registers_ascend
 };
 
@@ -176,8 +221,10 @@ enum {
   k_num_mte_registers = k_last_mte_reg_ascend - k_last_su_reg_ascend,
   k_num_vecrb_registers = k_last_vecrb_reg_ascend - k_last_mte_reg_ascend,
   k_num_l1_registers = k_last_l1_reg_ascend - k_last_vecrb_reg_ascend,
-  k_num_register_sets_default = 1,
-  k_num_register_sets = 4
+  k_num_aic_error_registers = lldb_l1_error_t0_1 - lldb_sc_error_t0_0 + 1,
+  k_num_err_info_registers = lldb_l1_err_info_t0_1 - lldb_sc_err_info_t0_0 + 1,
+  k_num_register_sets_default = 4,
+  k_num_register_sets = 6
 };
 
 static const uint32_t g_su_regnums_ascend950[] = {
@@ -219,19 +266,19 @@ static_assert(sizeof(g_mte_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_mt
               "Invalid size of g_mte_regnums_ascend950");
 
 static const uint32_t g_vecrb_regnums_ascend950[] = {
-  lldb_vreg0_ascend, lldb_vreg1_ascend, lldb_vreg2_ascend,
-  lldb_vreg3_ascend, lldb_vreg4_ascend, lldb_vreg5_ascend, lldb_vreg6_ascend,
-  lldb_vreg7_ascend, lldb_vreg8_ascend, lldb_vreg9_ascend, lldb_vreg10_ascend,
-  lldb_vreg11_ascend, lldb_vreg12_ascend, lldb_vreg13_ascend, lldb_vreg14_ascend,
-  lldb_vreg15_ascend, lldb_vreg16_ascend, lldb_vreg17_ascend, lldb_vreg18_ascend,
-  lldb_vreg19_ascend, lldb_vreg20_ascend, lldb_vreg21_ascend, lldb_vreg22_ascend,
-  lldb_vreg23_ascend, lldb_vreg24_ascend, lldb_vreg25_ascend, lldb_vreg26_ascend,
-  lldb_vreg27_ascend, lldb_vreg28_ascend, lldb_vreg29_ascend, lldb_vreg30_ascend,
-  lldb_vreg31_ascend, lldb_preg0_ascend, lldb_preg1_ascend, lldb_preg2_ascend,
-  lldb_preg3_ascend, lldb_preg4_ascend, lldb_preg5_ascend, lldb_preg6_ascend,
-  lldb_preg7_ascend, lldb_uld_0_ascend, lldb_uld_1_ascend, lldb_uld_2_ascend,
-  lldb_uld_3_ascend, lldb_ust_data_0_ascend, lldb_ust_data_1_ascend, lldb_ust_data_2_ascend,
-  lldb_ust_data_3_ascend, lldb_ust_flag_0_ascend, lldb_ust_flag_1_ascend, lldb_ust_flag_2_ascend,
+  lldb_v0_ascend, lldb_v1_ascend, lldb_v2_ascend,
+  lldb_v3_ascend, lldb_v4_ascend, lldb_v5_ascend, lldb_v6_ascend,
+  lldb_v7_ascend, lldb_v8_ascend, lldb_v9_ascend, lldb_v10_ascend,
+  lldb_v11_ascend, lldb_v12_ascend, lldb_v13_ascend, lldb_v14_ascend,
+  lldb_v15_ascend, lldb_v16_ascend, lldb_v17_ascend, lldb_v18_ascend,
+  lldb_v19_ascend, lldb_v20_ascend, lldb_v21_ascend, lldb_v22_ascend,
+  lldb_v23_ascend, lldb_v24_ascend, lldb_v25_ascend, lldb_v26_ascend,
+  lldb_v27_ascend, lldb_v28_ascend, lldb_v29_ascend, lldb_v30_ascend,
+  lldb_v31_ascend, lldb_p0_ascend, lldb_p1_ascend, lldb_p2_ascend,
+  lldb_p3_ascend, lldb_p4_ascend, lldb_p5_ascend, lldb_p6_ascend,
+  lldb_p7_ascend, lldb_uld0_ascend, lldb_uld1_ascend, lldb_uld2_ascend,
+  lldb_uld3_ascend, lldb_ust0_ascend, lldb_ust1_ascend, lldb_ust2_ascend,
+  lldb_ust3_ascend, lldb_ust_flag_0_ascend, lldb_ust_flag_1_ascend, lldb_ust_flag_2_ascend,
   lldb_ust_flag_3_ascend,
   // 32bt
   lldb_tpes0_ascend, lldb_tpes1_ascend, lldb_tpes2_ascend, lldb_tpes3_ascend,
@@ -242,6 +289,15 @@ static const uint32_t g_vecrb_regnums_ascend950[] = {
   lldb_tpes20_ascend, lldb_tpes21_ascend, lldb_tpes22_ascend, lldb_tpes23_ascend,
   lldb_tpes24_ascend, lldb_tpes25_ascend, lldb_tpes26_ascend, lldb_tpes27_ascend,
   lldb_tpes28_ascend, lldb_tpes29_ascend, lldb_tpes30_ascend, lldb_tpes31_ascend,
+  // 32bit
+  lldb_s64_ascend, lldb_s65_ascend, lldb_s66_ascend, lldb_s67_ascend,
+  lldb_s68_ascend, lldb_s69_ascend, lldb_s70_ascend, lldb_s71_ascend,
+  lldb_s72_ascend, lldb_s73_ascend, lldb_s74_ascend, lldb_s75_ascend,
+  lldb_s76_ascend, lldb_s77_ascend, lldb_s78_ascend, lldb_s79_ascend,
+  lldb_s80_ascend, lldb_s81_ascend, lldb_s82_ascend, lldb_s83_ascend,
+  lldb_s84_ascend, lldb_s85_ascend, lldb_s86_ascend, lldb_s87_ascend,
+  lldb_s88_ascend, lldb_s89_ascend, lldb_s90_ascend, lldb_s91_ascend,
+  lldb_s92_ascend, lldb_s93_ascend, lldb_s94_ascend, lldb_s95_ascend,
   // 16bit, equal tpess0~tpess63
   lldb_s0_ascend, lldb_s1_ascend, lldb_s2_ascend, lldb_s3_ascend,
   lldb_s4_ascend, lldb_s5_ascend, lldb_s6_ascend, lldb_s7_ascend,
@@ -259,15 +315,6 @@ static const uint32_t g_vecrb_regnums_ascend950[] = {
   lldb_s52_ascend, lldb_s53_ascend, lldb_s54_ascend, lldb_s55_ascend,
   lldb_s56_ascend, lldb_s57_ascend, lldb_s58_ascend, lldb_s59_ascend,
   lldb_s60_ascend, lldb_s61_ascend, lldb_s62_ascend, lldb_s63_ascend,
-  // 32bit
-  lldb_s64_ascend, lldb_s65_ascend, lldb_s66_ascend, lldb_s67_ascend,
-  lldb_s68_ascend, lldb_s69_ascend, lldb_s70_ascend, lldb_s71_ascend,
-  lldb_s72_ascend, lldb_s73_ascend, lldb_s74_ascend, lldb_s75_ascend,
-  lldb_s76_ascend, lldb_s77_ascend, lldb_s78_ascend, lldb_s79_ascend,
-  lldb_s80_ascend, lldb_s81_ascend, lldb_s82_ascend, lldb_s83_ascend,
-  lldb_s84_ascend, lldb_s85_ascend, lldb_s86_ascend, lldb_s87_ascend,
-  lldb_s88_ascend, lldb_s89_ascend, lldb_s90_ascend, lldb_s91_ascend,
-  lldb_s92_ascend, lldb_s93_ascend, lldb_s94_ascend, lldb_s95_ascend,
   // 64bit
   lldb_tpesl0_ascend, lldb_tpesl1_ascend, lldb_tpesl2_ascend, lldb_tpesl3_ascend,
   lldb_tpesl4_ascend, lldb_tpesl5_ascend, lldb_tpesl6_ascend, lldb_tpesl7_ascend,
@@ -277,11 +324,11 @@ static const uint32_t g_vecrb_regnums_ascend950[] = {
   lldb_tpesll0_ascend, lldb_tpesll1_ascend, lldb_tpesll2_ascend, lldb_tpesll3_ascend,
   lldb_tpesll4_ascend, lldb_tpesll5_ascend, lldb_tpesll6_ascend, lldb_tpesll7_ascend,
 
-  lldb_va_0_ascend, lldb_va_1_ascend, lldb_va_2_ascend,
-  lldb_va_3_ascend, lldb_va_4_ascend, lldb_va_5_ascend, lldb_va_6_ascend,
-  lldb_va_7_ascend, lldb_areg_0_ascend, lldb_areg_1_ascend, lldb_areg_2_ascend,
-  lldb_areg_3_ascend, lldb_areg_4_ascend, lldb_areg_5_ascend, lldb_areg_6_ascend,
-  lldb_areg_7_ascend, lldb_mask_ascend, lldb_ar_ascend, lldb_vms4_sr_ascend,
+  lldb_va0_ascend, lldb_va1_ascend, lldb_va2_ascend,
+  lldb_va3_ascend, lldb_va4_ascend, lldb_va5_ascend, lldb_va6_ascend,
+  lldb_va7_ascend, lldb_a0_ascend, lldb_a1_ascend, lldb_a2_ascend,
+  lldb_a3_ascend, lldb_a4_ascend, lldb_a5_ascend, lldb_a6_ascend,
+  lldb_a7_ascend, lldb_mask_ascend, lldb_ar_ascend, lldb_vms4_sr_ascend,
   lldb_sqzn_ascend, lldb_vpc_ascend, lldb_vl_ascend, lldb_agu_am_const_0_ascend,
   lldb_agu_am_const_1_ascend, lldb_agu_am_const_2_ascend, lldb_agu_am_const_3_ascend, lldb_agu_am_const_4_ascend,
   lldb_agu_am_const_5_ascend, lldb_agu_am_const_6_ascend, lldb_agu_am_const_7_ascend, lldb_agu_am_const_8_ascend,
@@ -349,15 +396,46 @@ static const uint32_t g_l1_regnums_ascend950[] = {
   lldb_l1_warn_ascend, LLDB_INVALID_REGNUM
 };
 
+static const uint32_t g_aic_error_regnums[] = {
+  lldb_sc_error_t0_0,
+  lldb_su_error_t0_0, lldb_mte_error_t0_0, lldb_mte_error_t1_0,
+  lldb_vec_error_t0_0, lldb_vec_error_t0_2, lldb_cube_error_t0_0,
+  lldb_cube_error_t0_1, lldb_l1_error_t0_0, lldb_l1_error_t0_1,
+};
+
+static_assert(sizeof(g_aic_error_regnums) / sizeof(uint32_t) == k_num_aic_error_registers,
+              "Invalid size of g_aic_error_regnums");
+
+static const uint32_t g_err_info_regnums[] = {
+  lldb_sc_err_info_t0_0, lldb_sc_err_info_t0_1,
+
+  lldb_su_err_info_t0_0, lldb_su_err_info_t0_1, lldb_su_err_info_t0_2, lldb_su_err_info_t0_3,
+
+  lldb_mte_err_info_t0_0, lldb_mte_err_info_t0_1, lldb_mte_err_info_t0_2,
+  lldb_mte_err_info_t1_0, lldb_mte_err_info_t1_1, lldb_mte_err_info_t1_2,
+
+  lldb_vec_err_info_t0_0, lldb_vec_err_info_t0_1, lldb_vec_err_info_t0_2,
+  lldb_vec_err_info_t0_3, lldb_vec_err_info_t0_4, lldb_vec_err_info_t0_5,
+
+  lldb_cube_err_info_t0_0, lldb_cube_err_info_t0_1,
+
+  lldb_l1_err_info_t0_0, lldb_l1_err_info_t0_1,
+};
+
+static_assert(sizeof(g_err_info_regnums) / sizeof(uint32_t) == k_num_err_info_registers,
+              "Invalid size of g_err_info_regnums");
+
+
 static const RegisterSet g_reg_sets_ascend950[k_num_register_sets_default] = {
-  {"Registers", "register", k_num_su_registers,
-   g_su_regnums_ascend950}};
+  {"SURegisters", "su_dbg_reg", k_num_su_registers, g_su_regnums_ascend950},
+  {"MTERegisters", "mte_dbg_reg", k_num_mte_registers, g_mte_regnums_ascend950},
+  {"VECRegisters", "vec_dbg_reg", k_num_vecrb_registers, g_vecrb_regnums_ascend950},
+  {"L1Registers", "l1_dbg_reg", k_num_l1_registers, g_l1_regnums_ascend950}
+};
 
 static constexpr uint64_t SU_ID = 1UL;
 static constexpr uint64_t MTE_ID = 2UL;
 static constexpr uint64_t VEC_ID = 3UL;
-static constexpr uint64_t CUBE_ID = 4UL;
-static constexpr uint64_t BIU_ID = 5UL;
 static constexpr uint64_t L1_ID = 6UL;
 static constexpr uint64_t ID_OFFSET = 52UL;
 
@@ -449,54 +527,54 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_REG(PCIE_RD_CTRL, lldb_pcie_rd_ctrl_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 29, AIV_MASK},
   {ASCEND_REG(PCIE_WR_CTRL, lldb_pcie_wr_ctrl_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 30, AIV_MASK},
  
-  {ASCEND_REG_32B(VREG0, lldb_vreg0_ascend), VEC_ID << ID_OFFSET | 2UL << 48, AIV_MASK},
-  {ASCEND_REG_32B(VREG1, lldb_vreg1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 16, AIV_MASK},
-  {ASCEND_REG_32B(VREG2, lldb_vreg2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 32, AIV_MASK},
-  {ASCEND_REG_32B(VREG3, lldb_vreg3_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 48, AIV_MASK},
-  {ASCEND_REG_32B(VREG4, lldb_vreg4_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 64, AIV_MASK},
-  {ASCEND_REG_32B(VREG5, lldb_vreg5_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 80, AIV_MASK},
-  {ASCEND_REG_32B(VREG6, lldb_vreg6_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 96, AIV_MASK},
-  {ASCEND_REG_32B(VREG7, lldb_vreg7_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 112, AIV_MASK},
-  {ASCEND_REG_32B(VREG8, lldb_vreg8_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 128, AIV_MASK},
-  {ASCEND_REG_32B(VREG9, lldb_vreg9_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 144, AIV_MASK},
-  {ASCEND_REG_32B(VREG10, lldb_vreg10_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 160, AIV_MASK},
-  {ASCEND_REG_32B(VREG11, lldb_vreg11_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 176, AIV_MASK},
-  {ASCEND_REG_32B(VREG12, lldb_vreg12_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 192, AIV_MASK},
-  {ASCEND_REG_32B(VREG13, lldb_vreg13_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 208, AIV_MASK},
-  {ASCEND_REG_32B(VREG14, lldb_vreg14_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 224, AIV_MASK},
-  {ASCEND_REG_32B(VREG15, lldb_vreg15_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 240, AIV_MASK},
-  {ASCEND_REG_32B(VREG16, lldb_vreg16_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 256, AIV_MASK},
-  {ASCEND_REG_32B(VREG17, lldb_vreg17_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 272, AIV_MASK},
-  {ASCEND_REG_32B(VREG18, lldb_vreg18_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 288, AIV_MASK},
-  {ASCEND_REG_32B(VREG19, lldb_vreg19_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 304, AIV_MASK},
-  {ASCEND_REG_32B(VREG20, lldb_vreg20_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 320, AIV_MASK},
-  {ASCEND_REG_32B(VREG21, lldb_vreg21_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 336, AIV_MASK},
-  {ASCEND_REG_32B(VREG22, lldb_vreg22_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 352, AIV_MASK},
-  {ASCEND_REG_32B(VREG23, lldb_vreg23_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 368, AIV_MASK},
-  {ASCEND_REG_32B(VREG24, lldb_vreg24_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 384, AIV_MASK},
-  {ASCEND_REG_32B(VREG25, lldb_vreg25_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 400, AIV_MASK},
-  {ASCEND_REG_32B(VREG26, lldb_vreg26_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 416, AIV_MASK},
-  {ASCEND_REG_32B(VREG27, lldb_vreg27_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 432, AIV_MASK},
-  {ASCEND_REG_32B(VREG28, lldb_vreg28_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 448, AIV_MASK},
-  {ASCEND_REG_32B(VREG29, lldb_vreg29_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 464, AIV_MASK},
-  {ASCEND_REG_32B(VREG30, lldb_vreg30_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 480, AIV_MASK},
-  {ASCEND_REG_32B(VREG31, lldb_vreg31_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 496, AIV_MASK},
-  {ASCEND_REG(PREG0, lldb_preg0_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 512, AIV_MASK},
-  {ASCEND_REG(PREG1, lldb_preg1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 514, AIV_MASK},
-  {ASCEND_REG(PREG2, lldb_preg2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 516, AIV_MASK},
-  {ASCEND_REG(PREG3, lldb_preg3_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 518, AIV_MASK},
-  {ASCEND_REG(PREG4, lldb_preg4_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 520, AIV_MASK},
-  {ASCEND_REG(PREG5, lldb_preg5_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 522, AIV_MASK},
-  {ASCEND_REG(PREG6, lldb_preg6_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 524, AIV_MASK},
-  {ASCEND_REG(PREG7, lldb_preg7_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 526, AIV_MASK},
-  {ASCEND_REG_32B(ULD_0, lldb_uld_0_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 1536, AIV_MASK},
-  {ASCEND_REG_32B(ULD_1, lldb_uld_1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 1537, AIV_MASK},
-  {ASCEND_REG_32B(ULD_2, lldb_uld_2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 1538, AIV_MASK},
-  {ASCEND_REG_32B(ULD_3, lldb_uld_3_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 1539, AIV_MASK},
-  {ASCEND_REG_32B(UST_DATA_0, lldb_ust_data_0_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 2048, AIV_MASK},
-  {ASCEND_REG_32B(UST_DATA_1, lldb_ust_data_1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 2049, AIV_MASK},
-  {ASCEND_REG_32B(UST_DATA_2, lldb_ust_data_2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 2050, AIV_MASK},
-  {ASCEND_REG_32B(UST_DATA_3, lldb_ust_data_3_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 2051, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V0, v0, 256), VEC_ID << ID_OFFSET | 2UL << 48, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V1, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 16, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V2, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 32, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V3, v3, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 48, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V4, v4, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 64, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V5, v5, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 80, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V6, v6, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 96, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V7, v7, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 112, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V8, v8, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 128, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V9, v9, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 144, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V10, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 160, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V11, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 176, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V12, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 192, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V13, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 208, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V14, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 224, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V15, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 240, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V16, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 256, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V17, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 272, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V18, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 288, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V19, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 304, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V20, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 320, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V21, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 336, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V22, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 352, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V23, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 368, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V24, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 384, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V25, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 400, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V26, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 416, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V27, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 432, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V28, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 448, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V29, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 464, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V30, v3, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 480, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V31, v3, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 496, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P0, p0, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 512, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P1, p1, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 514, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P2, p2, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 516, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P3, p3, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 518, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P4, p4, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 520, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P5, p5, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 522, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P6, p6, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 524, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(P7, p7, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 526, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(ULD0, uld0, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 1536, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(ULD1, uld1, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 1537, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(ULD2, uld2, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 1538, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(ULD3, uld3, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 1539, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(UST0, ust0, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 2048, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(UST1, ust1, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 2049, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(UST2, ust2, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 2050, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(UST3, ust3, 32), VEC_ID << ID_OFFSET | 2UL << 48 | 2051, AIV_MASK},
   {ASCEND_REG(UST_FLAG_0, lldb_ust_flag_0_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 2052, AIV_MASK},
   {ASCEND_REG(UST_FLAG_1, lldb_ust_flag_1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 2053, AIV_MASK},
   {ASCEND_REG(UST_FLAG_2, lldb_ust_flag_2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 2054, AIV_MASK},
@@ -649,37 +727,37 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_GPR_NBYTES(TPESL14, tpesl14, 8), 0, AIV_MASK},
   {ASCEND_GPR_NBYTES(TPESL15, tpesl15, 8), 0, AIV_MASK},
   // 128bit
-  {ASCEND_GPR_NBYTES(TPESLL0, tpesll0, 16), 0, AIV_MASK},
-  {ASCEND_GPR_NBYTES(TPESLL1, tpesll1, 16), 0, AIV_MASK},
-  {ASCEND_GPR_NBYTES(TPESLL2, tpesll2, 16), 0, AIV_MASK},
-  {ASCEND_GPR_NBYTES(TPESLL3, tpesll3, 16), 0, AIV_MASK},
-  {ASCEND_GPR_NBYTES(TPESLL4, tpesll4, 16), 0, AIV_MASK},
-  {ASCEND_GPR_NBYTES(TPESLL5, tpesll5, 16), 0, AIV_MASK},
-  {ASCEND_GPR_NBYTES(TPESLL6, tpesll6, 16), 0, AIV_MASK},
-  {ASCEND_GPR_NBYTES(TPESLL7, tpesll7, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL0, tpesll0, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL1, tpesll1, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL2, tpesll2, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL3, tpesll3, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL4, tpesll4, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL5, tpesll5, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL6, tpesll6, 16), 0, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(TPESLL7, tpesll7, 16), 0, AIV_MASK},
 
-  {ASCEND_REG_16B(VA_0, lldb_va_0_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3072, AIV_MASK},
-  {ASCEND_REG_16B(VA_1, lldb_va_1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3073, AIV_MASK},
-  {ASCEND_REG_16B(VA_2, lldb_va_2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3074, AIV_MASK},
-  {ASCEND_REG_16B(VA_3, lldb_va_3_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3075, AIV_MASK},
-  {ASCEND_REG_16B(VA_4, lldb_va_4_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3076, AIV_MASK},
-  {ASCEND_REG_16B(VA_5, lldb_va_5_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3077, AIV_MASK},
-  {ASCEND_REG_16B(VA_6, lldb_va_6_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3078, AIV_MASK},
-  {ASCEND_REG_16B(VA_7, lldb_va_7_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3079, AIV_MASK},
-  {ASCEND_REG(AREG_0, lldb_areg_0_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3584, AIV_MASK},
-  {ASCEND_REG(AREG_1, lldb_areg_1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3585, AIV_MASK},
-  {ASCEND_REG(AREG_2, lldb_areg_2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3586, AIV_MASK},
-  {ASCEND_REG(AREG_3, lldb_areg_3_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3587, AIV_MASK},
-  {ASCEND_REG(AREG_4, lldb_areg_4_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3588, AIV_MASK},
-  {ASCEND_REG(AREG_5, lldb_areg_5_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3589, AIV_MASK},
-  {ASCEND_REG(AREG_6, lldb_areg_6_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3590, AIV_MASK},
-  {ASCEND_REG(AREG_7, lldb_areg_7_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 3591, AIV_MASK},
-  {ASCEND_REG_16B(MASK, lldb_mask_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 4608, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA0, va0, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3072, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA1, va1, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3073, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA2, va2, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3074, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA3, va3, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3075, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA4, va4, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3076, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA5, va5, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3077, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA6, va6, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3078, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(VA7, va7, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 3079, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A0, a0, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3584, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A1, a1, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3585, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A2, a2, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3586, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A3, a3, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3587, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A4, a4, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3588, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A5, a5, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3589, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A6, a6, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3590, AIV_MASK},
+  {ASCEND_GPR_NBYTES(A7, a7, 4), VEC_ID << ID_OFFSET | 2UL << 48 | 3591, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(MASK, mask, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 4608, AIV_MASK},
   {ASCEND_REG(AR, lldb_ar_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 5632, AIV_MASK},
   {ASCEND_REG(VMS4_SR, lldb_vms4_sr_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 6144, AIV_MASK},
-  {ASCEND_REG_32B(SQZN, lldb_sqzn_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 6656, AIV_MASK},
+  {ASCEND_GPR_NBYTES_VEC(SQZN, sqzn, 16), VEC_ID << ID_OFFSET | 2UL << 48 | 6656, AIV_MASK},
   {ASCEND_REG(VPC, lldb_vpc_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 7168, AIV_MASK},
-  {ASCEND_REG(VL, lldb_vl_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 7680, AIV_MASK},
+  {ASCEND_GPR_NBYTES(VL, vl, 2), VEC_ID << ID_OFFSET | 2UL << 48 | 7680, AIV_MASK},
   {ASCEND_REG(AGU_AM_CONST_0, lldb_agu_am_const_0_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 8192, AIV_MASK},
   {ASCEND_REG(AGU_AM_CONST_1, lldb_agu_am_const_1_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 8193, AIV_MASK},
   {ASCEND_REG(AGU_AM_CONST_2, lldb_agu_am_const_2_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 8194, AIV_MASK},
@@ -750,13 +828,13 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_REG(UST_ELE_OFS_3, lldb_ust_ele_ofs_3_ascend), VEC_ID << ID_OFFSET | 2UL << 48 | 8707, AIV_MASK},
   {ASCEND_REG(CORE_ID, lldb_core_id_ascend), VEC_ID << ID_OFFSET | 9UL << 48, AIV_MASK},
   {ASCEND_REG(VEC_CORE_ID, lldb_vec_core_id_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 1, AIV_MASK},
-  {ASCEND_REG(VTHREADDIM_x, lldb_vthreaddim_x_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 2, AIV_MASK},
-  {ASCEND_REG(VTHREADDIM_y, lldb_vthreaddim_y_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 3, AIV_MASK},
-  {ASCEND_REG(VTHREADDIM_z, lldb_vthreaddim_z_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 4, AIV_MASK},
+  {ASCEND_REG_2B(VTHREADDIM_X, lldb_vthreaddim_x_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 2, AIV_MASK},
+  {ASCEND_REG_2B(VTHREADDIM_Y, lldb_vthreaddim_y_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 3, AIV_MASK},
+  {ASCEND_REG_2B(VTHREADDIM_Z, lldb_vthreaddim_z_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 4, AIV_MASK},
   {ASCEND_REG(SIMT_PC, lldb_simt_pc_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 16384, AIV_MASK},
   {ASCEND_REG(SU_PC, lldb_su_pc_ascend), SU_ID << ID_OFFSET | 64, MIX_MASK},
   {ASCEND_REG(P_REGISTER, lldb_p_register_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 98304, AIV_MASK},
-  {ASCEND_REG(EXECMASK, lldb_execmask_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 114688, AIV_MASK},
+  {ASCEND_REG_4B(EXECMASK, lldb_execmask_ascend), VEC_ID << ID_OFFSET | 9UL << 48 | 0x1c000, AIV_MASK},
   {ASCEND_GPR_NBYTES(R0, r0, 4), VEC_ID << ID_OFFSET | 9UL << 48 | 81920, AIV_MASK},
   {ASCEND_GPR_NBYTES(R1, r1, 4), VEC_ID << ID_OFFSET | 9UL << 48 | 81920, AIV_MASK},
   {ASCEND_GPR_NBYTES(R2, r2, 4), VEC_ID << ID_OFFSET | 9UL << 48 | 81920, AIV_MASK},
@@ -905,14 +983,130 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_REG(LOOP4_PARA, lldb_loop4_para_ascend), L1_ID << ID_OFFSET | 1UL << 48 | 7, AIC_MASK},
   {ASCEND_REG(CHANNEL_PARA, lldb_channel_para_ascend), L1_ID << ID_OFFSET | 1UL << 48 | 8, AIC_MASK},
   {ASCEND_REG(ELT_ANTIQ_PARA, lldb_elt_antiq_para_ascend), L1_ID << ID_OFFSET | 1UL << 48 | 9, AIC_MASK},
-  {ASCEND_REG(L1_WARN, lldb_l1_warn_ascend), L1_ID << ID_OFFSET | 7UL << 48, AIC_MASK}
+  {ASCEND_REG(L1_WARN, lldb_l1_warn_ascend), L1_ID << ID_OFFSET | 7UL << 48, AIC_MASK},
+  // for core file only. if you add new both reg, please insert before
+  {ASCEND_REG_4B(SC_ERROR_T0_0, lldb_sc_error_t0_0), 0x4700, MIX_MASK},
+  {ASCEND_REG_4B(SU_ERROR_T0_0, lldb_su_error_t0_0), 0x5700, MIX_MASK},
+  {ASCEND_REG_4B(MTE_ERROR_T0_0, lldb_mte_error_t0_0), 0x6700, MIX_MASK},
+  {ASCEND_REG_4B(MTE_ERROR_T1_0, lldb_mte_error_t1_0), 0x6708, MIX_MASK},
+  {ASCEND_REG_4B(VEC_ERROR_T0_0, lldb_vec_error_t0_0), 0x7700, AIV_MASK},
+  {ASCEND_REG_4B(VEC_ERROR_T0_2, lldb_vec_error_t0_2), 0x7708, AIV_MASK},
+  {ASCEND_REG_4B(CUBE_ERROR_T0_0, lldb_cube_error_t0_0), 0x8700, AIC_MASK},
+  {ASCEND_REG_4B(CUBE_ERROR_T0_1, lldb_cube_error_t0_1), 0x8704, AIC_MASK},
+  {ASCEND_REG_4B(L1_ERROR_T0_0, lldb_l1_error_t0_0), 0xa700, MIX_MASK},
+  {ASCEND_REG_4B(L1_ERROR_T0_1, lldb_l1_error_t0_0), 0xa704, MIX_MASK},
+
+  {ASCEND_REG_4B(SC_ERR_INFO_T0_0, lldb_sc_err_info_t0_0), 0x4730, MIX_MASK},
+  {ASCEND_REG_4B(SC_ERR_INFO_T0_1, lldb_sc_err_info_t0_1), 0x4734, MIX_MASK},
+
+  {ASCEND_REG_4B(SU_ERR_INFO_T0_0, lldb_su_err_info_t0_0), 0x5730, MIX_MASK},
+  {ASCEND_REG_4B(SU_ERR_INFO_T0_1, lldb_su_err_info_t0_1), 0x5734, MIX_MASK},
+  {ASCEND_REG_4B(SU_ERR_INFO_T0_2, lldb_su_err_info_t0_2), 0x5738, MIX_MASK},
+  {ASCEND_REG_4B(SU_ERR_INFO_T0_3, lldb_su_err_info_t0_3), 0x573C, MIX_MASK},
+
+  {ASCEND_REG_4B(MTE_ERR_INFO_T0_0, lldb_mte_err_info_t0_0), 0x6718, MIX_MASK},
+  {ASCEND_REG_4B(MTE_ERR_INFO_T0_1, lldb_mte_err_info_t0_0), 0x671c, MIX_MASK},
+  {ASCEND_REG_4B(MTE_ERR_INFO_T0_2, lldb_mte_err_info_t0_0), 0x6720, MIX_MASK},
+  {ASCEND_REG_4B(MTE_ERR_INFO_T1_0, lldb_mte_err_info_t0_0), 0x6724, MIX_MASK},
+  {ASCEND_REG_4B(MTE_ERR_INFO_T1_1, lldb_mte_err_info_t0_0), 0x6728, MIX_MASK},
+  {ASCEND_REG_4B(MTE_ERR_INFO_T1_2, lldb_mte_err_info_t0_0), 0x673c, MIX_MASK}, // 地址是否有问题？
+
+  {ASCEND_REG_4B(VEC_ERR_INFO_T0_0, lldb_vec_err_info_t0_0), 0x7730, AIV_MASK},
+  {ASCEND_REG_4B(VEC_ERR_INFO_T0_1, lldb_vec_err_info_t0_0), 0x7734, AIV_MASK},
+  {ASCEND_REG_4B(VEC_ERR_INFO_T0_2, lldb_vec_err_info_t0_0), 0x7738, AIV_MASK},
+  {ASCEND_REG_4B(VEC_ERR_INFO_T0_3, lldb_vec_err_info_t0_0), 0x773c, AIV_MASK},
+  {ASCEND_REG_4B(VEC_ERR_INFO_T0_4, lldb_vec_err_info_t0_0), 0x7740, AIV_MASK},
+  {ASCEND_REG_4B(VEC_ERR_INFO_T0_5, lldb_vec_err_info_t0_0), 0x7744, AIV_MASK},
+
+  {ASCEND_REG_4B(CUBE_ERR_INFO_T0_1, lldb_cube_err_info_t0_0), 0x8730, AIC_MASK},
+  {ASCEND_REG_4B(CUBE_ERR_INFO_T0_2, lldb_cube_err_info_t0_0), 0x8734, AIC_MASK},
+
+  {ASCEND_REG_4B(L1_ERR_INFO_T0_0, lldb_l1_err_info_t0_0), 0xa718, MIX_MASK},
+  {ASCEND_REG_4B(L1_ERR_INFO_T0_1, lldb_l1_err_info_t0_0), 0xa71c, MIX_MASK},
 };
- 
+
+// Returns uint32_t with bits [start, end] = 1
+inline constexpr uint32_t GenMask(uint32_t start, uint32_t end) {
+  return static_cast<uint32_t>(((1UL << (end - start + 1)) - 1) << start);
+}
+
+inline void AddMaskCommon(uint32_t mask, uint32_t err_info_reg_num, vector<ErrRegMask> &err_infos) {
+  ErrRegMask info_map = { mask };
+  ErrInfoReg pc_map = {
+      err_info_reg_num,
+      {
+        {GenMask(0, 15), GenMask(2, 17)},
+      }
+  };
+  info_map.err_info_regs.emplace_back(pc_map);
+  err_infos.emplace_back(info_map);
+}
+
+inline void AddVecMask(uint32_t mask, vector<ErrRegMask> &err_infos) {
+  ErrRegMask info_map = { mask };
+  ErrInfoReg pc_map = {
+      lldb_vec_err_info_t0_1,
+      {
+        {GenMask(0, 31), GenMask(0, 31)},
+      }
+  };
+  info_map.err_info_regs.emplace_back(pc_map);
+  pc_map = {
+      lldb_vec_err_info_t0_2,
+      {
+        {GenMask(0, 16), GenMask(32, 48)},
+      }
+  };
+  info_map.err_info_regs.emplace_back(pc_map);
+  err_infos.emplace_back(info_map);
+}
+
 static_assert(sizeof(REGISTER_950_INFO) / sizeof(DeviceRegisterInfo) == k_num_registers_ascend,
               "REGISTER_950_INFO size is invalid");
+} // namespace
+
+const vector<vector<ErrRegMask>> *RegisterInfoPOSIXCore_ascend950::GetAicErrorRegTable() {
+  static vector<vector<ErrRegMask>> table;
+  if (!table.empty()) {
+    return &table;
+  }
+
+  auto addMask = [&](const auto& err_info, uint32_t mask) {
+      vector<ErrRegMask> err_infos;
+      AddMaskCommon(err_info, mask, err_infos);
+      table.push_back(err_infos);
+  };
+
+  auto addVecMask = [&](uint32_t mask) {
+      vector<ErrRegMask> err_infos;
+      AddVecMask(mask, err_infos);
+      table.push_back(err_infos);
+  };
+  // sc_error_t0_0
+  table.push_back({});
+  // su_error_t0_0
+  addMask(lldb_su_err_info_t0_0, GenMask(0, 31));
+  // mte_error_t0_0
+  addMask(lldb_mte_err_info_t0_0, GenMask(0, 31));
+  // mte_error_t1_0
+  addMask(lldb_mte_err_info_t0_0, GenMask(0, 31));
+  // vec_error_t0_0
+  addVecMask(GenMask(0, 25));
+  // vec_error_t0_2
+  addVecMask(GenMask(0, 1));
+  // cube_error_t0_9
+  addMask(lldb_cube_err_info_t0_1, GenMask(0, 15));
+  // cube_error_t0_1
+  addMask(lldb_cube_err_info_t0_1, GenMask(0, 9));
+  // l1_error_t0_0
+  addMask(lldb_l1_err_info_t0_1, GenMask(0, 30));
+  // l1_error_t0_1
+  addMask(lldb_l1_err_info_t0_1, GenMask(0, 21));
+  return &table;
+}
  
 const RegExtractor &RegisterInfoPOSIX_ascend950::GetRegExtractor() {
-  static RegExtractor instance(REGISTER_950_INFO, k_num_registers_ascend);
+  static RegExtractor instance(REGISTER_950_INFO, k_num_dbg_registers_ascend);
   static std::once_flag flag{};
   std::call_once(flag, []() {
     LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
@@ -929,10 +1123,14 @@ const RegisterInfo *RegisterInfoPOSIX_ascend950::GetRegisterInfoAt(uint32_t reg_
 }
  
 RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch)
-  : RegisterInfoPOSIX_ascend(target_arch, k_num_registers_ascend,
+  : RegisterInfoPOSIX_ascend(target_arch, k_num_dbg_registers_ascend,
     k_last_gpr_ascend - k_first_gpr_ascend + 1,
     GetRegExtractor().raw_register_infos.data(),
     GetRegExtractor().register_map) {
+}
+
+size_t RegisterInfoPOSIX_ascend950::GetRegisterSetCount() const {
+  return k_num_register_sets_default;
 }
  
 const RegisterSet* RegisterInfoPOSIX_ascend950::GetRegisterSet(size_t set_index) const {
@@ -958,11 +1156,6 @@ Status RegisterInfoPOSIX_ascend950::GetRegisterAddr(const llvm::StringRef reg_na
   return error;
 }
 
-uint64_t RegisterInfoPOSIX_ascend950::GetDbgAddr(uint64_t addr) {
-    addr |= (SU_ID << ID_OFFSET);
-    return addr;
-}
-
 bool RegisterInfoPOSIX_ascend950::IsSimtPC(const RegisterInfo *reg_info) {
   return reg_info->kinds[eRegisterKindLLDB] == lldb_simt_pc_ascend;
 }
@@ -971,10 +1164,14 @@ bool RegisterInfoPOSIX_ascend950::IsSReg(const RegisterInfo *reg_info) {
   return reg_info->kinds[eRegisterKindLLDB] >= lldb_sreg_first && reg_info->kinds[eRegisterKindLLDB] <= lldb_sreg_last;
 }
 
+bool RegisterInfoPOSIX_ascend950::IsVReg(const RegisterInfo *reg_info) {
+  return reg_info->kinds[eRegisterKindLLDB] >= lldb_v0_ascend && reg_info->kinds[eRegisterKindLLDB] <= lldb_v31_ascend;
+}
+
 RegisterInfoPOSIX_ascend950::BaseRegGroup
 RegisterInfoPOSIX_ascend950::GetSRegGroup(const RegisterInfo *reg_info) {
   constexpr uint32_t once_bytes = 4;
-  uint8_t read_count = reg_info->byte_size / once_bytes;
+  uint8_t read_count = (reg_info->byte_size + once_bytes - 1) / once_bytes;
   uint32_t cur_reg_num = reg_info->kinds[eRegisterKindLLDB];
   // 16bit
   if (cur_reg_num >= lldb_s0_ascend && cur_reg_num <= lldb_s63_ascend) {
@@ -991,8 +1188,8 @@ RegisterInfoPOSIX_ascend950::GetSRegGroup(const RegisterInfo *reg_info) {
     return {(cur_reg_num - lldb_tpesl0_ascend) * 2 + lldb_tpes0_ascend, read_count, 0};
   }
   // 128bit
-  if (cur_reg_num >= lldb_s0_ascend && cur_reg_num <= lldb_s63_ascend) {
-    return {(cur_reg_num - lldb_s0_ascend) * 4 + lldb_tpes0_ascend, read_count, 0};
+  if (cur_reg_num >= lldb_tpesll0_ascend && cur_reg_num <= lldb_tpesll7_ascend) {
+    return {(cur_reg_num - lldb_tpesll0_ascend) * 4 + lldb_tpes0_ascend, read_count, 0};
   }
   return {cur_reg_num, read_count, 0};
 }
@@ -1000,8 +1197,11 @@ RegisterInfoPOSIX_ascend950::GetSRegGroup(const RegisterInfo *reg_info) {
 // ============== RegisterInfoPOSIXCore_ascend950 =================
 const RegExtractor &RegisterInfoPOSIXCore_ascend950::GetRegExtractor() {
   static RegExtractor instance(REGISTER_950_INFO, k_num_registers_ascend);
-  LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
-            instance.raw_register_infos.size());
+  static std::once_flag flag{};
+  std::call_once(flag, []() {
+    LLDB_LOGF(GetLog(LLDBLog::Process), "core raw_register_infos_size=%lu",
+              instance.raw_register_infos.size());
+  });
   return instance;
 }
 
@@ -1018,12 +1218,209 @@ RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_
   : RegisterInfoPOSIX_ascend(target_arch, register_info_count,
     register_gpr_count, register_info_p, register_map) {
 }
- 
+
+Status RegisterInfoPOSIX_ascend950::ReadVXReg(
+        const RegisterInfo *reg_info, const InterruptPosInfo &pos,
+        const RegisterDataInterface *reg_data_reader,
+        RegisterValue &value) const {
+  Log *log = GetLog(LLDBLog::Process);
+  // simd is 256bit
+  constexpr uint16_t vl_size = 256;
+  constexpr uint8_t read_count = vl_size / 32; 
+  DataBufferHeap buffer;
+  Status error;
+  if (m_register_map.find(reg_info->name) == m_register_map.end()) {
+    error.SetErrorStringWithFormatv("Internl error: find addr for register {0} failed.", reg_info->name);
+    return error;
+  }
+  const DeviceRegisterInfo &device_reg_info = m_register_map.at(reg_info->name);
+  for (uint8_t i = 0; i < read_count; i++) {
+    RegisterValue tmp_value;
+    RegisterInfo one_reg_info = *reg_info;
+    one_reg_info.byte_size = 32;
+    error = reg_data_reader->ReadRegister(device_reg_info.addr | i,
+                                          &one_reg_info, pos.core_id, pos.core_type, tmp_value);
+    if (error.Fail()) {
+      return error;
+    }
+    const uint8_t *value_data = static_cast<const uint8_t *>(tmp_value.GetBytes());
+    // little order
+    buffer.AppendData(value_data, one_reg_info.byte_size);
+  }
+  value.SetBytes(buffer.GetBytes(), reg_info->byte_size, lldb::eByteOrderLittle);
+  if (log) {
+    StreamString ss;
+    ss << "0x";
+    uint8_t *cur_data = buffer.GetBytes();
+    for (size_t i = 0; i < 32; i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "first 32 bytes value: {1}", ss.GetString());
+  }
+  return error;
+}
+
+Status RegisterInfoPOSIX_ascend950::ReadSXReg(
+        const RegisterInfo *reg_info, const InterruptPosInfo &pos,
+        const RegisterDataInterface *reg_data_reader,
+        RegisterValue &value) const {
+  Log *log = GetLog(LLDBLog::Process);
+
+  auto reg_group = GetSRegGroup(reg_info);
+  Status error;
+  DataBufferHeap buffer;
+  LLDB_LOG(log, "Read register {0} with start_reg={1}, group_num={2}, half_type={3}",
+           reg_info->name, reg_group.start_reg_num,
+           reg_group.num, reg_group.half_type);
+  if (reg_group.num == 0) {
+    error.SetErrorStringWithFormatv("Get register {0} groups info failed", reg_info->name);
+    return error;
+  }
+  for (uint8_t i = 0; i < reg_group.num; i++) {
+    const RegisterInfo *base_reg_info = RegisterInfoPOSIX_ascend950::GetRegisterInfoAt(i + reg_group.start_reg_num);
+    RegisterValue tmp_value;
+    if (base_reg_info && m_register_map.find(base_reg_info->name) != m_register_map.end()) {
+      const DeviceRegisterInfo &device_reg_info = m_register_map.at(base_reg_info->name);
+      error = reg_data_reader->ReadRegister(device_reg_info.addr,
+                                            base_reg_info, pos.core_id, pos.core_type, tmp_value);
+      if (error.Fail()) {
+        return error;
+      }
+      const uint8_t *value_data = static_cast<const uint8_t *>(tmp_value.GetBytes());
+      uint8_t value_bytes = 4;
+      if (reg_group.half_type == 1) {
+        value_bytes = 2;
+      } else if (reg_group.half_type == 2) {
+        value_data += 2;
+        value_bytes = 2;
+      }
+      // little order
+      buffer.AppendData(value_data, value_bytes);
+    }
+  }
+  value.SetBytes(buffer.GetBytes(), reg_info->byte_size, lldb::eByteOrderLittle);
+  if (log) {
+    StreamString ss;
+    ss << "0x";
+    uint8_t *cur_data = buffer.GetBytes();
+    for (size_t i = 0; i < std::min(reg_info->byte_size, 8U); i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "first {0} byte value: {1}",
+             std::min(reg_info->byte_size, 8U), ss.GetString());
+  }
+  return error;
+}
+
+Status RegisterInfoPOSIX_ascend950::ReadRXReg(
+        const RegisterInfo *reg_info, uint64_t base_addr,
+        const InterruptPosInfo &pos,
+        const RegisterDataInterface *reg_data_reader,
+        RegisterValue &value) const {
+  Log *log = GetLog(LLDBLog::Process);
+  uint64_t rx_addr = base_addr;
+  uint8_t r_idx = reg_info->kinds[eRegisterKindDWARF] - dwarf_r0_ascend;
+  uint16_t thread_id = pos.thread_info.thread_id;
+  uint16_t warp_id = pos.GetWarpId();
+  rx_addr |= (warp_id % 4) << 10; // bit 11-10
+  uint32_t wid_div = warp_id >> 2;
+  rx_addr |= (wid_div & 0x1) << 9; // bit 9
+
+  rx_addr |= (((wid_div >> 1) & 0x1) | ((r_idx >> 6) & 0x1)) << 8; // bit 8
+  rx_addr |= (((wid_div >> 2) & 0x1) | ((r_idx >> 5) & 0x1)) << 7; // bit 7
+  rx_addr |= (((wid_div >> 3) & 0x1) | ((r_idx >> 4) & 0x1)) << 6; // bit 6
+  rx_addr |= (r_idx & 0xF) << 2; // bit 5-2
+  rx_addr |= thread_id % 32 / 8;
+  RegisterInfo fix_byte_reg_info = *reg_info;
+  fix_byte_reg_info.byte_size = 32;
+  fix_byte_reg_info.encoding = eEncodingVector;
+  RegisterValue batch_thread_value;
+  auto error = reg_data_reader->ReadRegister(rx_addr, &fix_byte_reg_info, pos.core_id, pos.core_type, batch_thread_value);
+  if (error.Fail()) {
+    return error;
+  }
+  const uint8_t *data = static_cast<const uint8_t*>(batch_thread_value.GetBytes());
+  value.SetBytes(data + (thread_id % 8 * 4), 4, batch_thread_value.GetByteOrder());
+  LLDB_LOG(log, "got R[{0}]={1:x}, warp_id={2}, thread_id={3}", r_idx, value.GetAsUInt64(), warp_id, thread_id);
+  if (log) {
+    StreamString ss;
+    ss << "0x";
+    const uint8_t *cur_data = static_cast<const uint8_t*>(batch_thread_value.GetBytes());
+    for (size_t i = 0; i < fix_byte_reg_info.byte_size; i += sizeof(uint32_t)) {
+      ss.Printf("%u ", *reinterpret_cast<const uint32_t*>(cur_data + i));
+    }
+    LLDB_LOG(log, "Read batch Rx, batch value: {0}", ss.GetString());
+  }
+  return error;
+}
+
+Status RegisterInfoPOSIX_ascend950::ReadSimtPC(
+        const RegisterInfo *reg_info, uint64_t base_addr,
+        const InterruptPosInfo &pos, const RegisterDataInterface *reg_data_reader,
+        RegisterValue &value) const {
+  Log *log = GetLog(LLDBLog::Process);
+  uint16_t warp_id = pos.GetWarpId();
+  Status error =  reg_data_reader->ReadRegister(base_addr | warp_id, reg_info, pos.core_id, pos.core_type, value);
+  LLDB_LOG(log, "got SimtPC={0:x}, warp_id={1}", value.GetAsUInt64(), warp_id);
+  return error;
+}
+
+Status RegisterInfoPOSIX_ascend950::ReadExecMask(
+        const RegisterInfo *reg_info, uint64_t base_addr,
+        const InterruptPosInfo &pos, const RegisterDataInterface *reg_data_reader,
+        RegisterValue &value) const {
+  Log *log = GetLog(LLDBLog::Process);
+  uint16_t warp_id = pos.GetWarpId();
+  Status error =  reg_data_reader->ReadRegister(base_addr | warp_id, reg_info, pos.core_id, pos.core_type, value);
+  LLDB_LOG(log, "got exec_mask={0:x}, warp_id={1}", value.GetAsUInt32(), warp_id);
+  return error;
+}
+
+Status RegisterInfoPOSIX_ascend950::ReadRegister(
+        const RegisterInfo *reg_info, const InterruptPosInfo &pos_info,
+        const RegisterDataInterface *reg_data_reader, RegisterValue &value) const {
+  Status error;
+  if (reg_info && reg_info->kinds[eRegisterKindLLDB] < m_register_map.size() &&
+      m_register_map.find(reg_info->name) != m_register_map.end()) {
+    const DeviceRegisterInfo &device_reg_info = m_register_map.at(reg_info->name);
+    uint64_t addr = device_reg_info.addr;
+
+    // Read R0~R129
+    if (reg_info->kinds[eRegisterKindDWARF] >= dwarf_r0_ascend && reg_info->kinds[eRegisterKindDWARF] <= dwarf_rx_max_id) {
+      return ReadRXReg(reg_info, addr, pos_info, reg_data_reader, value);
+    }
+    if (IsSimtPC(reg_info)) {
+      return ReadSimtPC(reg_info, addr, pos_info, reg_data_reader, value);
+    }
+    if (reg_info->kinds[eRegisterKindLLDB] == lldb_execmask_ascend) {
+      return ReadExecMask(reg_info, addr, pos_info, reg_data_reader, value);
+    }
+    // Read S0~S60
+    if (IsSReg(reg_info)) {
+      return ReadSXReg(reg_info, pos_info, reg_data_reader, value);
+    }
+
+    if (IsVReg(reg_info)) {
+      return ReadVXReg(reg_info, pos_info, reg_data_reader, value);
+    }
+
+    error = reg_data_reader->ReadRegister(addr, reg_info, pos_info.core_id, pos_info.core_type, value);
+    if (error.Fail()) {
+      return error;
+    }
+  } else {
+    error.SetErrorString("reg_info is null or reg_num in reg_info is invalid");
+  }
+  return error;
+}
+
 static const RegisterSet g_core_reg_sets[k_num_register_sets] = {
   {"SURegisters", "su_dbg_reg", k_num_su_registers, g_su_regnums_ascend950},
   {"MTERegisters", "mte_dbg_reg", k_num_mte_registers, g_mte_regnums_ascend950},
   {"VECRegisters", "vec_dbg_reg", k_num_vecrb_registers, g_vecrb_regnums_ascend950},
   {"L1Registers", "l1_dbg_reg", k_num_l1_registers, g_l1_regnums_ascend950},
+  {"AicErrorRegisters", "aic_err_reg", k_num_aic_error_registers, g_aic_error_regnums},
+  {"ErrorInfoRegisters", "err_info_reg", k_num_err_info_registers, g_err_info_regnums},
 };
  
 const RegisterSet* RegisterInfoPOSIXCore_ascend950::GetRegisterSet(size_t set_index) const {

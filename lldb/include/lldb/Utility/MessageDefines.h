@@ -13,6 +13,15 @@
 namespace lldb_private {
 constexpr uint32_t KERNEL_NAME_SIZE = 2048;
 
+enum class CoreStatus {
+  UNKNOWN = 0,
+  RUNNING = 1,
+  BRKPT = 2,
+  SINGLE_STEP = 3,
+  EXCEPTION = 4,
+  TASK_KILLED = 5
+};
+
 enum class SocType {
   SOC_BEGIN = 0,
   ASCEND910B,
@@ -78,6 +87,23 @@ struct WarpInfo {
 };
 #pragma pack()
 
+struct ThreadInfo {
+  uint16_t thread_dim_x;
+  uint16_t thread_dim_y;
+  uint16_t thread_dim_z;
+  uint16_t thread_id;
+};
+
+struct InterruptEvent {
+  uint8_t core_type;
+  InterruptPosType pos_type;
+  uint8_t reserve[2];
+  CoreStatus status;
+  uint32_t core_id;
+  uint64_t pc;
+  ThreadInfo thread_info;
+};
+
 struct ThreadPos {
   uint16_t x;
   uint16_t y;
@@ -130,8 +156,8 @@ struct DeviceStopInfo {
   // used by coredump currently
   std::string stop_description;
 
-  uint16_t thread_idx_x;
-  uint16_t thread_idx_y;
+  uint16_t thread_idx_x; 
+  uint16_t thread_idx_y; 
   uint16_t thread_idx_z;
 };
 
@@ -142,6 +168,51 @@ struct MemoryTypeInfo {
   DeviceAddressClass address_class;
   uint8_t element_size;
 };
+
+// 
+struct InterruptPosInfo {
+  CoreType core_type;
+  bool single_core_run;
+  bool single_warp_run;
+  uint32_t core_id;
+  InterruptPosType pos_type{InterruptPosType::STARS_SU_INTERRUPT};
+  ThreadPos thread_pos;
+  uint64_t pc;
+  ThreadInfo thread_info;
+
+  void Update(const InterruptEvent &event) {
+   core_id = event.core_id;
+   core_type = (CoreType)event.core_type;
+   pos_type = event.pos_type;
+   pc = event.pc;
+   thread_info = event.thread_info;
+   if (thread_info.thread_dim_x && thread_info.thread_dim_y && thread_info.thread_dim_z) {
+     thread_pos.x = thread_info.thread_id % thread_info.thread_dim_x;
+     thread_pos.y = thread_info.thread_id / thread_info.thread_dim_x % thread_info.thread_dim_y;
+     thread_pos.z = thread_info.thread_id / thread_info.thread_dim_x / thread_info.thread_dim_y;
+   }
+  }
+
+  void Reset() {
+    core_id = 1;
+    core_type = CoreType::UNKNOWN_CORE_TYPE;
+    pos_type = InterruptPosType::STARS_SU_INTERRUPT;
+    thread_pos = ThreadPos{};
+    pc = -1;
+    // 默认设置所有warp同步调试
+    single_warp_run = false;
+    thread_info = ThreadInfo{};
+  }
+
+  uint16_t GetWarpNum() const {
+    return (thread_info.thread_dim_x * thread_info.thread_dim_y * thread_info.thread_dim_z + 31U) / 32U;
+  }
+
+  uint16_t GetWarpId() const {
+    return thread_info.thread_id / 32U;
+  }
+};
+
 
 }
 

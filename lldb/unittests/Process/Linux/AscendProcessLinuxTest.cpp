@@ -47,11 +47,6 @@ public:
     bool StartListenThread() override { return true; }
     Status EnableDebugMode() override { return Status(); }
 
-    Status ReadRegister(const RegisterInfo *reg_info,
-                        const InterruptPosInfo &pos_info,
-                        RegisterValue &value) override {
-        return Status("Not implemented");
-    }
     Status GetRegisterAddr(const llvm::StringRef reg_name,
                            CoreType core_type, uint64_t &addr) override {
         return Status("Not implemented");
@@ -60,7 +55,7 @@ public:
                            CoreType core_type) override {
         return Status("Not implemented");
     }
-    Status CheckRegisterAddr(CoreType core_type, uint64_t addr) override {
+    Status CheckRegisterAddr(CoreType core_type, uint64_t addr) const override {
         return Status();
     }
     SocType GetSocType() override { return SocType::SOC_END; }

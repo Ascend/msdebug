@@ -180,34 +180,53 @@ void RegisterContextPOSIXCore_ascend::FixPC(uint64_t &pc) {
   }
 }
 
+Status RegisterContextPOSIXCore_ascend::ReadRegister(
+        uint64_t addr, const RegisterInfo* reg_info, 
+        uint32_t core_id, CoreType core_type, RegisterValue &value) const {
+  Status error;
+  const auto& summary_info = *m_summary_info;
+  const auto data_index = summary_info.focus_core_id;
+  if (summary_info.reg_data.find(data_index) == summary_info.reg_data.end() ||
+      summary_info.reg_data.at(data_index).find(addr) ==
+      summary_info.reg_data.at(data_index).end()) {
+      error.SetErrorStringWithFormatv(
+          "Get value for register_name={0}, register_addr={1:x}, focus_core_id={2} failed",
+          reg_info->name, addr, data_index);
+      return error;
+  }
+  if (summary_info.reg_data.at(data_index).at(addr)->invalid) {
+      error.SetErrorStringWithFormatv(
+          "Get invalid value for register_name={0}, register_addr={1:x}, focus_core_id={2} failed",
+          reg_info->name, addr, data_index);
+    return error;
+  }
+  const auto &core_reg_info = summary_info.reg_data.at(data_index).at(addr);
+  value.SetBytes(core_reg_info->GetValue(), core_reg_info->reg_size, lldb::eByteOrderLittle);
+  return error;
+}
+
 bool RegisterContextPOSIXCore_ascend::ReadRegister(const RegisterInfo *reg_info,
                                                    RegisterValue &value) {
   Log *log = GetLog(LLDBLog::Thread);
   auto register_map = m_register_info->GetRegisterMap();
-  const auto& summary_info = GetThread().GetProcess()->GetSummaryInfo();
+  m_summary_info = &GetThread().GetProcess()->GetSummaryInfo();
 
   if (reg_info && reg_info->kinds[lldb::eRegisterKindLLDB] < register_map.size()) {
     const auto *reg_name = reg_info->name;
     uint64_t addr;
-    Status error = m_register_info->GetRegisterAddr(reg_name, summary_info.focus_core_type, addr);
+    Status error = m_register_info->GetRegisterAddr(reg_name, m_summary_info->focus_core_type, addr);
     if (error.Fail()) {
       LLDB_LOG(log, "Get addr for register_name={0} failed", reg_name);
       return false;
     }
-    if (summary_info.reg_data.find(summary_info.focus_core_id) == summary_info.reg_data.end() ||
-      summary_info.reg_data.at(summary_info.focus_core_id).find(addr) ==
-      summary_info.reg_data.at(summary_info.focus_core_id).end()) {
-      LLDB_LOG(log, "Get value for register_name={0}, register_addr={1:x}, focus_core_id={2} failed",
-               reg_name, addr, summary_info.focus_core_id);
+    // added pos_info;
+    InterruptPosInfo pos_info{};
+    pos_info.core_type = m_summary_info->focus_core_type;
+    error = m_register_info->ReadRegister(reg_info, pos_info, this, value);
+    if (error.Fail()) {
+      LLDB_LOG(log, "Read register {0} failed: {1}", reg_name, error);
       return false;
     }
-    if (summary_info.reg_data.at(summary_info.focus_core_id).at(addr)->invalid) {
-      LLDB_LOG(log, "Get invalid value for register_name={0}, register_addr={1:x}, focus_core_id={2} failed",
-               reg_name, addr, summary_info.focus_core_id);
-      return false;
-    }
-    const auto &core_reg_info = summary_info.reg_data.at(summary_info.focus_core_id).at(addr);
-    value.SetBytes(core_reg_info->GetValue(), core_reg_info->reg_size, lldb::eByteOrderLittle);
     // use error register to fix pc
     if (reg_info->kinds[lldb::eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
         uint64_t pc = value.GetAsUInt64();

@@ -18,11 +18,8 @@ public:
   SocType GetSocType() override { return m_soc_type; }
   Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) override;
   Status GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) override;
-  Status CheckRegisterAddr(CoreType core_type, uint64_t addr) override;
+  Status CheckRegisterAddr(CoreType core_type, uint64_t addr) const override;
  
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      const InterruptPosInfo &pos_info, RegisterValue &value) override;
-
   MemType GetStackMemType() const override;
 
   Status InvalidInstrCache(const lldb::addr_t &addr,
@@ -42,14 +39,6 @@ public:
   Status GetWarpsInfo(std::vector<WarpInfo> &warps_info, const InterruptPosInfo &m_pos_info) const override;
   Status GetWarpInfo(WarpInfo &info, uint16_t warp_id, const InterruptPosInfo &m_pos_info) const override;
 
-private:
-  Status ReadRXReg(const RegisterInfo *reg_info, uint64_t base_addr,
-                   const InterruptPosInfo &pos, RegisterValue &value);
-
-  Status ReadSimtPC(const RegisterInfo *reg_info, uint64_t base_addr,
-                    const InterruptPosInfo &pos, RegisterValue &value);
-
-  Status ReadSXReg(const RegisterInfo *reg_info, const InterruptPosInfo &pos, RegisterValue &value);
 private:
   SocType m_soc_type;
 };

@@ -10,7 +10,7 @@
 #include <map>
 
 #include "RegisterInfoAndSetInterface.h"
-#include "Plugins/Process/Linux/DeviceContext/DeviceContext.h"
+#include "lldb/Utility/MessageDefines.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/RegisterValue.h"
 
@@ -49,8 +49,18 @@ enum DWARF_ASCEND_REGNUM {
   dwarf_x29_ascend,
   dwarf_x30_ascend,
   dwarf_x31_ascend,
-  dwarf_pc_ascend = 128,
-
+  // VA0-VA7
+  dwarf_va0_ascend = 96, dwarf_va1_ascend, dwarf_va2_ascend, dwarf_va3_ascend,
+  dwarf_va4_ascend, dwarf_va5_ascend, dwarf_va6_ascend, dwarf_va7_ascend,
+  // V0-V31
+  dwarf_v0_ascend = 105, dwarf_v1_ascend, dwarf_v2_ascend, dwarf_v3_ascend,
+  dwarf_v4_ascend, dwarf_v5_ascend, dwarf_v6_ascend, dwarf_v7_ascend,
+  dwarf_v8_ascend, dwarf_v9_ascend, dwarf_v10_ascend, dwarf_v11_ascend,
+  dwarf_v12_ascend, dwarf_v13_ascend, dwarf_v14_ascend, dwarf_v15_ascend,
+  dwarf_v16_ascend, dwarf_v17_ascend, dwarf_v18_ascend, dwarf_v19_ascend,
+  dwarf_v20_ascend, dwarf_v21_ascend, dwarf_v22_ascend, dwarf_v23_ascend,
+  dwarf_v24_ascend, dwarf_v25_ascend, dwarf_v26_ascend, dwarf_v27_ascend,
+  dwarf_v28_ascend, dwarf_v29_ascend, dwarf_v30_ascend, dwarf_v31_ascend,
   // sreg
   dwarf_s0_ascend = 137, dwarf_s1_ascend, dwarf_s2_ascend, dwarf_s3_ascend,
   dwarf_s4_ascend, dwarf_s5_ascend, dwarf_s6_ascend, dwarf_s7_ascend,
@@ -77,6 +87,16 @@ enum DWARF_ASCEND_REGNUM {
   dwarf_s84_ascend, dwarf_s85_ascend, dwarf_s86_ascend, dwarf_s87_ascend,
   dwarf_s88_ascend, dwarf_s89_ascend, dwarf_s90_ascend, dwarf_s91_ascend,
   dwarf_s92_ascend, dwarf_s93_ascend, dwarf_s94_ascend, dwarf_s95_ascend,
+  // A0-A7
+  dwarf_a0_ascend = 233, dwarf_a1_ascend, dwarf_a2_ascend, dwarf_a3_ascend, 
+  dwarf_a4_ascend, dwarf_a5_ascend, dwarf_a6_ascend, dwarf_a7_ascend, 
+  // P0-P7
+  dwarf_p0_ascend = 241, dwarf_p1_ascend, dwarf_p2_ascend, dwarf_p3_ascend,
+  dwarf_p4_ascend, dwarf_p5_ascend, dwarf_p6_ascend, dwarf_p7_ascend,
+  // ULD0-ULD7
+  dwarf_uld0_ascend = 257, dwarf_uld1_ascend, dwarf_uld2_ascend, dwarf_uld3_ascend,
+  // UST0-UST7
+  dwarf_ust0_ascend = 261, dwarf_ust1_ascend, dwarf_ust2_ascend, dwarf_ust3_ascend,
   // simt
   dwarf_r0_ascend = 265, dwarf_r1_ascend, dwarf_r2_ascend, dwarf_r3_ascend,
   dwarf_r4_ascend, dwarf_r5_ascend, dwarf_r6_ascend, dwarf_r7_ascend,
@@ -130,6 +150,11 @@ enum DWARF_ASCEND_REGNUM {
   dwarf_tpesll4_ascend, dwarf_tpesll5_ascend, dwarf_tpesll6_ascend, dwarf_tpesll7_ascend,
 
   dwarf_sx_max_id = dwarf_tpesll7_ascend,
+  // used as a placeholder
+  dwarf_pc_ascend,
+  dwarf_sqzn_ascend,
+  dwarf_mask_ascend,
+  dwarf_vl_ascend,
 };
 
 // RegisterKind: EHFrame, DWARF, Generic, Process Plugin, LLDB
@@ -141,9 +166,25 @@ enum DWARF_ASCEND_REGNUM {
        nullptr, nullptr,                                                  \
   }
 
-#define ASCEND_GPR_NBYTES(reg, lower_reg, byte_size)                                         \
+#define ASCEND_GPR_NBYTES(reg, lower_reg, byte_size)                          \
   {                                                                           \
-    #reg, nullptr, byte_size, 0, eEncodingUint, eFormatHex,                           \
+    #reg, nullptr, byte_size, 0, eEncodingUint, eFormatHex,                   \
+       {dwarf_##lower_reg##_ascend, dwarf_##lower_reg##_ascend,               \
+        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##lower_reg##_ascend}, \
+       nullptr, nullptr,                                                      \
+  }
+
+#define ASCEND_GPR_NBYTES_VEC(reg, lower_reg, byte_size)                      \
+  {                                                                           \
+    #reg, nullptr, byte_size, 0, eEncodingVector, eFormatVectorOfUInt8,       \
+       {dwarf_##lower_reg##_ascend, dwarf_##lower_reg##_ascend,               \
+        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##lower_reg##_ascend}, \
+       nullptr, nullptr,                                                      \
+  }
+
+#define ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(reg, lower_reg, byte_size)        \
+  {                                                                           \
+    #reg, nullptr, byte_size, 0, eEncodingVector, eFormatVectorOfUInt32,      \
        {dwarf_##lower_reg##_ascend, dwarf_##lower_reg##_ascend,               \
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##lower_reg##_ascend}, \
        nullptr, nullptr,                                                      \
@@ -165,7 +206,7 @@ enum DWARF_ASCEND_REGNUM {
        nullptr, nullptr,                                                  \
   }
 
-#define ASCEND_REG_4B(reg, kind5)                                            \
+#define ASCEND_REG_4B(reg, kind5)                                         \
   {                                                                       \
     #reg, nullptr, 4, 0, eEncodingUint, eFormatHex,                       \
        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                         \
@@ -173,17 +214,9 @@ enum DWARF_ASCEND_REGNUM {
        nullptr, nullptr,                                                  \
   }
 
-#define ASCEND_REG_16B(reg, kind5)                                         \
+#define ASCEND_REG_2B(reg, kind5)                                         \
   {                                                                       \
-    #reg, nullptr, 16, 0, eEncodingUint, eFormatHex,                      \
-       {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                         \
-        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, kind5},                 \
-       nullptr, nullptr,                                                  \
-  }
- 
-#define ASCEND_REG_32B(reg, kind5)                                         \
-  {                                                                       \
-    #reg, nullptr, 32, 0, eEncodingVector, eFormatHex,                      \
+    #reg, nullptr, 2, 0, eEncodingUint, eFormatDecimal,                   \
        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                         \
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, kind5},                 \
        nullptr, nullptr,                                                  \
@@ -235,6 +268,12 @@ struct RegExtractor {
   std::map<std::string, DeviceRegisterInfo> register_map;
 };
 
+class RegisterDataInterface {
+public:
+    virtual Status ReadRegister(uint64_t addr, const RegisterInfo* reg_info, 
+        uint32_t core_id, CoreType core_type, RegisterValue &value) const = 0;
+};
+
 class RegisterInfoPOSIX_ascend: public RegisterInfoInterface {
 public:
   RegisterInfoPOSIX_ascend(const ArchSpec &target_arch, uint32_t register_info_count,
@@ -256,6 +295,9 @@ public:
   virtual Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr);
 
   virtual const std::vector<std::vector<ErrRegMask>> *GetAicErrorRegTable() { return nullptr; }
+
+  virtual Status ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info,
+                              const RegisterDataInterface *reg_data_reader, RegisterValue &value) const;
 
 protected:
   uint32_t m_register_info_count;

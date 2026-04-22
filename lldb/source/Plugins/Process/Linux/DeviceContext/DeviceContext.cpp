@@ -449,13 +449,13 @@ size_t DeviceContext::ReadLocalMemory(lldb::addr_t addr, size_t size,
     event.src_addr += BLOCK_MEM_SIZE;
   }
   if (log) {
-      StreamString ss;
-      ss << "0x";
-      cur_data = static_cast<uint8_t*>(data);
-      for (size_t i = 0; i < std::min(size, 8UL); i++) {
-          ss.Printf("%02x", cur_data[i]);
-      }
-      LLDB_LOG(log, "Read local memory, first {0} byte value: {1}", std::min(size, 8UL), ss.GetString());
+    StreamString ss;
+    ss << "0x";
+    cur_data = static_cast<uint8_t*>(data);
+    for (size_t i = 0; i < std::min(size, 8UL); i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "Read local memory, first {0} byte value: {1}", std::min(size, 8UL), ss.GetString());
   }
   return size;
 }
@@ -485,9 +485,17 @@ Status DeviceContext::SingleStep(const InterruptPosInfo &pos_info) const {
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&maskInfo, sizeof(maskInfo));
 }
 
+Status DeviceContext::ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info, RegisterValue &value) const {
+  if (!m_reg_info_up) {
+    return Status("internal error: need initialize m_reginster_info");
+  }
+  return m_reg_info_up->ReadRegister(reg_info, pos_info, this, value);
+}
+
+
 Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info, 
                                    uint32_t core_id, CoreType core_type, 
-                                   RegisterValue &reg_value) {
+                                   RegisterValue &reg_value) const {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
   constexpr uint8_t max_bytes = 32;
@@ -502,8 +510,8 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
   }
   error = BaseSqCqComm(CmdType::READ_REGISTER, (const uint8_t *)&param, sizeof(param),
                        (uint8_t *)buffer_sp->GetBytes(), buffer_sp->GetByteSize());
-  LLDB_LOG(log, "Read Register core_id={0} addr={1:x} core_type={2}",
-            core_id, addr, int(core_type));
+  LLDB_LOG(log, "Read {0} Register core_id={1} addr={2:x} core_type={3}",
+           reg_info->name, core_id, addr, int(core_type));
   if (error.Fail()) {
     return error;
   }
@@ -767,29 +775,4 @@ DeviceContext::~DeviceContext() {
     close(m_drv_fd);
   }
 }
-
-void InterruptPosInfo::Reset() {
-  core_id = 0;
-  core_type = CoreType::UNKNOWN_CORE_TYPE;
-  pos_type = InterruptPosType::STARS_SU_INTERRUPT;
-  thread_pos = ThreadPos{};
-  pc = -1;
-  // 默认设置所有warp同步调试
-  single_warp_run = false;
-  thread_info = ThreadInfo{};
-}
-
-void InterruptPosInfo::Update(const InterruptEvent &event) {
-  core_id = event.core_id;
-  core_type = (CoreType)event.core_type;
-  pos_type = event.pos_type;
-  pc = event.pc;
-  thread_info = event.thread_info;
-  if (thread_info.thread_dim_x && thread_info.thread_dim_y && thread_info.thread_dim_z) {
-    thread_pos.x = thread_info.thread_id % thread_info.thread_dim_x;
-    thread_pos.y = thread_info.thread_id / thread_info.thread_dim_x % thread_info.thread_dim_y;
-    thread_pos.z = thread_info.thread_id / thread_info.thread_dim_x / thread_info.thread_dim_y;
-  }
-}
-
 #endif // ifdef MS_DEBUGGER

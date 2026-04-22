@@ -42,4 +42,22 @@ std::map<std::string, DeviceRegisterInfo> RegisterInfoPOSIX_ascend::GetRegisterM
 Status RegisterInfoPOSIX_ascend::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
   return Status();
 }
+
+Status RegisterInfoPOSIX_ascend::ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info,
+        const RegisterDataInterface *reg_data_reader, RegisterValue &value) const {
+  Status error;
+  if (reg_data_reader && reg_info && reg_info->kinds[eRegisterKindLLDB] < m_register_map.size() &&
+      m_register_map.find(reg_info->name) != m_register_map.end()) {
+    const DeviceRegisterInfo &device_reg_info = m_register_map.at(reg_info->name);
+    uint64_t addr = device_reg_info.addr;
+    error = reg_data_reader->ReadRegister(addr, reg_info, pos_info.core_id, pos_info.core_type, value);
+    if (error.Fail()) {
+      return error;
+    }
+  } else {
+    error.SetErrorString("reg_info is null or reg_num in reg_info is invalid");
+  }
+  return error;
+}
+
 #endif // ifdef MS_DEBUGGER

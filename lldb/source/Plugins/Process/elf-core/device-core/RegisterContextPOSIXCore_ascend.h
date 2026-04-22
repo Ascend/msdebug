@@ -10,11 +10,12 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Plugins/Process/elf-core/device-core/ElfCoreDeviceUtilities.h"
 
 using namespace std;
 using namespace lldb_private;
 
-class RegisterContextPOSIXCore_ascend : public RegisterContext {
+class RegisterContextPOSIXCore_ascend : public RegisterContext, RegisterDataInterface {
 public:
   static unique_ptr<RegisterContextPOSIXCore_ascend>
   Create(Thread &thread, const ArchSpec &arch, SocType soc_type);
@@ -25,6 +26,9 @@ public:
 
   bool ReadRegister(const RegisterInfo *reg_info,
                   RegisterValue &value) override;
+
+  Status ReadRegister(uint64_t addr, const RegisterInfo* reg_info, 
+        uint32_t core_id, CoreType core_type, RegisterValue &value) const override;
 
   bool WriteRegister(const RegisterInfo *reg_info,
                      const RegisterValue &value) override;
@@ -55,6 +59,7 @@ private:
 
 private:
   std::unique_ptr<RegisterInfoPOSIX_ascend> m_register_info;
+  const device_core::SummaryInfo *m_summary_info{};
 };
 
 #endif //LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ASCEND_H

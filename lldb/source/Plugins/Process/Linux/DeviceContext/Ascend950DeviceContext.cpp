@@ -4,10 +4,7 @@
 #ifdef MS_DEBUGGER
 #include "Ascend950DeviceContext.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend950.h"
-#include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/StreamString.h"
  
 using namespace lldb_private;
 using namespace lldb;
@@ -68,126 +65,9 @@ using namespace debug_ts;
 Ascend950DeviceContext::Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id):
   DeviceContext(pid, device_id) {
   m_soc_type = SocType::ASCEND950;
-}
-
-Status Ascend950DeviceContext::ReadSXReg(const RegisterInfo *reg_info,
-                                         const InterruptPosInfo &pos, RegisterValue &value) {
-  Log *log = GetLog(LLDBLog::Process);
-
-  auto reg_group = RegisterInfoPOSIX_ascend950::GetSRegGroup(reg_info);
-  Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
-  DataBufferHeap buffer;
-  for (uint8_t i = 0; i < reg_group.num; i++) {
-    const RegisterInfo *base_reg_info = RegisterInfoPOSIX_ascend950::GetRegisterInfoAt(i + reg_group.start_reg_num);
-    RegisterValue tmp_value;
-    if (base_reg_info && register_map.find(base_reg_info->name) != register_map.end()) {
-      const DeviceRegisterInfo &device_reg_info = register_map.at(base_reg_info->name);
-      error = DeviceContext::ReadRegister(device_reg_info.addr,
-                                          base_reg_info, pos.core_id, pos.core_type, tmp_value);
-      if (error.Fail()) {
-        return error;
-      }
-      const uint8_t *value_data = static_cast<const uint8_t *>(tmp_value.GetBytes());
-      uint8_t value_bytes = 4;
-      if (reg_group.half_type == 1) {
-        value_bytes = 2;
-      } else if (reg_group.half_type == 2) {
-        value_data += 2;
-        value_bytes = 2;
-      }
-      // little order
-      buffer.AppendData(value_data, value_bytes);
-    }
-  }
-  value.SetBytes(buffer.GetBytes(), reg_info->byte_size, lldb::eByteOrderLittle);
-  if (log) {
-    StreamString ss;
-    ss << "0x";
-    uint8_t *cur_data = buffer.GetBytes();
-    for (size_t i = 0; i < std::min(reg_info->byte_size, 8U); i++) {
-      ss.Printf("%02x", cur_data[i]);
-    }
-    LLDB_LOG(log, "Read register {0} with start_reg={1}, group_num={2}, half_type={3}, "
-             "first {4} byte value: {5}",
-             reg_info->name, reg_group.start_reg_num,
-             reg_group.num, reg_group.half_type,
-             std::min(reg_info->byte_size, 8U), ss.GetString());
-  }
-  return error;
-}
-
-Status Ascend950DeviceContext::ReadRXReg(const RegisterInfo *reg_info, uint64_t base_addr,
-                                         const InterruptPosInfo &pos, RegisterValue &value) {
-  Log *log = GetLog(LLDBLog::Process);
-  uint64_t rx_addr = base_addr;
-  uint8_t r_idx = reg_info->kinds[eRegisterKindDWARF] - dwarf_r0_ascend;
-  uint16_t thread_id = pos.thread_info.thread_id;
-  uint16_t warp_id = pos.GetWarpId();
-  rx_addr |= (warp_id % 4) << 10; // bit 11-10
-  uint32_t wid_div = warp_id >> 2;
-  rx_addr |= (wid_div & 0x1) << 9; // bit 9
-
-  rx_addr |= (((wid_div >> 1) & 0x1) | ((r_idx >> 6) & 0x1)) << 8; // bit 8
-  rx_addr |= (((wid_div >> 2) & 0x1) | ((r_idx >> 5) & 0x1)) << 7; // bit 7
-  rx_addr |= (((wid_div >> 3) & 0x1) | ((r_idx >> 4) & 0x1)) << 6; // bit 6
-  rx_addr |= (r_idx & 0xF) << 2; // bit 5-2
-  rx_addr |= thread_id % 32 / 8; // maybe thread_idx > 32?
-  RegisterInfo fix_byte_reg_info = *reg_info;
-  fix_byte_reg_info.byte_size = 32;
-  fix_byte_reg_info.encoding = eEncodingVector;
-  RegisterValue batch_thread_value;
-  auto error = DeviceContext::ReadRegister(rx_addr, &fix_byte_reg_info, pos.core_id, pos.core_type, batch_thread_value);
-  if (error.Fail()) {
-    return error;
-  }
-  const uint8_t *data = static_cast<const uint8_t*>(batch_thread_value.GetBytes());
-  value.SetBytes(data + (thread_id % 8 * 4), 4, batch_thread_value.GetByteOrder());
-  LLDB_LOG(log, "got R[{0}]={1:x}, warp_id={2}, thread_id={3}", r_idx, value.GetAsUInt64(), warp_id, thread_id);
-  return error;
-}
-
-Status Ascend950DeviceContext::ReadSimtPC(const RegisterInfo *reg_info, uint64_t base_addr,
-                                         const InterruptPosInfo &pos, RegisterValue &value) {
-  Log *log = GetLog(LLDBLog::Process);
-  uint16_t warp_id = pos.GetWarpId();
-  Status error =  DeviceContext::ReadRegister(base_addr | warp_id, reg_info, pos.core_id, pos.core_type, value);
-  LLDB_LOG(log, "got SimtPC={0:x}, warp_id={1}", value.GetAsUInt64(), warp_id);
-  return error;
+  m_reg_info_up = std::make_unique<RegisterInfoPOSIX_ascend950>(ArchSpec("hiipu64"));
 }
  
-Status Ascend950DeviceContext::ReadRegister(const RegisterInfo *reg_info,
-                                            const InterruptPosInfo &pos_info, RegisterValue &value) {
-  Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
-  if (reg_info && reg_info->kinds[eRegisterKindLLDB] < register_map.size() &&
-      register_map.find(reg_info->name) != register_map.end()) {
-    const DeviceRegisterInfo &device_reg_info = register_map.at(reg_info->name);
-    uint64_t addr = device_reg_info.addr;
-
-    // Read R0~R129
-    if (reg_info->kinds[eRegisterKindDWARF] >= dwarf_r0_ascend && reg_info->kinds[eRegisterKindDWARF] <= dwarf_rx_max_id) {
-      return ReadRXReg(reg_info, addr, pos_info, value);
-    }
-    if (RegisterInfoPOSIX_ascend950::IsSimtPC(reg_info)) {
-      return ReadSimtPC(reg_info, addr, pos_info, value);
-    }
-    // Read S0~S60
-    if (RegisterInfoPOSIX_ascend950::IsSReg(reg_info)) {
-      return ReadSXReg(reg_info, pos_info, value);
-    }
-
-    error = DeviceContext::ReadRegister(addr, reg_info, pos_info.core_id, pos_info.core_type, value);
-    if (error.Fail()) {
-      return error;
-    }
-  } else {
-    error.SetErrorString("reg_info is null or reg_num in reg_info is invalid");
-  }
-  return error;
-}
-
-
 Status Ascend950DeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
   Status error;
   const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
@@ -220,7 +100,7 @@ Status Ascend950DeviceContext::GetRegisterList(std::vector<std::string> &reg_lis
   return error;
 }
 
-Status Ascend950DeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) {
+Status Ascend950DeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) const {
   Status error;
   const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
   for (const auto &item : register_map) {
@@ -422,7 +302,7 @@ Status Ascend950DeviceContext::RemoveHardwareBreakpoint(
       error.SetErrorStringWithFormatv("get {0} warp failed: not matched warp id", i);
       return error;
     }
-
+    LLDB_LOG(log, "warp_id={0}, warp_pc={1:x}", warp_info.warp_id, warp_info.simt_pc);
     warps_info.push_back(warp_info);
   }
   return error;

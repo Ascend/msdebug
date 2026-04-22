@@ -485,8 +485,11 @@ const vector<vector<ErrRegMask>> *RegisterInfoPOSIXCore_ascend910B::GetAicErrorR
 
 const RegExtractor &RegisterInfoPOSIX_ascend910B::GetRegExtractor() {
   static RegExtractor instance(REGISTER_910B_INFO, k_num_dbg_registers_ascend);
-  LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
-            instance.raw_register_infos.size());
+  static std::once_flag flag{};
+  std::call_once(flag, []() {
+    LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
+              instance.raw_register_infos.size());
+  });
   return instance;
 }
 
@@ -532,8 +535,11 @@ Status RegisterInfoPOSIX_ascend910B::GetRegisterAddr(const llvm::StringRef reg_n
 
 const RegExtractor &RegisterInfoPOSIXCore_ascend910B::GetRegExtractor() {
   static RegExtractor instance(REGISTER_910B_INFO, k_num_registers_ascend);
-  LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
-            instance.raw_register_infos.size());
+  static std::once_flag flag{};
+  std::call_once(flag, []() {
+    LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
+              instance.raw_register_infos.size());
+  });
   return instance;
 }
 
