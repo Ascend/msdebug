@@ -128,9 +128,6 @@ public:
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
-#ifdef MS_DEBUGGER
-                eCommandProcessMustNotBeTaskKilled |
-#endif
                 eCommandProcessMustBePaused) {}
 
   ~CommandObjectThreadBacktrace() override = default;

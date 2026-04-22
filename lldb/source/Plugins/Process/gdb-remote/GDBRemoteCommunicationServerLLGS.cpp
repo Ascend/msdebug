@@ -4758,9 +4758,8 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
       const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_num);
       // make special judgement to obtain the PC when ctrl-c in the device
       if (main_thread && main_thread->GetStopReason(stop_info, description)) {
-        static constexpr uint32_t PC_REG_NUM = 64;
         if (stop_info.still_break_in_device && stop_info.reason == StopReason::eStopReasonSignal &&
-            reg_num == PC_REG_NUM) {
+            reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
           uint64_t reg_value = 0;
           status = m_current_process->GetStoppedCorePC(reg_value);
           if (status.Fail()) {
