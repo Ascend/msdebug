@@ -635,6 +635,8 @@ void AscendProcessLinux::TryUpdateThreadIndex(InterruptEvent &event) {
     event.thread_info = m_pos_info.thread_info;
   }
 
+  // 默认设置所有warp单步
+  m_pos_info.single_warp_run = false;
   return;
 
 }

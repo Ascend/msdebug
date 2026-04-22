@@ -295,16 +295,16 @@ inline auto FormatCoresLog(const DeviceCoreMask &cores) {
 Status Ascend950DeviceContext::Resume(const InterruptPosInfo &pos_info) const {
   ControlUnitParam param;
   param.core_info = GenCoreMask(pos_info);
-  param.pos_type = pos_info.pos_type;
   if (pos_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
       if (pos_info.single_warp_run) {
           param.thread_id_x = pos_info.thread_pos.x;
           param.thread_id_y = pos_info.thread_pos.y;
           param.thread_id_z = pos_info.thread_pos.z;
       } else {
-          param.enable_all_warp = true;
+          param.enable_all_warp = 1;
       }
   }
+  param.pos_type = pos_info.pos_type;
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, {5}), pos_type={6}",
            param.core_info.magic,
@@ -324,9 +324,10 @@ Status Ascend950DeviceContext::SingleStep(const InterruptPosInfo &pos_info) cons
           param.thread_id_y = pos_info.thread_pos.y;
           param.thread_id_z = pos_info.thread_pos.z;
       } else {
-          param.enable_all_warp = true;
+          param.enable_all_warp = 1;
       }
   }
+  param.pos_type = pos_info.pos_type;
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, {5}), pos_type={6}",
            param.core_info.magic,

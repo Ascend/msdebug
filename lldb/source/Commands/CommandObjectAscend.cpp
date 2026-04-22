@@ -87,6 +87,19 @@ static Status GetCoreInfo(Process *process, const uint8_t core_id, const CoreTyp
 
 }
 
+static uint32_t ComputeLinearIdx(const ThreadPos &thread_idx, const ThreadPos &thread_dim) {
+  // 获取线程的线性ID
+  return thread_idx.x + thread_idx.y * thread_dim.x + thread_idx.z * thread_dim.x * thread_dim.y;
+}
+
+static ThreadPos LinearIdxToThreadIdx(uint32_t linear_idx, const ThreadPos &thread_dim) {
+  ThreadPos pos;
+  pos.x = linear_idx % thread_dim.x;
+  pos.y = (linear_idx / thread_dim.x) % thread_dim.y;
+  pos.z = linear_idx / (thread_dim.x * thread_dim.y);
+  return pos;
+}
+
 inline uint32_t CalcBitNum(const vector<uint64_t> &bitmaps) {
   uint32_t num = 0;
   for (auto bitmap: bitmaps) {
@@ -728,28 +741,23 @@ public:
 
 protected:
 
-struct ThreadRange {
-  ThreadPos start_thread;
-  ThreadPos end_thread;
-  uint32_t thread_count;
-  uint64_t pc;
-  /* data */
-};
-
-struct ActivateThread {
-  uint32_t linear_idx; // 线程的索引
-  uint64_t pc;
-  /* data */
-};
-
-  ThreadPos LinearIdxToThreadIdx(uint32_t linear_idx, const ThreadPos &thread_dim) {
-    ThreadPos pos;
-    pos.x = linear_idx % thread_dim.x;
-    pos.y = (linear_idx / thread_dim.x) % thread_dim.y;
-    pos.z = linear_idx / (thread_dim.x * thread_dim.y);
-    return pos;
+  void FormatThreadIdx(const ThreadPos &thread_idx, std::stringstream &ss) {
+    ss << "(" << thread_idx.x << "," << thread_idx.y << "," << thread_idx.z << ")";
   }
-  
+
+  // 居中对齐展示
+  std::string CenterAlign(const std::string &str, size_t width) {
+    if (str.length() >= width) {
+      return str;
+    }
+
+    size_t left_pad = (width - str.length()) / 2;
+    size_t right_pad = (width - str.length()) - left_pad;
+
+    return std::string(left_pad, ' ') + str + std::string(right_pad, ' ');
+
+  }
+
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -766,7 +774,6 @@ struct ActivateThread {
     DeviceStopInfo stop_info; // 获取当前core_id
     process->GetDeviceStopInfoCached(stop_info);
 
-
     CoreInfo core_info;
     Status error = GetCoreInfo(process, stop_info.core_id, stop_info.core_type, core_info);
 
@@ -775,16 +782,65 @@ struct ActivateThread {
       return;
     }
 
-    strm << "  PC                Thread\n*";
+    ThreadPos thread_dim = {
+      core_info.thread_dim_x,
+      core_info.thread_dim_y,
+      core_info.thread_dim_z,
+    };
 
-    std::stringstream ss;
-    ss << " 0x" << std::hex << core_info.pc << "   ";
-    ss << std::dec <<" (" << stop_info.thread_idx_x << "," << stop_info.thread_idx_y << ","
-        << stop_info.thread_idx_z << ")";
-    ss << std::endl;
-    strm << ss.str();
+    std::vector<WarpInfo> warps_info;
+    error = process->GetWarpsInfo(warps_info);
+    if (error.Fail()) {
+      result.AppendErrorWithFormatv("Get warps info failed: {0}", error);
+      return;
+    }
+    constexpr uint32_t WARP_SIZE = 32;
+    // 当前线程
+    uint32_t current_linear = ComputeLinearIdx({stop_info.thread_idx_x, stop_info.thread_idx_y,
+                                                stop_info.thread_idx_z}, thread_dim);
+    // 属于哪个warp，用于突出展示
+    uint32_t current_warp_id = current_linear / WARP_SIZE;
+
+    strm << "  ThreadIdx  to  ThreadIdx  ActiveCount  " 
+         << CenterAlign("PC", 14) << "  " << CenterAlign("ActiveMask", 10) << "\n";
     
-    strm.EOL();
+    // 按照warp维度展示线程信息，每行一个warp
+    for (const auto &warp : warps_info) {
+      // 计算每个线程的warp范围
+      uint32_t start_linear = warp.warp_id * WARP_SIZE;
+      uint32_t end_linear = start_linear + WARP_SIZE - 1;
+      ThreadPos start_pos = LinearIdxToThreadIdx(start_linear, thread_dim);
+      ThreadPos end_pos = LinearIdxToThreadIdx(end_linear, thread_dim);
+
+      // 统计活跃线程数量
+      uint32_t active_count = 0;
+      for (uint32_t i = 0; i < WARP_SIZE; i++) {
+        if ((warp.exec_mask & (1U << i)) != 0) {
+          active_count++;
+        }
+      }
+
+      std::stringstream ss, start_ss, end_ss;
+      FormatThreadIdx(start_pos, start_ss);
+      FormatThreadIdx(end_pos, end_ss);
+      // 标明当前线程
+      if (warp.warp_id == current_warp_id) {
+        strm << "* ";
+      }else {
+        strm << "  ";
+      }
+
+      ss << std::left << std::setw(9) << CenterAlign(start_ss.str(), 9) << "  ";
+      ss << std::left << std::setw(2) << "to" << "  ";
+      ss << std::left << std::setw(9) << CenterAlign(end_ss.str(), 9) << "  ";
+      ss << std::left << std::setw(11) << CenterAlign(std::to_string(active_count), 11) << "  ";
+      ss << "0x" << std::hex << std::setfill('0') << std::setw(8) << warp.simt_pc << "  ";
+      ss << "0x" << std::hex << std::setfill('0') << std::setw(8) << warp.exec_mask << "  ";
+      ss << std::dec;
+      strm << ss.str();
+      strm.EOL();
+    }
+
     strm.Flush();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
@@ -1071,10 +1127,6 @@ protected:
     return linear_idx < (thread_dim.x * thread_dim.y * thread_dim.z);
   }
 
-  uint32_t ComputeLinearIdx(const ThreadPos &thread_idx, const ThreadPos &thread_dim) {
-    // 获取线程的线性ID
-    return thread_idx.x + thread_idx.y * thread_dim.x + thread_idx.z * thread_dim.x * thread_dim.y;
-  }
 
   Status GetWarpInfo(Process *process, WarpInfo &info) {
     std::vector<WarpInfo> warps_info;

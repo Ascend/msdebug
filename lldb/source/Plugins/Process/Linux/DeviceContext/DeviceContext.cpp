@@ -774,6 +774,8 @@ void InterruptPosInfo::Reset() {
   pos_type = InterruptPosType::STARS_SU_INTERRUPT;
   thread_pos = ThreadPos{};
   pc = -1;
+  // 默认设置所有warp同步调试
+  single_warp_run = false;
   thread_info = ThreadInfo{};
 }
 
