@@ -45,46 +45,81 @@ static const char *GetLLDBRepository() {
 #endif
 }
 
-const char *lldb_private::GetVersion() {
-  static std::string g_version_str;
-
-  if (g_version_str.empty()) {
 #ifdef MS_DEBUGGER
-    const char *msdebug_version = GetMsdebugVersion();
-    if (msdebug_version) {
-      g_version_str += msdebug_version;
-      g_version_str += "\n";
-    }
-#endif
-    const char *lldb_version = GetLLDBVersion();
-    const char *lldb_repo = GetLLDBRepository();
-    const char *lldb_rev = GetLLDBRevision();
-    g_version_str += lldb_version;
-    if (lldb_repo || lldb_rev) {
-      g_version_str += " (";
-      if (lldb_repo)
-        g_version_str += lldb_repo;
-      if (lldb_repo && lldb_rev)
-        g_version_str += " ";
+const char *lldb_private::GetVersion() {
+    static std::string g_version_str;
+  
+    if (g_version_str.empty()) {
+      const char *lldb_repo = GetLLDBRepository();
+      const char *msdebug_version = GetMsdebugVersion();
+      if (msdebug_version) {
+        g_version_str += msdebug_version;
+        g_version_str += "\n";
+        if (lldb_repo) {
+          g_version_str += "msdebug repository: ";
+          g_version_str += lldb_repo;
+          g_version_str += "\n";
+        }
+      }
+
+      const char *lldb_version = GetLLDBVersion();
+      const char *lldb_rev = GetLLDBRevision();
+      g_version_str += lldb_version;
       if (lldb_rev) {
-        g_version_str += "revision ";
+        g_version_str += ", revision: ";
         g_version_str += lldb_rev;
       }
-      g_version_str += ")";
+  
+      std::string clang_rev(clang::getClangRevision());
+      if (clang_rev.length() > 0) {
+        g_version_str += "\n  clang revision: ";
+        g_version_str += clang_rev;
+      }
+  
+      std::string llvm_rev(clang::getLLVMRevision());
+      if (llvm_rev.length() > 0) {
+        g_version_str += "\n  llvm revision: ";
+        g_version_str += llvm_rev;
+      }
     }
-
-    std::string clang_rev(clang::getClangRevision());
-    if (clang_rev.length() > 0) {
-      g_version_str += "\n  clang revision ";
-      g_version_str += clang_rev;
-    }
-
-    std::string llvm_rev(clang::getLLVMRevision());
-    if (llvm_rev.length() > 0) {
-      g_version_str += "\n  llvm revision ";
-      g_version_str += llvm_rev;
-    }
+  
+    return g_version_str.c_str();
   }
+#else
+const char *lldb_private::GetVersion() {
+    static std::string g_version_str;
 
-  return g_version_str.c_str();
-}
+    if (g_version_str.empty()) {
+      const char *lldb_version = GetLLDBVersion();
+      const char *lldb_repo = GetLLDBRepository();
+      const char *lldb_rev = GetLLDBRevision();
+      g_version_str += lldb_version;
+      if (lldb_repo || lldb_rev) {
+        g_version_str += " (";
+        if (lldb_repo)
+          g_version_str += lldb_repo;
+        if (lldb_repo && lldb_rev)
+          g_version_str += " ";
+        if (lldb_rev) {
+          g_version_str += "revision ";
+          g_version_str += lldb_rev;
+        }
+        g_version_str += ")";
+      }
+  
+      std::string clang_rev(clang::getClangRevision());
+      if (clang_rev.length() > 0) {
+        g_version_str += "\n  clang revision ";
+        g_version_str += clang_rev;
+      }
+  
+      std::string llvm_rev(clang::getLLVMRevision());
+      if (llvm_rev.length() > 0) {
+        g_version_str += "\n  llvm revision ";
+        g_version_str += llvm_rev;
+      }
+    }
+  
+    return g_version_str.c_str();
+  }
+#endif
