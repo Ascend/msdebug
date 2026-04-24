@@ -288,6 +288,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vDeviceId,
       &GDBRemoteCommunicationServerLLGS::Handle_vDeviceId);
+  RegisterMemberFunctionHandler(
+          StringExtractorGDBRemote::eServerPacketType_vVFStartPC,
+          &GDBRemoteCommunicationServerLLGS::Handle_vVFStartPC);
 #endif
 }
 
@@ -4919,4 +4922,21 @@ GDBRemoteCommunicationServerLLGS::Handle_vDeviceId(StringExtractorGDBRemote &pac
             __FUNCTION__, packet.GetStringRef().data(), device_id);
   return SendOKResponse();
 }
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vVFStartPC(
+        StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Process);
+  packet.SetFilePos(strlen("vVFStartPC:"));
+  uint64_t start_pc = packet.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
+  if (start_pc == LLDB_INVALID_ADDRESS) {
+    return SendErrorResponse(68);
+  }
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s packet=%s vpc=%#lx parsed out",
+            __FUNCTION__, packet.GetStringRef().data(), start_pc);
+  m_current_process->SetVFStartPC(start_pc);
+  return SendOKResponse();
+}
+
 #endif

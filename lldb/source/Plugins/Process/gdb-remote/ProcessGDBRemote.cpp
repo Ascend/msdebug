@@ -6330,4 +6330,14 @@ Status ProcessGDBRemote::SendDeviceId(const int32_t device_id) {
   }
   return error;
 }
+
+Status ProcessGDBRemote::UpdateVFStartPC(const uint64_t start_pc) {
+  Status error;
+  uint8_t error_no = m_gdb_comm.UpdateVFStartPC(start_pc);
+  if (error_no != 0) {
+    error.SetErrorStringWithFormatv("error: {0} update vf start pc 0x{1:x} failed", error_no, start_pc);
+  }
+  return error;
+}
+
 #endif

@@ -146,6 +146,7 @@ public:
     eServerPacketType_vDeviceAic,
     eServerPacketType_vDeviceAiv,
     eServerPacketType_vDeviceThread,
+    eServerPacketType_vVFStartPC,
 #endif
     eServerPacketType_vAttach,
     eServerPacketType_vAttachWait,

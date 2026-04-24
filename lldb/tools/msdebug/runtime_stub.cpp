@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2026. All rights reserved.
  */
 
 #ifdef MS_DEBUGGER
@@ -50,11 +50,13 @@ typedef pid_t (*drvDeviceGetBareTgidFunc)(void);
 constexpr uint8_t SOC_VERSION_LEN = 32;
 constexpr uint32_t BUFFER_SIZE = 2048; // lldb-server侧buffer大小
 constexpr uint32_t KERNEL_NAME_SIZE = 2047; // lldb-client侧为2048
-static void *GetStubFuncPtr(const std::string funcName);
+static void *GetStubFuncPtr(const std::string funcName, bool throw_error=true);
 static bool g_isInited = false;
 static std::mutex g_initMtx;
 static std::mutex g_initStubFunc;
 static void *g_handle = nullptr;
+static void *g_drvHandle = nullptr;
+static void GetDeviceId(int32_t* device);
 
 static std::map<const void *, std::string>& GetStubFuncToNameMap()
 {
@@ -98,14 +100,29 @@ static std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
                 {"rtStreamSynchronize", RT_STREAM_SYNC_NOT_FOUND_ERR, nullptr}},
             {"rtGetVisibleDeviceIdByLogicDeviceId",
                 {"rtGetVisibleDeviceIdByLogicDeviceId", RT_GET_VISIBLE_DEVID_BY_LOGIC_DEVID_NOT_FOUND_ERR, nullptr}},
-            {"drvDeviceGetBareTgid",
-                {"drvDeviceGetBareTgid", DRV_DEV_GET_BARE_TGID_NOT_FOUND_ERR, nullptr}},
+            {"rtMemGetAddressRange",
+                {"rtMemGetAddressRange", RT_MEM_GET_ADDRESS_RANGE_NOT_FOUND_ERR, nullptr}},
             {"rtGetDevice",
                   {"rtGetDevice", RT_GET_DEVICE_NOT_FOUND_ERR, nullptr}},
         };
     }
     return stubFuncInfoMap;
 }
+
+static std::map<std::string, StubFuncInfo>& GetDrvStubFuncInfoMap()
+{
+    static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
+    if (stubFuncInfoMap.size() == 0) {
+        stubFuncInfoMap = {
+            {"drvDeviceGetBareTgid",
+                {"drvDeviceGetBareTgid", DRV_DEV_GET_BARE_TGID_NOT_FOUND_ERR, nullptr}},
+            {"halMemAdvise",
+                {"halMemAdvise", HAL_MEM_ADVISE_NOT_FOUND_ERR, nullptr}},
+        };
+    }
+    return stubFuncInfoMap;
+}
+
 
 static void GetDeviceId(int32_t* device)
 {
@@ -340,8 +357,31 @@ static void OpenRtLib()
     for (auto &it : GetStubFuncInfoMap()) {
         it.second.funcPtr = dlsym(g_handle, it.second.name.c_str());
         if (it.second.funcPtr == nullptr) {
-            ThrowErrorCode(it.second.errorCode);
+            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
+                                it.second.name.c_str());
+            continue;
         }
+    }
+}
+
+static void OpenDrvLib()
+{
+    if (g_drvHandle == nullptr) {
+        g_drvHandle = dlopen("libascend_hal.so", RTLD_NOW | RTLD_GLOBAL);
+        if (g_drvHandle == nullptr) {
+            ThrowErrorCode(LIB_ASCEND_HAL_NOT_FOUND_ERR);
+        }
+        RT_STUB_LOG_INFO("dlopen hal done\n");
+    }
+
+    for (auto &it : GetDrvStubFuncInfoMap()) {
+        it.second.funcPtr = dlsym(g_drvHandle, it.second.name.c_str());
+        if (it.second.funcPtr == nullptr) {
+            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
+                                it.second.name.c_str());
+            continue;
+        }
+        GetStubFuncInfoMap()[it.first] = it.second;
     }
 }
 
@@ -388,6 +428,8 @@ static void StubInit()
     RT_STUB_LOG_INFO("LogInit done\n");
 
     OpenRtLib();
+    // need be open after OpenRtLib
+    OpenDrvLib();
 
     EnvCheck();
 
@@ -467,18 +509,24 @@ std::string GetKernelNameByTilingKey(const void *hdl, uint64_t tilingKey)
     return "";
 }
 
-static void *GetStubFuncPtr(const std::string funcName)
+static void *GetStubFuncPtr(const std::string funcName, bool throw_error)
 {
     RT_STUB_LOG_INFO("GetStubFuncPtr funcName=%s\n", funcName.c_str());
     auto it = GetStubFuncInfoMap().find(funcName);
     if (it == GetStubFuncInfoMap().end()) {
-        ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        if (throw_error) {
+            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        }
+        return nullptr;
     }
     if (it->second.funcPtr == nullptr) {
         StubInit();
     }
     if (it->second.funcPtr == nullptr) {
-        ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        if (throw_error) {
+            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        }
+        return nullptr;
     }
     // if StubInit() returns, all stub functions are supposed to be loaded
     return it->second.funcPtr;
@@ -513,6 +561,63 @@ uint64_t GetFixedPcStartAddr(const KernelInfo &kernelInfo,
     return pcStartAddr;
 }
 
+static rtError_t rtMemGetAddressRange(void *ptr, void **pbase, size_t *psize)
+{
+    using FuncType = decltype(&rtMemGetAddressRange);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+    if (func == nullptr) {
+        RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+        return 1;
+    }
+    auto ret = func(ptr, pbase, psize);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+        ThrowErrorCode(ACLRT_GET_DEVICE_IMPL_FAILED_ERR);
+    }
+    return ret;
+}
+
+static drvError_t halMemAdvise(DVdeviceptr ptr, size_t count, unsigned int advise, DVdevice device)
+{
+    RT_STUB_LOG_INFO("Enter %s, ptr=%#llx, count=%lu, advise=%u\n", __FUNCTION__, ptr, count, advise);
+    using FuncType = decltype(&halMemAdvise);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+    if (func == nullptr) {
+        return 1;
+    }
+    return func(ptr, count, advise, device);
+}
+
+
+static void SetMemoryWritable(uint64_t pcStartAddr)
+{
+    static std::string soc_version = GetSocName();
+    // 950
+    if (!StartsWith(soc_version, "Ascend950")) {
+      return;
+    }
+    void *ptr = reinterpret_cast<void *>(pcStartAddr);
+    uint64_t *base_ptr{};
+    uint64_t psize{};
+    int ret = rtMemGetAddressRange(ptr, (void**)&base_ptr, &psize);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_WARNING("rtMemGetAddressRange get addr size failed, "
+                "If the memory used by your process is in a read-only state, "
+                "it may lead to failure in setting breakpoints.\n");
+        return;
+    }
+    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize = %lu", pcStartAddr, (uint64_t)base_ptr, psize);
+    int32_t deviceId{0};
+    GetDeviceId(&deviceId);
+    if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {
+        RT_STUB_LOG_WARNING("halMemAdvise failed, "
+                "If the memory used by your process is in a read-only state, "
+                "it may lead to failure in setting breakpoints.\n");
+        return;
+    }
+    return;
+}
+
 static uint64_t GetPcStartAddrDynamic(void *hdl, const uint64_t tilingKey)
 {
     rtKernelGetAddrAndPrefCntFunc func =
@@ -530,7 +635,9 @@ static uint64_t GetPcStartAddrDynamic(void *hdl, const uint64_t tilingKey)
 
     std::string targetKernelName = GetKernelNameByTilingKey(hdl, tilingKey);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(hdl);
-    return GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    pcStartAddr = GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    SetMemoryWritable(pcStartAddr);
+    return pcStartAddr;
 }
 
 static uint64_t GetPcStartAddrStatic(const void *stubFunc)
@@ -553,7 +660,9 @@ static uint64_t GetPcStartAddrStatic(const void *stubFunc)
     std::string targetKernelName = GetKernelNameFromStubFunc(stubFunc);
     const void *handle = MapManager::Instance().GetHandle(stubFunc);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    return GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    pcStartAddr = GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    SetMemoryWritable(pcStartAddr);
+    return pcStartAddr;
 }
 
 bool BinaryRegisterPost(const rtDevBinary_t *bin, void *hdl, const string &hash, string &err)

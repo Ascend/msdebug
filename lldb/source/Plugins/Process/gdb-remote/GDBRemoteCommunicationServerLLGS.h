@@ -291,6 +291,8 @@ protected:
   PacketResult Handle_qDeviceBinaryInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_vDeviceId(StringExtractorGDBRemote &packet);
+	 
+  PacketResult Handle_vVFStartPC(StringExtractorGDBRemote &packet);
 #endif
 
   void SetCurrentThreadID(lldb::tid_t tid);

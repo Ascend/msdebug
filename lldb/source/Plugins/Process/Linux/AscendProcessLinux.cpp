@@ -635,10 +635,20 @@ void AscendProcessLinux::TryUpdateThreadIndex(InterruptEvent &event) {
     event.thread_info = m_pos_info.thread_info;
   }
 
-  // 默认设置所有warp单步
-  m_pos_info.single_warp_run = false;
   return;
 
+}
+
+void AscendProcessLinux::FixSimdPC(uint64_t &pc) {
+  constexpr uint64_t low18bit = (1U << 18) - 1;
+  if (m_latest_vf_start_pc) {
+    pc &= low18bit;
+    if ((pc & low18bit) < (m_latest_vf_start_pc & low18bit)) {
+      pc |= (m_latest_vf_start_pc & (~low18bit)) + (1u << 18);
+    } else {
+      pc |= m_latest_vf_start_pc & (~low18bit);
+    }
+  }
 }
 
 void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
@@ -646,11 +656,15 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
   Status error;
   if (info.cmd_type == CmdType::INTERRUPT_EVENT) {
     const InterruptEvent *param = (const InterruptEvent*)info.recv_msg;
-    LLDB_LOGF(log, "pc=%#lx,core_id=%u,core_status=%d,core_type=%u,pos_type=%u,thread_dim=(%u,%u,%u),thread_id=%u",
-              param->pc, param->core_id, int(param->status), param->core_type,
-              (uint8_t)param->pos_type, param->thread_info.thread_dim_x, param->thread_info.thread_dim_y, param->thread_info.thread_dim_z,
-              param->thread_info.thread_id);
     InterruptEvent event = *param;
+    if (param->pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMD) {
+      LLDB_LOG(log, "latest vf start pc={0:x}", m_latest_vf_start_pc);
+      FixSimdPC(event.pc);
+    }
+    LLDB_LOGF(log, "pc=%#lx,core_id=%u,core_status=%d,core_type=%u,pos_type=%u,thread_dim=(%u,%u,%u),thread_id=%u,before_fix_pc=%#lx",
+              event.pc, param->core_id, int(param->status), param->core_type,
+              (uint8_t)param->pos_type, param->thread_info.thread_dim_x, param->thread_info.thread_dim_y, param->thread_info.thread_dim_z,
+              param->thread_info.thread_id, param->pc);
     std::lock_guard<std::mutex> guard(m_status_mtx);
     if (event.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
       TryUpdateThreadIndex(event);
@@ -824,6 +838,10 @@ void AscendProcessLinux::SetClientDeviceId(const int32_t device_id) {
   m_client_device_id = device_id;
 }
 
+void AscendProcessLinux::SetVFStartPC(uint64_t start_pc) {
+  m_latest_vf_start_pc = start_pc;
+}
+
 Status AscendProcessLinux::GetDeviceInfo(DeviceInfo &info) {
   if (m_device_context == nullptr) {
     return Status("device context is null!");
@@ -841,6 +859,13 @@ Status AscendProcessLinux::GetCoresInfo(std::vector<CoreInfo> &info) {
   if (error.Fail()) {
     return error;
   }
+  
+  for (auto &core_info: info) {
+    if (core_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMD) {
+      FixSimdPC(core_info.pc);
+    }
+  }
+
   m_cores_info = info;
   return error;
 }
@@ -877,6 +902,7 @@ Status AscendProcessLinux::GetStoppedCorePC(addr_t &pc) {
       return error;
     }
   }
+
   for (const auto &core_info: m_cores_info) {
     if (core_info.core_id == m_pos_info.core_id && core_info.core_type == m_pos_info.core_type) {
       pc = core_info.pc;

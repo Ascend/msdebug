@@ -389,6 +389,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_vDeviceAiv;
       if (PACKET_STARTS_WITH("vDeviceThread"))
         return eServerPacketType_vDeviceThread;
+      if (PACKET_STARTS_WITH("vVFStartPC"))
+ 	    return eServerPacketType_vVFStartPC;
 #endif
       if (PACKET_STARTS_WITH("vAttach;"))
         return eServerPacketType_vAttach;

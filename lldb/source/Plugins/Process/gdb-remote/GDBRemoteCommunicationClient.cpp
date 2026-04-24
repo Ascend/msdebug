@@ -4766,4 +4766,16 @@ uint8_t GDBRemoteCommunicationClient::SendDeviceIdPacket(const int32_t device_id
   }
   return UINT8_MAX;
 }
+
+uint8_t GDBRemoteCommunicationClient::UpdateVFStartPC(const uint64_t start_pc) {
+  StreamString temp;
+  temp.Printf("vVFStartPC:%lx", start_pc);
+  std::string const packet = temp.GetString().data();
+  StringExtractorGDBRemote response;
+  PacketResult const packet_result = SendPacketAndWaitForResponseNoLock(packet, response);
+  if (packet_result == PacketResult::Success && response.IsOKResponse()) {
+    return 0;
+  }
+  return UINT8_MAX;
+}
 #endif

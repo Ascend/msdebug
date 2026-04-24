@@ -481,6 +481,16 @@ public:
         "error: {0} does not support send device id.", GetPluginName());
     return error;
   }
+
+  // simd vf only record last 18 bit pc,
+  // we need update start pc for server
+  virtual Status UpdateVFStartPC(const uint64_t start_pc) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+            "error: {0} does not support update vf start pc.", GetPluginName());
+    return error;
+  }
+
   virtual void GetDeviceStopInfoCached(DeviceStopInfo &info) const;
   virtual void SetDeviceStopInfoCached(const DeviceStopInfo &info);
   virtual void ShowDeviceStopInfoCached(Stream &stream);

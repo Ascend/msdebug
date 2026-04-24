@@ -262,6 +262,7 @@ public:
                                 bool force);
   Status GetDeviceBinaryInfo(DeviceBinaryInfo &info) override;
   Status SendDeviceId(const int32_t device_id) override;
+  Status UpdateVFStartPC(const uint64_t start_pc) override;
 #endif
 
 protected:

@@ -340,6 +340,8 @@ public:
       DeviceBinaryInfo &device_binary_info, std::chrono::seconds timeout);
 
   uint8_t SendDeviceIdPacket(const int32_t device_id);
+
+  uint8_t UpdateVFStartPC(const uint64_t start_pc);
 #endif
   void TestPacketSpeed(const uint32_t num_packets, uint32_t max_send,
                        uint32_t max_recv, uint64_t recv_amount, bool json,

@@ -220,6 +220,8 @@ public:
   void SetClientDeviceId(const int32_t device_id) override {
     return;
   }
+
+  void SetVFStartPC(uint64_t device_id) override { return; }
 #endif
 
 protected:

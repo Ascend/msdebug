@@ -48,6 +48,9 @@ public:
   bool ConsumeKernelBinary(DeviceBinaryInfo &info) override;
 
   void SetClientDeviceId(const int32_t device_id) override;
+
+  void SetVFStartPC(uint64_t start_pc) override;
+
   Status GetDeviceInfo(DeviceInfo &info) override;
   Status GetCoresInfo(std::vector<CoreInfo> &info) override;
   Status GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache = false) override;
@@ -98,6 +101,8 @@ private:
   HandleResult HandleStubDeviceInfo(const DeviceInfoMsg& device_info_msg);
   HandleResult HandleStubKernelInfo(const KernelInfoMsg& kernel_info_msg);
 
+  void FixSimdPC(uint64_t &pc);
+
 private:
   std::shared_ptr<AscendCommunicationServer> m_server;
   const Socket *m_client_socket = nullptr;
@@ -120,6 +125,7 @@ private:
   std::mutex m_status_mtx;
   std::atomic_bool m_internal_break_done;
   std::atomic_bool m_stop;
+  uint64_t m_latest_vf_start_pc{};
 };
 
 } // namespace process_linux

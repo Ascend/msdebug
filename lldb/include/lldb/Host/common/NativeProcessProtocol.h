@@ -123,6 +123,10 @@ public:
   virtual bool ConsumeKernelBinary(DeviceBinaryInfo &info) { return false; }
   virtual SocType GetSocType() {return SocType::SOC_END;};
   virtual void SetClientDeviceId(const int32_t device_id) = 0;
+
+  // simd vf only record last 18 bit pc,
+  // we need calcuate start pc from client
+  virtual void SetVFStartPC(uint64_t start_pc) = 0;
 #endif
 
   virtual Status ReadMemoryTags(int32_t type, lldb::addr_t addr, size_t len,

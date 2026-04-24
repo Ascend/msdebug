@@ -65,6 +65,7 @@ public:
   MOCK_METHOD1(SetSingleCoreRunFlag, void(bool isSingleCoreRun));
   MOCK_METHOD0(GetSingleCoreRunFlag, bool());
   MOCK_METHOD1(SetClientDeviceId, void(const int32_t device_id));
+  MOCK_METHOD1(SetVFStartPC, void(uint64_t start_pc));
   MOCK_METHOD1(GetDeviceInfo, Status(DeviceInfo &device_info));
   MOCK_METHOD1(GetCoresInfo, Status(std::vector<CoreInfo> &info));
   MOCK_METHOD1(GetCoreInfo, Status(CoreInfo &info));

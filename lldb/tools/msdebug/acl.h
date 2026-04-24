@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 #define VISIBILITY_EXPORT __attribute__((visibility("default")))
 
@@ -46,6 +47,23 @@ typedef void* aclrtParamHandle;
 typedef void* aclrtBinary;
 typedef void* aclrtArgsHandle;
 typedef void* aclrtContext;
+typedef unsigned long long UINT64;
+typedef unsigned int UINT32;
+typedef unsigned short UINT16;
+typedef unsigned char UINT8;
+
+typedef UINT32 DVmem_advise;
+typedef UINT32 DVdevice;
+typedef UINT64 DVdeviceptr;
+typedef uint32_t drvError_t;
+typedef drvError_t DVresult;
+
+enum ADVISE_MEM_TYPE {
+    ADVISE_PERSISTENT = 0,
+    ADVISE_DEV_MEM = 1,
+    ADVISE_ACCESS_READONLY = 2,
+    ADVISE_ACCESS_READWRITE = 3,
+};
 
 static const int ACL_SUCCESS = 0;
  
@@ -69,6 +87,13 @@ typedef struct aclrtBinaryLoadOptions {
     aclrtBinaryLoadOption *options;
     size_t numOpt;
 } aclrtBinaryLoadOptions;
+
+inline bool StartsWith(const std::string& str, const std::string& prefix) {
+    if (str.length() < prefix.length()) {
+        return false;
+    }
+    return str.substr(0, prefix.length()) == prefix;
+}
 
 extern "C" {
 VISIBILITY_EXPORT aclError aclrtBinaryLoadFromFileImpl(
