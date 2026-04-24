@@ -50,7 +50,7 @@ void Foo(const LocalTensor<float> &a); // 该写法变量a可正常打印
     - 能找到调试依赖的设备节点/dev/drv_debug。
     - 容器环境具有该设备节点的访问权限。
 
-    > [!NOTE] 说明   
+    > [!NOTE]    
     > 建议在容器启动命令中增加选项--privileged --device=/dev/drv_debug，可保证调试依赖的设备节点被映射，且允许容器环境访问该节点。
 
 ## msDebug工具断点设置在核函数内，命中断点后执行continue命令，算子运行失败

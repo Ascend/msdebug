@@ -25,7 +25,7 @@
 
     2. 执行以下命令完成算子编译。
 
-        > [!NOTE] 说明   
+        > [!NOTE]    
         > 非首次场景，可以使用make clean && make命令替代make命令。
 
         ```bash
@@ -101,7 +101,7 @@
     - 使用print命令与memory read命令配合可打印出Tensor变量中存放的值。
         - 打印位于UB内存上的LocalTensor中存放的数据。
 
-            > [!NOTE] 说明   
+            > [!NOTE]    
             > UB内存打印起始地址需参考LocalTensor变量展示的**address_**字段中的bufferAddr参数。此处以变量**xLocal**为例，其内存起始地址为**0**。
 
             ```bash
@@ -123,7 +123,7 @@
 
         - 打印位于GM内存上的GlobalTensor中存放的数据。
 
-            > [!NOTE] 说明   
+            > [!NOTE]    
             > GM内存打印的起始地址需参考GlobalTensor变量展示的**address_**字段。此处以变量**xGm**为例，其内存起始地址为**0x00001240c0015000**。
 
             ```bash
@@ -205,7 +205,7 @@
 
 单击[链接](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom)获取算子样例工程，为进行算子调试做准备。
 
-> [!NOTE] 说明
+> [!NOTE] 
 > 
 >- 此样例工程不支持<term>Atlas A3 训练系列产品</term>。
 >- 下载代码样例时，需执行以下命令指定分支版本。
@@ -255,7 +255,7 @@
     export LAUNCH_KERNEL_PATH=/{path_to_kernel}/kernel_name.o  # {path_to_kernel}表示对算子Kernel侧实现编译后生成的算子二进制文件*.o所在路径，请根据实际情况进行替换
     ```
 
-    > [!NOTE] 说明   
+    > [!NOTE]    
     > 算子的多个dtype在Kernel侧可能会编译出多个`.o`文件，请选择[4](#步骤4算子编译)示例中所调用的`.o`文件进行导入。
 
 7. 使用msDebug工具加载[5](#步骤5)中得到的单算子可执行文件execute_add_op。
@@ -295,7 +295,7 @@
     (msdebug) 
     ```
 
-    > [!NOTE] 说明   
+    > [!NOTE]    
     > 后续调试过程可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 ## 调试PyTorch接口调用的算子
@@ -308,7 +308,7 @@
 
 - 单击[链接](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom)获取样例工程，为进行算子调试做准备。
 
-    > [!NOTE] 说明
+    > [!NOTE] 
     > 
     > - 此样例工程仅支持Python3.9，若要在其他Python版本上运行，需要修改${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation目录下run_op_plugin.sh文件中的Python版本。
     > - 此样例工程不支持<term>Atlas A3 训练系列产品</term>。
@@ -348,7 +348,7 @@
     cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation
     ```
 
-    > [!NOTE] 说明   
+    > [!NOTE]    
     > PyTorch接入工程的样例工程目录如下：
 >
     > ```text
@@ -391,7 +391,7 @@
 
 6. 手动导入算子调试信息，示例如下。
 
-    > [!NOTE] 说明 
+    > [!NOTE] 
     > 
     > - ${INSTALL_DIR}请替换为CANN软件安装后文件存储路径。以root安装举例，则安装后文件存储路径为：/usr/local/Ascend/cann。
     > - 非<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在安装昇腾AI处理器的服务器执行`npu-smi info`命令进行查询，获取**Chip Name**信息。实际配置值为AscendChip Name，例如**Chip Name**取值为xxxyy，实际配置值为Ascend_xxxyy_。当Ascendxxxyy为代码样例的路径时，需要配置为ascendxxxyy。
@@ -445,7 +445,7 @@
     (msdebug)
     ```
 
-    > [!NOTE] 说明 
+    > [!NOTE]  
     > 其他调试操作可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 10. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
@@ -518,7 +518,7 @@
     (msdebug)
     ```
 
-    > [!NOTE] 说明   
+    > [!NOTE]    
     > **_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo**为模板库的kernel名字，示例仅显示前面64位。
 
 5. 检视信息。
@@ -576,7 +576,7 @@
         (uint32_t) $1 = 0
         ```
 
-    > [!NOTE] 说明   
+    > [!NOTE]    
     > 其他调试操作可参考[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 6. 查询并删除断点，恢复程序运行。

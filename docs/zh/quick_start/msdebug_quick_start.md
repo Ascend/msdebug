@@ -9,7 +9,7 @@ msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧
 
 ### 1.1 建议
 
-本章节以您已完成<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《昇腾算子开发工具链快速入门》</a>的全流程操作为前提；若尚未体验，建议先完成该指南以获得更佳的学习效果。
+本章节以您已完成<a href="https://gitcode.com/Ascend/msot/blob/26.0.0/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《算子开发工具快速入门》</a>的全流程操作为前提；若尚未体验，建议先完成该指南以获得更佳的学习效果。
 
 ### 1.2 环境准备
 
@@ -40,10 +40,10 @@ python3 -c "import numpy, sympy, scipy, attrs, psutil, decorator; from packaging
 
 #### 2.3.1 开启内核调试开关
 
->[!CAUTION]注意   
->**注意：msDebug 需要 root 权限**       
->msDebug 需要内核调试开关 /proc/debug_switch 开启才能正常工作，但出于安全考虑默认关闭，且需要 root 权限才能打开；   
->这在很多环境（如共享开发机、容器）中可能无法满足，这时请联系系统管理员开启，或在拥有特权的容器中体验此部分。
+> [!CAUTION]   
+> **注意：msDebug 需要 root 权限**       
+> msDebug 需要内核调试开关 /proc/debug_switch 开启才能正常工作，但出于安全考虑默认关闭，且需要 root 权限才能打开；   
+> 这在很多环境（如共享开发机、容器）中可能无法满足，这时请联系系统管理员开启，或在拥有特权的容器中体验此部分。
 
 确认内核调试开关 debug_switch 是否已打开：
 
@@ -79,10 +79,10 @@ MY_OP_PKG=$(find ./build_out -maxdepth 1 -name "custom_opp_*.run" | head -1) && 
 
 #### 2.3.3 设置调试环境变量
 
->[!NOTE]说明    
->**知识点：什么时候需要设置 LAUNCH_KERNEL_PATH？**   
->除了 <<<>>> 这种直调的工程，其他都要设置 LAUNCH_KERNEL_PATH。也就是说算子二进制以 .o 文件形式独立存在并部署的情况下，
->需要明确告诉 msDebug 来导入算子调试信息，否则调试功能会异常。
+> [!NOTE]    
+> **知识点：什么时候需要设置 LAUNCH_KERNEL_PATH？**   
+> 除了 <<<>>> 这种直调的工程，其他都要设置 LAUNCH_KERNEL_PATH。也就是说算子二进制以 .o 文件形式独立存在并部署的情况下，
+> 需要明确告诉 msDebug 来导入算子调试信息，否则调试功能会异常。
 
 设置 LAUNCH_KERNEL_PATH，指定算子 obj 加载路径并导入调试符号信息：
 > **算子 obj 路径查找方法：**   需要在算子部署路径中搜索，示例路径：/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_ab1b6750d7f510985325b603cb06dc8b.o
@@ -108,8 +108,8 @@ msdebug execute_add_op
 b add_custom.cpp:34
 ```
 
->[!CAUTION]注意   
->**若在直接申请的容器环境中操作，需特别留意 `/proc/debug_switch = 1` 可能为虚假状态**       
+> [!CAUTION]    
+> **若在直接申请的容器环境中操作，需特别留意 `/proc/debug_switch = 1` 可能为虚假状态**       
 > 若您在云服务商提供的容器环境中操作，即使在容器内成功将 /proc/debug_switch 设置并查询为 1，该状态也可能是虚假的。因出于安全考虑，
 > 底层宿主机通常会通过写时复制（CoW）、影子文件或覆盖挂载（overlay mount）等机制对 /proc 目录进行隔离，导致设置未实际生效。
 > 在此情况下，执行上一节所述的断点设置将触发警告；而按照后续章节运行 `run` 命令时，则会报出如下错误：
