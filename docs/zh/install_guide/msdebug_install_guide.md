@@ -2,6 +2,11 @@
 
 <br>
 
+msDebug工具的安装方式包括：
+
+- 二进制安装：msDebug工具完整功能已集成在CANN包中发布，可直接安装CANN包，具体请参见[二进制安装](#1-二进制安装)。
+- 源码安装：如需使用最新代码的功能，或对源码进行修改以增强功能，可下载本仓库代码，自行编译、打包工具并完成安装，具体请参见[源码安装](#2-源码安装)。
+
 ## 1. 二进制安装
 
 MindStudio工具链是集成到CANN包中发布的，msDebug在`{install_cann_path}/cann/tools/msdebug`路径下，可通过以下方式安装CANN包：
@@ -41,7 +46,7 @@ MindStudio工具链是集成到CANN包中发布的，msDebug在`{install_cann_pa
 python build.py
 ```
 
-> [!NOTE]  说明
+> [!NOTE]  
 >
 > 如果本地更改了依赖子仓库中的代码，不想构建过程中执行更新动作，可以执行```python build.py local```。
 
@@ -57,7 +62,7 @@ python build.py
 >
 > 生成run包依赖pigz库，一般系统自带，```pigz --version```如果没有显示版本，可自行下载。
 
-### 2.3 安装与卸载
+### 2.3 安装
 
 #### 2.3.1 准备 run 包
 
@@ -81,7 +86,7 @@ chmod +x mindstudio-debugger_<version>_<arch>.run
 mindstudio-debugger package install success!
 ```
 
-> [!NOTE]  说明
+> [!NOTE]  
 >
 > - 如果环境中配置过`ASCEND_HOME_PATH`环境变量，则会安装到`${ASCEND_HOME_PATH}`目录下；否则会默认安装到`${HOME}/Ascend`目录下。
 >
@@ -89,7 +94,7 @@ mindstudio-debugger package install success!
 >
 > - 若系统中已安装该工具的旧版本，安装过程中会提示是否替换；输入 "y" 可执行覆盖安装。
 
-#### 2.3.3 卸载
+### 2.4 卸载
 
 执行以下命令，卸载软件。
 
@@ -103,7 +108,7 @@ mindstudio-debugger package install success!
 mindstudio-debugger uninstall success!
 ```
 
-> [!NOTE]  说明
+> [!NOTE]  
 > 默认会在${HOME}/Ascend目录下卸载，如果安装时通过```--install-path```指定了安装路径，则卸载时也需添加```--install-path```，例如```./mindstudio-debugger_<version>_<arch>.run  --install-path=./test --uninstall```。
 
 如果run包已经删除，则可执行如下命令，卸载软件。
@@ -112,7 +117,7 @@ mindstudio-debugger uninstall success!
 bash $HOME/Ascend/share/info/mindstudio-debugger/script/uninstall.sh   # 或bash ./xxx/share/info/mindstudio-debugger/script/uninstall.sh（指定路径安装场景）
 ```
 
-#### 2.3.4 升级
+### 2.5 升级
 
 如需使用run包替换运行环境中已安装的mindstudio-debugger包，执行如下安装操作：
 
@@ -122,5 +127,5 @@ bash $HOME/Ascend/share/info/mindstudio-debugger/script/uninstall.sh   # 或bash
 
 安装过程中，会提示是否替换原有安装包```do you want to overwrite current installation? [y/n]```，输入y后，安装包会自动完成升级操作。
 
-> [!NOTE]  说明
+> [!NOTE]  
 > 默认会升级到${HOME}/Ascend目录下的mindstudio-debugger，如果老版本是通过指定路径安装的，则需添加```--install-path```，例如```./mindstudio-debugger_<version>_<arch>.run  --install-path=./test --run```，其中test是老版本的安装路径。
