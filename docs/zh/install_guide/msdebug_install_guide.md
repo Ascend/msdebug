@@ -2,26 +2,12 @@
 
 <br>
 
+## 1. 安装说明
+
 msDebug工具的安装方式包括：
 
-- 二进制安装：msDebug工具完整功能已集成在CANN包中发布，可直接安装CANN包，具体请参见[二进制安装](#1-二进制安装)。
+- 使用CANN包安装：msDebug工具完整功能已集成在CANN包中发布，可直接安装CANN包，请参考《[CANN 快速安装](https://www.hiascend.com/cann/download)》，逐步完成安装与配置。
 - 源码安装：如需使用最新代码的功能，或对源码进行修改以增强功能，可下载本仓库代码，自行编译、打包工具并完成安装，具体请参见[源码安装](#2-源码安装)。
-
-## 1. 二进制安装
-
-MindStudio工具链是集成到CANN包中发布的，msDebug在`{install_cann_path}/cann/tools/msdebug`路径下，可通过以下方式安装CANN包：
-
-### 方式一：依据 CANN 官方文档安装
-
-请参考<a href="https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst" target="_blank">《CANN安装官方文档》</a>，
-按文档逐步安装和配置。
-
-### 方式二：使用CANN官方容器镜像
-
-请访问<a href="https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884" target="_blank">《CANN官方镜像仓库》</a>，
-按照仓库中的指引完成镜像拉取及容器启动。
-
-<br>
 
 ## 2. 源码安装
 
@@ -59,7 +45,7 @@ python build.py
 
 构建成功的run包默认保存在output目录下。其中`<version>`表示版本号，`<arch>`表示CPU架构。
 
-> [!NOTE]  说明
+> [!NOTE]
 >
 > 生成run包依赖pigz库，一般系统自带，```pigz --version```如果没有显示版本，可自行下载。
 
