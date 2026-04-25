@@ -20,44 +20,18 @@ Ascend910BDeviceContext::Ascend910BDeviceContext(const ::pid_t pid, const uint32
   m_reg_info_up = std::make_unique<RegisterInfoPOSIX_ascend910B>(ArchSpec("hiipu64"));
 }
 
-Status Ascend910BDeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
-  Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend910B::GetRegExtractor().register_map;
-  auto reg_info = register_map.find(reg_name.str());
-  if (reg_info == register_map.end()) {
-      error.SetErrorStringWithFormatv(
-          "Can not get addr, register name: {0}", reg_name);
-      return error;
-  }
-  if ((1U << static_cast<int>(core_type)) & reg_info->second.core_type_support_mask) {
-    addr = reg_info->second.addr;
-  } else {
-    error.SetErrorStringWithFormatv(
-        "Can not get addr, register {0} is not support", reg_name);
-  }
-  return error;
+MemType Ascend910BDeviceContext::GetStackMemType() const {
+  return MemType::OUT_MEM;
 }
 
-Status Ascend910BDeviceContext::GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) {
+Status Ascend910BDeviceContext::CheckRegisterAddr(CoreType core_type,
+                                                  uint64_t addr) const {
   Status error;
-  if (core_type == CoreType::UNKNOWN_CORE_TYPE) {
-    error.SetErrorString("GetRegisterList failed due to unknown core type.");
-    return error;
-  }
-  const auto &register_map = RegisterInfoPOSIX_ascend910B::GetRegExtractor().register_map;
-  for(const auto &item : register_map) {
-    if ((1U << static_cast<int>(core_type)) & item.second.core_type_support_mask) {
-      reg_list.push_back(item.first);
-    }
-  }
-  return error;
-}
-
-Status Ascend910BDeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) const {
-  Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend910B::GetRegExtractor().register_map;
+  const auto &register_map =
+      RegisterInfoPOSIX_ascend910B::GetRegExtractor().register_map;
   for (const auto &item : register_map) {
-    if ((1U << static_cast<int>(core_type)) & item.second.core_type_support_mask) {
+    if ((1U << static_cast<int>(core_type)) &
+        item.second.core_type_support_mask) {
       if (item.second.addr == addr) {
         return error;
       }
@@ -65,10 +39,6 @@ Status Ascend910BDeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t a
   }
   error.SetErrorString("CheckRegisterAddr failed due to error register addr");
   return error;
-}
-
-MemType Ascend910BDeviceContext::GetStackMemType() const {
-  return MemType::OUT_MEM;
 }
 
 size_t Ascend910BDeviceContext::ReadLocalMemory(lldb::addr_t addr, size_t size, const MemoryTypeInfo &memory_type_info,

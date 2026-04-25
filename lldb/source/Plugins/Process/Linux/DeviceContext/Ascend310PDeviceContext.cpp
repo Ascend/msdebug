@@ -17,32 +17,6 @@ Ascend310PDeviceContext::Ascend310PDeviceContext(const ::pid_t pid, const uint32
   m_reg_info_up = std::make_unique<RegisterInfoPOSIX_ascend310P>(ArchSpec("hiipu64"));
 }
 
-Status Ascend310PDeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
-  Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend310P::GetRegExtractor().register_map;
-  auto reg_info = register_map.find(reg_name.str());
-  if (reg_info == register_map.end()) {
-    error.SetErrorStringWithFormatv(
-        "Can not get addr, register name: {0}", reg_name);
-    return error;
-  }
-  addr = reg_info->second.addr;
-  return error;
-}
-
-Status Ascend310PDeviceContext::GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) {
-  Status error;
-  if (core_type == CoreType::UNKNOWN_CORE_TYPE) {
-    error.SetErrorString("GetRegisterList failed due to unknown core type.");
-    return error;
-  }
-  const auto &register_map = RegisterInfoPOSIX_ascend310P::GetRegExtractor().register_map;
-  for(const auto &item : register_map) {
-    reg_list.push_back(item.first);
-  }
-  return error;
-}
-
 Status Ascend310PDeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) const {
   Status error;
   const auto &register_map = RegisterInfoPOSIX_ascend310P::GetRegExtractor().register_map;
@@ -149,7 +123,7 @@ size_t Ascend310PDeviceContext::ReadLocalMemory(
   auto mem_type = DeviceAddressClassToMemType(memory_type_info.address_class);
   LLDB_LOG(log, "{0} read local memory: element_size={1}, mem_type={2}",
            __FUNCTION__, memory_type_info.element_size, static_cast<uint32_t>(mem_type));
- 
+
   if (mem_type == MemType::L0A || mem_type == MemType::L0B) {
     return ReadL0ABMemory(addr, size, memory_type_info, pos_info, data);
   } else if (mem_type != MemType::L0C ||

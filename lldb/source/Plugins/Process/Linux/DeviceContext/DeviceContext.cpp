@@ -493,8 +493,8 @@ Status DeviceContext::ReadRegister(const RegisterInfo *reg_info, const Interrupt
 }
 
 
-Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info, 
-                                   uint32_t core_id, CoreType core_type, 
+Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
+                                   uint32_t core_id, CoreType core_type,
                                    RegisterValue &reg_value) const {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
@@ -516,7 +516,7 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
     return error;
   }
 
-  reg_value.SetFromMemoryData(*reg_info, buffer_sp->GetBytes(), 
+  reg_value.SetFromMemoryData(*reg_info, buffer_sp->GetBytes(),
                               reg_info->byte_size, eByteOrderLittle, error);
   if (log) {
     StreamString ss;
@@ -529,14 +529,6 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
              reg_info->name,
              std::min(reg_info->byte_size, 8U), ss.GetString());
   }
-  return error;
-}
-
-Status DeviceContext::ReadRegisterList(std::vector<std::string> &reg_list, uint32_t core_id, CoreType core_type) {
-  Status error;
-  Log *log = GetLog(LLDBLog::Process);
-  error = GetRegisterList(reg_list, core_type);
-  LLDB_LOGF(log, "Read Register List core_id=%d core_type=%d", core_id, int(core_type));
   return error;
 }
 
@@ -606,7 +598,7 @@ bool DeviceContext::UseSpecifiedCore(uint32_t aic_mask, uint64_t aiv_mask, CoreM
   return true;
 }
 
-Status DeviceContext::InvalidInstrCache(const addr_t &addr, 
+Status DeviceContext::InvalidInstrCache(const addr_t &addr,
   const InterruptPosInfo &pos_info, uint8_t redirect_ifu) const {
   Status error;
   InvalidCacheParam param;
@@ -727,7 +719,7 @@ Status DeviceContext::TaskKill(uint32_t stream_id) {
 
 MemType DeviceContext::DeviceAddressClassToMemType(DeviceAddressClass address_class) const {
   if (address_class == DeviceAddressClass::STACK) {
-    // stack is located in different memory space in different chips 
+    // stack is located in different memory space in different chips
     return GetStackMemType();
   }
   static std::map<DeviceAddressClass, MemType> address_class_mem_type_map = {

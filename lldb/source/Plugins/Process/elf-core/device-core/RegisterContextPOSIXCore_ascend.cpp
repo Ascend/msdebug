@@ -40,15 +40,16 @@ RegisterContextPOSIXCore_ascend::RegisterContextPOSIXCore_ascend(
       m_register_info(std::move(register_info)) {}
 
 // Extract mask0 bits from reg_value, and replace mask1 bits in pc with those bits.
-inline void ReplacePCBit(uint32_t reg_value, uint32_t mask0, uint32_t mask1, uint64_t &pc) {
+inline void ReplacePCBit(uint32_t reg_value, uint64_t mask0, uint64_t mask1,
+                         uint64_t &pc) {
   Log *log = GetLog(LLDBLog::Thread);
-  if (__builtin_popcount(mask0) != __builtin_popcount(mask1)) {
+  if (__builtin_popcountll(mask0) != __builtin_popcountll(mask1)) {
     LLDB_LOG(log, "Internel error: invalid mask, stop replacing, please check err_info_reg map table define.");
     return;
   }
-  uint32_t pc0 = reg_value & mask0;
-  uint32_t l0 = __builtin_ctz(mask0);
-  uint32_t l1 = __builtin_ctz(mask1);
+  uint64_t pc0 = reg_value & mask0;
+  uint64_t l0 = __builtin_ctzll(mask0);
+  uint64_t l1 = __builtin_ctzll(mask1);
   if (l0 > l1) {
     pc0 >>= (l0 - l1);
   } else {
@@ -56,7 +57,7 @@ inline void ReplacePCBit(uint32_t reg_value, uint32_t mask0, uint32_t mask1, uin
   }
   pc = (pc & ~(1ULL * mask1)) | pc0;
 }
- 
+
 void RegisterContextPOSIXCore_ascend::FixPCByErrorInfoReg(
     const ErrRegMask &err_map, uint64_t &pc) {
   Log *log = GetLog(LLDBLog::Thread);
@@ -76,10 +77,9 @@ void RegisterContextPOSIXCore_ascend::FixPCByErrorInfoReg(
   }
 }
 
-bool RegisterContextPOSIXCore_ascend::CheckAicErrorRegisterIsValid(size_t num_registers,
-    const vector<vector<ErrRegMask>> *error_table,
-    const RegisterSet *const reg_set, 
-    ErrRegMask &err_reg_mask) {
+bool RegisterContextPOSIXCore_ascend::CheckAicErrorRegisterIsValid(
+    size_t num_registers, const vector<vector<ErrRegMask>> *error_table,
+    const RegisterSet *const reg_set, ErrRegMask &err_reg_mask) {
   uint32_t reg_num = 0;
   Log *log = GetLog(LLDBLog::Thread);
   for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
@@ -90,7 +90,8 @@ bool RegisterContextPOSIXCore_ascend::CheckAicErrorRegisterIsValid(size_t num_re
       continue;
     }
     uint32_t err_u32_value = err_reg_value.GetAsUInt32();
-    LLDB_LOG(log, "Got aic_err_{0} register value={1:x}.", reg_idx, err_u32_value);
+    LLDB_LOG(log, "Got {0} register value={1:x}.", reg_info->name,
+             err_u32_value);
     for (const auto &err_map: (*error_table)[reg_idx]) {
       if ((err_u32_value & err_map.mask) == 0)
         continue;
@@ -122,8 +123,8 @@ string RegisterContextPOSIXCore_ascend::GetStopErrorRegister() {
     if (string(reg_set->short_name) != "aic_err_reg") {
       continue;
     }
-    LLDB_LOG(log, "Got aic_err_reg set.");
     const size_t num_registers = reg_set->num_registers;
+    LLDB_LOG_ONCE(log, "Got aic_err_reg set, num={0}.", num_registers);
     ErrRegMask err_reg_mask;
     if (!CheckAicErrorRegisterIsValid(num_registers, error_table, reg_set, err_reg_mask)) {
       LLDB_LOG(log, "There are different error type in AIC_ERROR_X register"
@@ -181,11 +182,11 @@ void RegisterContextPOSIXCore_ascend::FixPC(uint64_t &pc) {
 }
 
 Status RegisterContextPOSIXCore_ascend::ReadRegister(
-        uint64_t addr, const RegisterInfo* reg_info, 
-        uint32_t core_id, CoreType core_type, RegisterValue &value) const {
+    uint64_t addr, const RegisterInfo *reg_info, uint32_t core_id,
+    CoreType core_type, RegisterValue &value) const {
   Status error;
   const auto& summary_info = *m_summary_info;
-  const auto data_index = summary_info.focus_core_id;
+  const auto data_index = summary_info.focus_pos_info.core_id;
   if (summary_info.reg_data.find(data_index) == summary_info.reg_data.end() ||
       summary_info.reg_data.at(data_index).find(addr) ==
       summary_info.reg_data.at(data_index).end()) {
@@ -200,8 +201,16 @@ Status RegisterContextPOSIXCore_ascend::ReadRegister(
           reg_info->name, addr, data_index);
     return error;
   }
+  Log *log = GetLog(LLDBLog::Thread);
   const auto &core_reg_info = summary_info.reg_data.at(data_index).at(addr);
-  value.SetBytes(core_reg_info->GetValue(), core_reg_info->reg_size, lldb::eByteOrderLittle);
+  if (core_reg_info->reg_size < reg_info->byte_size) {
+    LLDB_LOG(
+        log,
+        "Warning: for reg {0}, core file byte size={1}<expect byte size={1}",
+        reg_info->name, core_reg_info->reg_size, reg_info->byte_size);
+  }
+  value.SetFromMemoryData(*reg_info, core_reg_info->GetValue(),
+                          reg_info->byte_size, lldb::eByteOrderLittle, error);
   return error;
 }
 
@@ -214,14 +223,16 @@ bool RegisterContextPOSIXCore_ascend::ReadRegister(const RegisterInfo *reg_info,
   if (reg_info && reg_info->kinds[lldb::eRegisterKindLLDB] < register_map.size()) {
     const auto *reg_name = reg_info->name;
     uint64_t addr;
-    Status error = m_register_info->GetRegisterAddr(reg_name, m_summary_info->focus_core_type, addr);
+    Status error = m_register_info->GetRegisterAddr(
+        reg_name, m_summary_info->focus_pos_info.core_type,
+        m_summary_info->focus_pos_info.pos_type, addr);
     if (error.Fail()) {
       LLDB_LOG(log, "Get addr for register_name={0} failed", reg_name);
       return false;
     }
     // added pos_info;
     InterruptPosInfo pos_info{};
-    pos_info.core_type = m_summary_info->focus_core_type;
+    pos_info.core_type = m_summary_info->focus_pos_info.core_type;
     error = m_register_info->ReadRegister(reg_info, pos_info, this, value);
     if (error.Fail()) {
       LLDB_LOG(log, "Read register {0} failed: {1}", reg_name, error);
@@ -229,10 +240,10 @@ bool RegisterContextPOSIXCore_ascend::ReadRegister(const RegisterInfo *reg_info,
     }
     // use error register to fix pc
     if (reg_info->kinds[lldb::eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
-        uint64_t pc = value.GetAsUInt64();
-        FixPC(pc);
-        LLDB_LOG(log, "Update pc from {0:x} to {1:x}", value.GetAsUInt64(), pc);
-        value.SetUInt64(pc);
+      uint64_t pc = value.GetAsUInt64();
+      FixPC(pc);
+      LLDB_LOG(log, "Update pc from {0:x} to {1:x}", value.GetAsUInt64(), pc);
+      value.SetUInt64(pc);
     }
   } else {
     return false;

@@ -404,4 +404,17 @@ template <typename Cat> Log *GetLog(Cat mask) {
       ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
 
+#ifdef MS_DEBUGGER
+#define LLDB_LOG_ONCE(log, ...)                                                \
+  do {                                                                         \
+    static std::once_flag flag{};                                              \
+    lldb_private::Log *log_private = (log);                                    \
+    if (log_private) {                                                         \
+      std::call_once(flag, [&]() {                                             \
+        log_private->Format(__FILE__, __func__, __VA_ARGS__);                  \
+      });                                                                      \
+    }                                                                          \
+  } while (0)
+#endif
+
 #endif // LLDB_UTILITY_LOG_H

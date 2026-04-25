@@ -50,7 +50,9 @@ public:
   DataExtractor GetAuxvData() override;
 
   Status GetCoresInfo(std::vector<CoreInfo> &info) override;
- 
+
+  Status GetWarpsInfo(std::vector<WarpInfo> &info) override;
+
   // Update which pipe_err we got, depends on register values.
   void UpdateStopInfo(bool focus_known_error_core = false) override;
 
@@ -86,6 +88,12 @@ private:
   Status GetGlobalMemData(const device_core::GlobalMemInfo& global_mem_info, bool valid);
 
   void FocusToAnyKnownErrorAiCore();
+
+  Status GetThreadDim(lldb::RegisterContextSP reg_ctx_sp, device_core::ThreadDim &thread_dim);
+
+  void FocusToActiveThreadInWarp(uint8_t warp_id);
+
+  InterruptPosType GetPosType(lldb::RegisterContextSP reg_ctx_sp);
 
 private:
   device_core::SummaryInfo m_summary_info;

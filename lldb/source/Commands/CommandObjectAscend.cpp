@@ -74,8 +74,7 @@ static Status GetCoreInfo(Process *process, const uint8_t core_id, const CoreTyp
   for (uint32_t i = 0; i < infos.size(); ++i) {
     CoreInfo core_info = infos[i];
 
-    if (core_info.core_id == core_id && 
-        core_info.core_type == core_type) {
+    if (core_info.core_id == core_id && core_info.core_type == core_type) {
       info = core_info;
       return error;
     }
@@ -87,17 +86,10 @@ static Status GetCoreInfo(Process *process, const uint8_t core_id, const CoreTyp
 
 }
 
-static uint32_t ComputeLinearIdx(const ThreadPos &thread_idx, const ThreadPos &thread_dim) {
+static uint32_t ComputeLinearIdx(const ThreadPos &thread_idx,
+                                 const ThreadDim &thread_dim) {
   // 获取线程的线性ID
   return thread_idx.x + thread_idx.y * thread_dim.x + thread_idx.z * thread_dim.x * thread_dim.y;
-}
-
-static ThreadPos LinearIdxToThreadIdx(uint32_t linear_idx, const ThreadPos &thread_dim) {
-  ThreadPos pos;
-  pos.x = linear_idx % thread_dim.x;
-  pos.y = (linear_idx / thread_dim.x) % thread_dim.y;
-  pos.z = linear_idx / (thread_dim.x * thread_dim.y);
-  return pos;
 }
 
 inline uint32_t CalcBitNum(const vector<uint64_t> &bitmaps) {
@@ -107,7 +99,7 @@ inline uint32_t CalcBitNum(const vector<uint64_t> &bitmaps) {
   }
   return num;
 }
- 
+
 inline void DumpBitmap(const vector<uint64_t> &bitmaps, std::ostream &os) {
   os << "0x";
   if (bitmaps.empty()) {
@@ -170,8 +162,8 @@ protected:
       strm << "  Device Aic_Num Aiv_Num Aic_Mask Aiv_Mask\n";
       std::stringstream ss;
       for (const auto& id : device_info.device_ids) {
-        WriteLine(ss, id, id == device_info.device_id, aic_num, aiv_num, 
-          device_info.aic_bitmaps, device_info.aiv_bitmaps);
+        WriteLine(ss, id, id == device_info.device_id, aic_num, aiv_num,
+                  device_info.aic_bitmaps, device_info.aiv_bitmaps);
       }
       strm << ss.str();
     } else {
@@ -248,7 +240,6 @@ public:
   ~CommandObjectAscendInfoAicores() override = default;
 
 protected:
-  
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -281,7 +272,7 @@ protected:
       }
       static constexpr uint32_t CORE_ID_WIDTH = 4;
       static constexpr uint32_t BLOCK_ID_WIDTH = 6;
-      
+
       std::string stopReasonKey = std::to_string(static_cast<uint8_t>(core_info.core_type)) + '_' +
         std::to_string(core_info.core_id);
       auto iter = stop_reason.find(stopReasonKey);
@@ -329,21 +320,21 @@ protected:
       return;
     }
 
-    KernelInfo kernel_info;
+    KernelInfo kernel_info{};
     error = process->GetKernelInfo(kernel_info);
     if (!error.Success()) {
       result.AppendErrorWithFormat("Failed to get kernel info, reason: %s", error.AsCString());
       return;
     }
 
-    CoreInfo focus_core;
+    CoreInfo focus_core{};
     error = commonInfo.GetFocusCore(process, focus_core);
     if (!error.Success()) {
       result.AppendErrorWithFormat("Failed to get focused core info, reason: %s", error.AsCString());
       return;
     }
 
-    TaskInfo task_info;
+    TaskInfo task_info{};
 
     task_info.stream_id = focus_core.stream_id;
     task_info.task_id = focus_core.task_id;
@@ -396,13 +387,13 @@ protected:
       result.AppendErrorWithFormat("Failed to get ascend info, reason: %s", error.AsCString());
       return;
     }
-    CoreInfo focus_core;
+    CoreInfo focus_core{};
     error = commonInfo.GetFocusCore(process, focus_core);
     if (!error.Success()) {
       result.AppendErrorWithFormat("Failed to get focused core info, reason: %s", error.AsCString());
       return;
     }
-    
+
     StreamInfo stream_info;
     stream_info.stream_id = focus_core.stream_id;
     std::string core_type_str;
@@ -437,33 +428,33 @@ public:
   class OptionGroupAscendInfoBlocks : public OptionGroup {
   public:
     OptionGroupAscendInfoBlocks() {}
- 
+
     ~OptionGroupAscendInfoBlocks() override = default;
- 
+
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::ArrayRef(g_ascend_info_blocks_options);
     }
- 
+
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                           ExecutionContext *execution_context) override {
       Status error;
       const int short_option = g_ascend_info_blocks_options[option_idx].short_option;
- 
+
       switch (short_option) {
         case 'd':
           m_show_details = true;
           break;
- 
+
         default:
           llvm_unreachable("Unimplemented option");
       }
       return error;
     }
-    
+
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_show_details = false;
     }
- 
+
     bool m_show_details;
   };
 
@@ -555,7 +546,7 @@ protected:
       return false;
     }
     Status error;
- 
+
     // 遍历并展示暂停点上下文
     strm << "Current stop state of all blocks:\n\n";
     for (uint32_t i = 0; i < commonInfo.m_core_info_vec.size(); ++i) {
@@ -571,7 +562,7 @@ protected:
                                      stop_info.core_id);
         continue;
       }
- 
+
       std::stringstream ss;
       ss << "["
          << ((commonInfo.m_stop_info.core_id == stop_info.core_id) ? "* " : "")
@@ -584,7 +575,7 @@ protected:
       strm.EOL();
     }
     strm.Flush();
- 
+
     // 切回原核
     error = SetCoreOnFocus(process, commonInfo.m_stop_info);
     if (error.Fail()) {
@@ -595,11 +586,11 @@ protected:
       return false;
     }
     thread->RefreshStackFramePC();
- 
+
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return error.Success();
   }
- 
+
 private:
   OptionGroupAscendInfoBlocks m_blocks_options;
   OptionGroupOptions m_all_options;
@@ -610,7 +601,7 @@ void PrintDevtbl(const SummaryInfo& summary_info, const DeviceStopInfo &stop_inf
   strm << "  CoreId  CoreType        PC         DeviceId    ChipType\n";
   static constexpr uint32_t ID_WIDTH = 4;
   for (const auto &core_info: core_infos) {
-    std::stringstream ss; 
+    std::stringstream ss;
     ss << (core_info.core_type == stop_info.core_type && core_info.core_id == stop_info.core_id ? " *" : "  ");
     ss << std::setw(ID_WIDTH) << static_cast<uint64_t>(core_info.core_id) << "       " <<
         (core_info.core_type == CoreType::AIC ? "AIC" : "AIV") << "    0x" << std::hex <<
@@ -618,7 +609,7 @@ void PrintDevtbl(const SummaryInfo& summary_info, const DeviceStopInfo &stop_inf
         summary_info.dev_id << "        " <<
       DevdrvChipTypeToStr[summary_info.chip_type] << std::endl;
     strm << ss.str();
-  } 
+  }
 }
 
 void PrintTensorShape(GlobalDataType data_type, const GlobalMemInfo &mem_info, std::stringstream &ss) {
@@ -670,7 +661,8 @@ void PrintDeviceInfo(const SummaryInfo& summary_info, Stream &strm) {
             CenterText(global_mem_vec[i].global_mem_info.addr, WIDTH_LONG, true, global_mem_vec[i].valid) <<
             "  " << std::setw(WIDTH_LONG) <<
             CenterText(global_mem_vec[i].global_mem_info.size, WIDTH_LONG, false, true);
-      if (global_data_type == GlobalDataType::STACK) {
+      if (global_data_type == GlobalDataType::STACK ||
+          global_data_type == GlobalDataType::VF_STACK) {
         ss << "  " << std::setw(WIDTH_SHORT) <<
                CenterText(core_id, WIDTH_SHORT, false, true) <<
               "        " << std::setw(WIDTH_SHORT) <<
@@ -765,7 +757,7 @@ protected:
       result.AppendError("Failed to get process info");
       return;
     }
-    
+
     if (!process->IsStopInSimtKernel()) {
       result.AppendError("The ascend info threads command can only run on in simt kernel.");
       return;
@@ -782,10 +774,10 @@ protected:
       return;
     }
 
-    ThreadPos thread_dim = {
-      core_info.thread_dim_x,
-      core_info.thread_dim_y,
-      core_info.thread_dim_z,
+    ThreadDim thread_dim = {
+        core_info.thread_dim_x,
+        core_info.thread_dim_y,
+        core_info.thread_dim_z,
     };
 
     std::vector<WarpInfo> warps_info;
@@ -796,30 +788,24 @@ protected:
     }
     constexpr uint32_t WARP_SIZE = 32;
     // 当前线程
-    uint32_t current_linear = ComputeLinearIdx({stop_info.thread_idx_x, stop_info.thread_idx_y,
-                                                stop_info.thread_idx_z}, thread_dim);
+    uint32_t current_linear =
+        ComputeLinearIdx(stop_info.thread_pos, thread_dim);
     // 属于哪个warp，用于突出展示
     uint32_t current_warp_id = current_linear / WARP_SIZE;
 
-    strm << "  ThreadIdx  to  ThreadIdx  ActiveCount  " 
-         << CenterAlign("PC", 14) << "  " << CenterAlign("ActiveMask", 10) << "\n";
-    
+    strm << "  ThreadIdx  to  ThreadIdx  ActiveCount  " << CenterAlign("PC", 14)
+         << "  " << CenterAlign("ActiveMask", 10) << "\n";
+
     // 按照warp维度展示线程信息，每行一个warp
     for (const auto &warp : warps_info) {
       // 计算每个线程的warp范围
       uint32_t start_linear = warp.warp_id * WARP_SIZE;
       uint32_t end_linear = start_linear + WARP_SIZE - 1;
-      ThreadPos start_pos = LinearIdxToThreadIdx(start_linear, thread_dim);
-      ThreadPos end_pos = LinearIdxToThreadIdx(end_linear, thread_dim);
+      ThreadPos start_pos = LinearIdxToThreadPos(start_linear, thread_dim);
+      ThreadPos end_pos = LinearIdxToThreadPos(end_linear, thread_dim);
 
       // 统计活跃线程数量
-      uint32_t active_count = 0;
-      for (uint32_t i = 0; i < WARP_SIZE; i++) {
-        if ((warp.exec_mask & (1U << i)) != 0) {
-          active_count++;
-        }
-      }
-
+      uint32_t active_count = __builtin_popcount(warp.exec_mask);
       std::stringstream ss, start_ss, end_ss;
       FormatThreadIdx(start_pos, start_ss);
       FormatThreadIdx(end_pos, end_ss);
@@ -1109,24 +1095,22 @@ public:
   ~CommandObjectAscendThread() override = default;
 
 protected:
-
-  bool CheckThreadIdxValid(const ThreadPos &thread_idx, const ThreadPos &thread_dim) {
+  bool CheckThreadIdxValid(const ThreadPos &thread_idx,
+                           const ThreadDim &thread_dim) {
     // 校验用户输入的x,y,z三维是否符合thread_dim的要求
-    if (thread_idx.x >= thread_dim.x || 
-        thread_idx.y >= thread_dim.y ||
-        thread_idx.z >= thread_dim.z
-    ) {
+    if (thread_idx.x >= thread_dim.x || thread_idx.y >= thread_dim.y ||
+        thread_idx.z >= thread_dim.z) {
       return false;
     }
 
     return true;
   }
 
-  bool CheckThreadIdxValid(const uint32_t linear_idx, const ThreadPos &thread_dim) {
+  bool CheckThreadIdxValid(const uint32_t linear_idx,
+                           const ThreadDim &thread_dim) {
     // 校验用户输入的线性线程ID是否符合thread_dim的要求
-    return linear_idx < (thread_dim.x * thread_dim.y * thread_dim.z);
+    return linear_idx < (thread_dim.x * 1ULL * thread_dim.y * thread_dim.z);
   }
-
 
   Status GetWarpInfo(Process *process, WarpInfo &info) {
     std::vector<WarpInfo> warps_info;
@@ -1156,7 +1140,8 @@ protected:
 
   }
 
-  bool GetLinearIdx(Args &command, CommandReturnObject &result, uint32_t &linear_idx, const ThreadPos &thread_dim) {
+  bool GetLinearIdx(Args &command, CommandReturnObject &result,
+                    uint32_t &linear_idx, const ThreadDim &thread_dim) {
     // 解析参数，校验参数并获取用户的线性ID
     std::string arg0 = command.GetArgumentAtIndex(0);
 
@@ -1165,7 +1150,7 @@ protected:
       size_t pos2 = arg0.find(',', pos1 + 1);
       size_t end_pos = arg0.find(')');
 
-      if (pos1 == std::string::npos || pos2 == std::string::npos || 
+      if (pos1 == std::string::npos || pos2 == std::string::npos ||
           end_pos == std::string::npos) {
         result.AppendErrorWithFormat("Invalid format, expected (x, y, z)");
         return false;
@@ -1183,7 +1168,9 @@ protected:
         return false;
       }
 
-      ThreadPos thread_idx = {x, y, z};
+      ThreadPos thread_idx = {static_cast<uint16_t>(x),
+                              static_cast<uint16_t>(y),
+                              static_cast<uint16_t>(z)};
       if (!CheckThreadIdxValid(thread_idx, thread_dim)) {
         result.AppendErrorWithFormat("input thread is invalid and exceeds the value range indicated by thread_dim.");
         return false;
@@ -1261,7 +1248,7 @@ protected:
       result.AppendError("Failed to get thread info");
       return;
     }
-    
+
     DeviceStopInfo stop_info;
     process->GetDeviceStopInfoCached(stop_info);
 
@@ -1272,11 +1259,11 @@ protected:
       result.AppendErrorWithFormat("Failed to get core info.");
       return;
     }
-    
-    ThreadPos thread_dim = {
-      core_info.thread_dim_x,
-      core_info.thread_dim_y,
-      core_info.thread_dim_z,
+
+    ThreadDim thread_dim = {
+        core_info.thread_dim_x,
+        core_info.thread_dim_y,
+        core_info.thread_dim_z,
     };
 
     uint32_t linear_idx;
@@ -1285,7 +1272,7 @@ protected:
       return;
     }
 
-    WarpInfo warp_info;
+    WarpInfo warp_info{};
     warp_info.warp_id = GetWarpId(linear_idx);
 
     error = GetWarpInfo(process, warp_info);
@@ -1305,9 +1292,9 @@ protected:
       return;
     }
     // update core info cache in client
-    stop_info.thread_idx_x = linear_idx % thread_dim.x;
-    stop_info.thread_idx_y = (linear_idx / thread_dim.x) % thread_dim.y;
-    stop_info.thread_idx_z = linear_idx / (thread_dim.x * thread_dim.y);
+    stop_info.thread_pos = LinearIdxToThreadPos(
+        linear_idx, {core_info.thread_dim_x, core_info.thread_dim_y,
+                     core_info.thread_dim_z});
     process->SetDeviceStopInfoCached(stop_info);
     // 切换线程后，刷新与线程相关的寄存器缓存
     RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());

@@ -274,8 +274,9 @@ const RegisterSet* RegisterInfoPOSIX_ascend310P::GetRegisterSet(size_t set_index
   return nullptr;
 }
 
-Status RegisterInfoPOSIX_ascend310P::GetRegisterAddr(const llvm::StringRef reg_name,
-  CoreType core_type, uint64_t &addr) {
+Status RegisterInfoPOSIX_ascend310P::GetRegisterAddr(
+    const llvm::StringRef reg_name, CoreType core_type,
+    InterruptPosType pos_type, uint64_t &addr) {
   Status error;
   auto reg_info = m_register_map.find(reg_name.str());
   if (reg_info == m_register_map.end()) {

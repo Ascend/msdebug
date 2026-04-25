@@ -9,12 +9,38 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace std;
- 
+
+namespace {
+
+// bitmap:0|1|2|3
+//        aic|aiv|simd_vf|simt_vf
+// don't care pos_type
 constexpr uint8_t AIC_MASK = 1U << static_cast<int>(CoreType::AIC);
 constexpr uint8_t AIV_MASK = 1U << static_cast<int>(CoreType::AIV);
 constexpr uint8_t MIX_MASK = AIC_MASK | AIV_MASK;
- 
-namespace {
+
+// only show on SIMD/SIMT
+constexpr uint8_t SIMD_MASK_OFFSET = 2;
+constexpr uint8_t SIMT_MASK_OFFSET = 3;
+constexpr uint8_t SIMD_VF_MASK = 1U << SIMD_MASK_OFFSET;
+constexpr uint8_t SIMT_VF_MASK = 1U << SIMT_MASK_OFFSET;
+
+bool IsRegisterSupport(CoreType core_type, InterruptPosType pos_type,
+                       uint8_t mask) {
+  // if mask not belong to simd/simt, only consider core_type
+  if ((mask & AIC_MASK) || (mask & AIV_MASK)) {
+    return mask & (1U << static_cast<int>(core_type));
+  }
+  if (pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
+    return mask & SIMD_VF_MASK;
+  }
+  if (pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+    return mask & SIMT_VF_MASK;
+  }
+  // su but register is vf
+  return false;
+}
+
 enum LLDB_ASCEND_RENUM {
   k_first_gpr_ascend,
   lldb_x0_ascend = k_first_gpr_ascend, lldb_x1_ascend, lldb_x2_ascend, lldb_x3_ascend,
@@ -59,7 +85,7 @@ enum LLDB_ASCEND_RENUM {
   lldb_p7_ascend, lldb_uld0_ascend, lldb_uld1_ascend, lldb_uld2_ascend,
   lldb_uld3_ascend, lldb_ust0_ascend, lldb_ust1_ascend, lldb_ust2_ascend,
   lldb_ust3_ascend, lldb_ust_flag_0_ascend, lldb_ust_flag_1_ascend, lldb_ust_flag_2_ascend,
-  lldb_ust_flag_3_ascend, 
+  lldb_ust_flag_3_ascend,
   // 32 bit
   lldb_sreg_first,
   lldb_tpes0_ascend = lldb_sreg_first, lldb_tpes1_ascend, lldb_tpes2_ascend, lldb_tpes3_ascend,
@@ -526,7 +552,7 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_REG(LOOP4_STRIDE_NDDMA, lldb_loop4_stride_nddma_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 28, AIV_MASK},
   {ASCEND_REG(PCIE_RD_CTRL, lldb_pcie_rd_ctrl_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 29, AIV_MASK},
   {ASCEND_REG(PCIE_WR_CTRL, lldb_pcie_wr_ctrl_ascend), MTE_ID << ID_OFFSET | 2UL << 48 | 30, AIV_MASK},
- 
+
   {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V0, v0, 256), VEC_ID << ID_OFFSET | 2UL << 48, AIV_MASK},
   {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V1, v1, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 16, AIV_MASK},
   {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V2, v2, 256), VEC_ID << ID_OFFSET | 2UL << 48 | 32, AIV_MASK},
@@ -962,7 +988,7 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
   {ASCEND_GPR_NBYTES(R124, r124, 4), VEC_ID << ID_OFFSET | 9UL << 48 | 81920, AIV_MASK},
   {ASCEND_GPR_NBYTES(R125, r125, 4), VEC_ID << ID_OFFSET | 9UL << 48 | 81920, AIV_MASK},
   {ASCEND_GPR_NBYTES(R126, r126, 4), VEC_ID << ID_OFFSET | 9UL << 48 | 81920, AIV_MASK},
- 
+
   {ASCEND_REG(FMATRIX, lldb_fmatrix_ascend), L1_ID << ID_OFFSET | 0, AIC_MASK},
   {ASCEND_REG(PADDING_L1, lldb_padding_l1_ascend), L1_ID << ID_OFFSET | 1, AIC_MASK},
   {ASCEND_REG(L0_SET_VALUE_L1, lldb_l0_set_value_l1_ascend), L1_ID << ID_OFFSET | 2, AIC_MASK},
@@ -1026,8 +1052,8 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
 };
 
 // Returns uint32_t with bits [start, end] = 1
-inline constexpr uint32_t GenMask(uint32_t start, uint32_t end) {
-  return static_cast<uint32_t>(((1UL << (end - start + 1)) - 1) << start);
+inline constexpr uint64_t GenMask(uint32_t start, uint32_t end) {
+  return static_cast<uint64_t>(((1UL << (end - start + 1)) - 1) << start);
 }
 
 inline void AddMaskCommon(uint32_t mask, uint32_t err_info_reg_num, vector<ErrRegMask> &err_infos) {
@@ -1104,7 +1130,7 @@ const vector<vector<ErrRegMask>> *RegisterInfoPOSIXCore_ascend950::GetAicErrorRe
   addMask(lldb_l1_err_info_t0_1, GenMask(0, 21));
   return &table;
 }
- 
+
 const RegExtractor &RegisterInfoPOSIX_ascend950::GetRegExtractor() {
   static RegExtractor instance(REGISTER_950_INFO, k_num_dbg_registers_ascend);
   static std::once_flag flag{};
@@ -1121,7 +1147,7 @@ const RegisterInfo *RegisterInfoPOSIX_ascend950::GetRegisterInfoAt(uint32_t reg_
   }
   return nullptr;
 }
- 
+
 RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch)
   : RegisterInfoPOSIX_ascend(target_arch, k_num_dbg_registers_ascend,
     k_last_gpr_ascend - k_first_gpr_ascend + 1,
@@ -1132,22 +1158,24 @@ RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_
 size_t RegisterInfoPOSIX_ascend950::GetRegisterSetCount() const {
   return k_num_register_sets_default;
 }
- 
+
 const RegisterSet* RegisterInfoPOSIX_ascend950::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &g_reg_sets_ascend950[set_index];
   return nullptr;
 }
- 
-Status RegisterInfoPOSIX_ascend950::GetRegisterAddr(const llvm::StringRef reg_name,
-  CoreType core_type, uint64_t &addr) {
+
+Status RegisterInfoPOSIX_ascend950::GetRegisterAddr(
+    const llvm::StringRef reg_name, CoreType core_type,
+    InterruptPosType pos_type, uint64_t &addr) {
   Status error;
   auto reg_info = m_register_map.find(reg_name.str());
   if (reg_info == m_register_map.end()) {
     error.SetErrorStringWithFormatv(
         "Can not get addr, register name: {0}", reg_name);
   }
-  if ((1U << static_cast<int>(core_type)) & reg_info->second.core_type_support_mask) {
+  if (IsRegisterSupport(core_type, pos_type,
+                        reg_info->second.core_type_support_mask)) {
     addr = reg_info->second.addr;
   } else {
     error.SetErrorStringWithFormatv(
@@ -1211,7 +1239,7 @@ RegisterInfoPOSIXCore_ascend950::RegisterInfoPOSIXCore_ascend950(const ArchSpec 
     GetRegExtractor().raw_register_infos.data(),
     GetRegExtractor().register_map) {
 }
- 
+
 RegisterInfoPOSIX_ascend950::RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch, uint32_t register_info_count,
   uint32_t register_gpr_count, const RegisterInfo *register_info_p,
   const std::map<std::string, DeviceRegisterInfo>& register_map)
@@ -1226,7 +1254,7 @@ Status RegisterInfoPOSIX_ascend950::ReadVXReg(
   Log *log = GetLog(LLDBLog::Process);
   // simd is 256bit
   constexpr uint16_t vl_size = 256;
-  constexpr uint8_t read_count = vl_size / 32; 
+  constexpr uint8_t read_count = vl_size / 32;
   DataBufferHeap buffer;
   Status error;
   if (m_register_map.find(reg_info->name) == m_register_map.end()) {
@@ -1422,14 +1450,14 @@ static const RegisterSet g_core_reg_sets[k_num_register_sets] = {
   {"AicErrorRegisters", "aic_err_reg", k_num_aic_error_registers, g_aic_error_regnums},
   {"ErrorInfoRegisters", "err_info_reg", k_num_err_info_registers, g_err_info_regnums},
 };
- 
+
 const RegisterSet* RegisterInfoPOSIXCore_ascend950::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &g_core_reg_sets[set_index];
   LLDB_LOGF(GetLog(LLDBLog::Thread), "get A2/A3 core register set failed");
   return nullptr;
 }
- 
+
 size_t RegisterInfoPOSIXCore_ascend950::GetRegisterSetCount() const {
   return k_num_register_sets;
 }

@@ -2541,11 +2541,11 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       } else if (key.compare("kernel_name") == 0) {
         stop_info.kernel_name = value.str();
       }else if (key.compare("thread_x") == 0) {
-        value.getAsInteger(16, stop_info.thread_idx_x);
+        value.getAsInteger(16, stop_info.thread_pos.x);
       } else if (key.compare("thread_y") == 0) {
-        value.getAsInteger(16, stop_info.thread_idx_y);
+        value.getAsInteger(16, stop_info.thread_pos.y);
       } else if (key.compare("thread_z") == 0) {
-        value.getAsInteger(16, stop_info.thread_idx_z);
+        value.getAsInteger(16, stop_info.thread_pos.z);
       } else if (key.compare("soc_type") == 0) {
         int integer_value;
         if(!value.getAsInteger(RADIX_HEX, integer_value)) {
@@ -2959,7 +2959,7 @@ Status ProcessGDBRemote::FlashErase(lldb::addr_t addr, size_t size) {
     return status;
 
   // The gdb spec doesn't say if erasures are allowed across multiple regions,
-  // but we'll disallow it to be safe and to keep the logic simple by worring
+  // but we'll disallow it to be safe and to keep the logic simple by worrying
   // about only one region's block size.  DoMemoryWrite is this function's
   // primary user, and it can easily keep writes within a single memory region
   if (addr + size > region.GetRange().GetRangeEnd()) {
@@ -4475,7 +4475,7 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
   Log *log(GetLog(GDBRLog::Process));
   // We will use the last instance of each value. Also we preserve the order
   // of declaration in the XML, as it may not be numerical.
-  // For example, hardware may intially release with two states that softwware
+  // For example, hardware may initially release with two states that softwware
   // can read from a register field:
   // 0 = startup, 1 = running
   // If in a future hardware release, the designers added a pre-startup state:

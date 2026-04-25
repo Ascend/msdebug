@@ -30,7 +30,7 @@ enum class SocType {
   SOC_END,
 };
 
-// Defined by ts 
+// Defined by ts
 enum class CoreType {
   AIC = 0,
   AIV,
@@ -56,9 +56,9 @@ enum class MemType : uint32_t {
 };
 
 enum class InterruptPosType : uint8_t {
-  STARS_SU_INTERRUPT = 0,
-  STARS_VEC_INTERRUPT_SIMD = 1,
-  STARS_VEC_INTERRUPT_SIMT = 2
+  SU_INTERRUPT = 0,
+  VEC_INTERRUPT_SIMD = 1,
+  VEC_INTERRUPT_SIMT = 2
 };
 
 struct CoreInfo {
@@ -155,10 +155,7 @@ struct DeviceStopInfo {
   SocType soc_type;
   // used by coredump currently
   std::string stop_description;
-
-  uint16_t thread_idx_x; 
-  uint16_t thread_idx_y; 
-  uint16_t thread_idx_z;
+  ThreadPos thread_pos;
 };
 
 // Message from lldb-client to lldb-server
@@ -169,13 +166,13 @@ struct MemoryTypeInfo {
   uint8_t element_size;
 };
 
-// 
+//
 struct InterruptPosInfo {
   CoreType core_type;
   bool single_core_run;
   bool single_warp_run;
   uint32_t core_id;
-  InterruptPosType pos_type{InterruptPosType::STARS_SU_INTERRUPT};
+  InterruptPosType pos_type{InterruptPosType::SU_INTERRUPT};
   ThreadPos thread_pos;
   uint64_t pc;
   ThreadInfo thread_info;
@@ -196,7 +193,7 @@ struct InterruptPosInfo {
   void Reset() {
     core_id = 1;
     core_type = CoreType::UNKNOWN_CORE_TYPE;
-    pos_type = InterruptPosType::STARS_SU_INTERRUPT;
+    pos_type = InterruptPosType::SU_INTERRUPT;
     thread_pos = ThreadPos{};
     pc = -1;
     // 默认设置所有warp同步调试

@@ -97,27 +97,27 @@ enum LLDB_ASCEND_RENUM {
   k_num_dbg_registers_ascend,
   // Above registers is used for both coredump and onboard.
   // If you add a new shared register, please insert it before this line.
-  lldb_aic_error_0 = k_num_dbg_registers_ascend, 
+  lldb_aic_error_0 = k_num_dbg_registers_ascend,
   lldb_aic_error_1,
-  lldb_aic_error_2, 
-  lldb_aic_error_3, 
-  lldb_aic_error_4, 
-  lldb_aic_error_5, 
+  lldb_aic_error_2,
+  lldb_aic_error_3,
+  lldb_aic_error_4,
+  lldb_aic_error_5,
   lldb_biu_err_info_0,
-  lldb_biu_err_info_1, 
-  lldb_ccu_err_info_0, 
-  lldb_ccu_err_info_1, 
-  lldb_cube_err_info, 
-  lldb_biu_err_info_2, 
-  lldb_ifu_err_info_0, 
-  lldb_ifu_err_info_1, 
-  lldb_mte_err_info_0, 
-  lldb_mte_err_info_1, 
-  lldb_vec_err_info_0, 
-  lldb_vec_err_info_1, 
-  lldb_fixp_err_info_0, 
-  lldb_su_dc_ecc_1bit_err_info, 
-  lldb_fixp_err_info_1, 
+  lldb_biu_err_info_1,
+  lldb_ccu_err_info_0,
+  lldb_ccu_err_info_1,
+  lldb_cube_err_info,
+  lldb_biu_err_info_2,
+  lldb_ifu_err_info_0,
+  lldb_ifu_err_info_1,
+  lldb_mte_err_info_0,
+  lldb_mte_err_info_1,
+  lldb_vec_err_info_0,
+  lldb_vec_err_info_1,
+  lldb_fixp_err_info_0,
+  lldb_su_dc_ecc_1bit_err_info,
+  lldb_fixp_err_info_1,
   k_num_registers_ascend
 };
 
@@ -156,16 +156,16 @@ static const uint32_t g_dbg_regnums[] = {
   LLDB_INVALID_REGNUM};
 
 static const uint32_t g_aic_err_regnums[] = {
-  lldb_aic_error_0, lldb_aic_error_1, lldb_aic_error_2, 
+  lldb_aic_error_0, lldb_aic_error_1, lldb_aic_error_2,
   lldb_aic_error_3, lldb_aic_error_4, lldb_aic_error_5,
   LLDB_INVALID_REGNUM};
 
 static const uint32_t g_err_info_regnums[] = {
-  lldb_biu_err_info_0, lldb_biu_err_info_1, lldb_ccu_err_info_0, 
-  lldb_ccu_err_info_1, lldb_cube_err_info, lldb_biu_err_info_2, 
-  lldb_ifu_err_info_0, lldb_ifu_err_info_1, lldb_mte_err_info_0, 
-  lldb_mte_err_info_1, lldb_vec_err_info_0, lldb_vec_err_info_1, 
-  lldb_fixp_err_info_0, lldb_su_dc_ecc_1bit_err_info, lldb_fixp_err_info_1, 
+  lldb_biu_err_info_0, lldb_biu_err_info_1, lldb_ccu_err_info_0,
+  lldb_ccu_err_info_1, lldb_cube_err_info, lldb_biu_err_info_2,
+  lldb_ifu_err_info_0, lldb_ifu_err_info_1, lldb_mte_err_info_0,
+  lldb_mte_err_info_1, lldb_vec_err_info_0, lldb_vec_err_info_1,
+  lldb_fixp_err_info_0, lldb_su_dc_ecc_1bit_err_info, lldb_fixp_err_info_1,
   LLDB_INVALID_REGNUM};
 
 static const RegisterSet g_reg_sets_ascend910b[k_num_register_sets_default] = {
@@ -485,11 +485,8 @@ const vector<vector<ErrRegMask>> *RegisterInfoPOSIXCore_ascend910B::GetAicErrorR
 
 const RegExtractor &RegisterInfoPOSIX_ascend910B::GetRegExtractor() {
   static RegExtractor instance(REGISTER_910B_INFO, k_num_dbg_registers_ascend);
-  static std::once_flag flag{};
-  std::call_once(flag, []() {
-    LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
-              instance.raw_register_infos.size());
-  });
+  LLDB_LOG_ONCE(GetLog(LLDBLog::Process), "raw_register_infos_size={0}",
+          instance.raw_register_infos.size());
   return instance;
 }
 
@@ -514,8 +511,9 @@ const RegisterSet* RegisterInfoPOSIX_ascend910B::GetRegisterSet(size_t set_index
   return nullptr;
 }
 
-Status RegisterInfoPOSIX_ascend910B::GetRegisterAddr(const llvm::StringRef reg_name,
-  CoreType core_type, uint64_t &addr) {
+Status RegisterInfoPOSIX_ascend910B::GetRegisterAddr(
+    const llvm::StringRef reg_name, CoreType core_type,
+    InterruptPosType pos_type, uint64_t &addr) {
   Status error;
   auto reg_info = m_register_map.find(reg_name.str());
   if (reg_info == m_register_map.end()) {
@@ -535,11 +533,7 @@ Status RegisterInfoPOSIX_ascend910B::GetRegisterAddr(const llvm::StringRef reg_n
 
 const RegExtractor &RegisterInfoPOSIXCore_ascend910B::GetRegExtractor() {
   static RegExtractor instance(REGISTER_910B_INFO, k_num_registers_ascend);
-  static std::once_flag flag{};
-  std::call_once(flag, []() {
-    LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
-              instance.raw_register_infos.size());
-  });
+  LLDB_LOG_ONCE(GetLog(LLDBLog::Process), "raw_register_infos_size={0}",instance.raw_register_infos.size() );
   return instance;
 }
 

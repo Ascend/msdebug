@@ -5,7 +5,7 @@
 #ifndef REGISTERINFOPOSIX_ASCEND950_H
 #define REGISTERINFOPOSIX_ASCEND950_H
 #include "RegisterInfoPOSIX_ascend.h"
- 
+
 class RegisterInfoPOSIX_ascend950 : public RegisterInfoPOSIX_ascend {
 public:
   struct BaseRegGroup {
@@ -16,7 +16,10 @@ public:
 
   RegisterInfoPOSIX_ascend950(const ArchSpec &target_arch);
   const RegisterSet* GetRegisterSet(size_t reg_set) const override;
-  Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) override;
+
+  Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type,
+                         InterruptPosType pos_type, uint64_t &addr) override;
+
   static const RegExtractor &GetRegExtractor();
 
   Status ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info,
@@ -64,14 +67,14 @@ private:
 class RegisterInfoPOSIXCore_ascend950 : public RegisterInfoPOSIX_ascend950 {
 public:
   static const RegExtractor& GetRegExtractor();
- 
+
 public:
   RegisterInfoPOSIXCore_ascend950(const ArchSpec &target_arch);
- 
+
   const RegisterSet* GetRegisterSet(size_t reg_set) const override;
 
   const std::vector<std::vector<ErrRegMask>> *GetAicErrorRegTable() override;
- 
+
   size_t GetRegisterSetCount() const override;
 };
 

@@ -15,8 +15,6 @@ public:
   Ascend310PDeviceContext(const ::pid_t pid, const uint32_t device_id);
   ~Ascend310PDeviceContext() = default;
   SocType GetSocType() override { return m_soc_type; }
-  Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) override;
-  Status GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) override;
   Status CheckRegisterAddr(CoreType core_type, uint64_t addr) const override;
 
   MemType GetStackMemType() const override;

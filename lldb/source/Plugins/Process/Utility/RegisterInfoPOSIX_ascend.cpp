@@ -39,10 +39,6 @@ std::map<std::string, DeviceRegisterInfo> RegisterInfoPOSIX_ascend::GetRegisterM
   return m_register_map;
 }
 
-Status RegisterInfoPOSIX_ascend::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
-  return Status();
-}
-
 Status RegisterInfoPOSIX_ascend::ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info,
         const RegisterDataInterface *reg_data_reader, RegisterValue &value) const {
   Status error;

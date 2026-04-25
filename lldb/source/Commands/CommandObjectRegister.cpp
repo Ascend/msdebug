@@ -191,7 +191,7 @@ public:
     }
 
     // 按照名称和长度对寄存器索引排序
-    std::sort(reg_indices.begin(), reg_indices.end(), 
+    std::sort(reg_indices.begin(), reg_indices.end(),
               [reg_ctx](uint32_t a, uint32_t b) {
                 const RegisterInfo *info_a = reg_ctx->GetRegisterInfoAtIndex(a);
                 const RegisterInfo *info_b = reg_ctx->GetRegisterInfoAtIndex(b);
@@ -205,7 +205,7 @@ public:
                 }
                 return len_a < len_b;
               });
-    
+
     for (uint32_t reg : reg_indices) {
       const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
       if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
@@ -243,12 +243,6 @@ protected:
       size_t num_register_sets = 1;
       const size_t set_array_size = m_command_options.set_indexes.GetSize();
       if (set_array_size > 0) {
-#ifdef MS_DEBUGGER
-        if (process->DeviceCoredumpEnable() || process->IsStopInDevice()) {
-          result.AppendError("Ascend device does not support setting register index.");
-          return;
-        }
-#endif
         for (size_t i = 0; i < set_array_size; ++i) {
           set_idx =
               m_command_options.set_indexes[i]->GetValueAs<uint64_t>().value_or(
@@ -269,22 +263,18 @@ protected:
           }
         }
       } else {
-#ifdef MS_DEBUGGER
-        if (process->IsStopInDevice() && !process->DeviceCoredumpEnable()) {
-          if (m_command_options.alternate_name) {
-            result.AppendError("Ascend device dose not support setting register alternate name.");
-          }
-          if (m_command_options.dump_all_sets) {
-            DumpRegisterSetWithSort(m_exe_ctx, strm, reg_ctx, set_idx,
-                          !m_command_options.dump_all_sets.GetCurrentValue());
-          }
-          return;
-        }
-#endif
         if (m_command_options.dump_all_sets)
           num_register_sets = reg_ctx->GetRegisterSetCount();
 
         for (set_idx = 0; set_idx < num_register_sets; ++set_idx) {
+#ifdef MS_DEBUGGER
+          if (process->IsStopInDevice()) {
+            DumpRegisterSetWithSort(
+                m_exe_ctx, strm, reg_ctx, set_idx,
+                !m_command_options.dump_all_sets.GetCurrentValue());
+            continue;
+          }
+#endif
           // When dump_all_sets option is set, dump primitive as well as
           // derived registers.
           DumpRegisterSet(m_exe_ctx, strm, reg_ctx, set_idx,

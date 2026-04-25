@@ -229,7 +229,7 @@ void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg
   }
   auto it = m_socket_device_pid.find(client_socket);
   if (it == m_socket_device_pid.end()) {
-    LLDB_LOG(log, "receive this device id for the fisrt time, message is: {0}, original length is {1}",
+    LLDB_LOG(log, "receive this device id for the first time, message is: {0}, original length is {1}",
              display_msg, msg.length());
   } else {
     LLDB_LOG(log, "receive message for device id: {0}, pid: {1}, message is: {2}",
@@ -657,7 +657,7 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
   if (info.cmd_type == CmdType::INTERRUPT_EVENT) {
     const InterruptEvent *param = (const InterruptEvent*)info.recv_msg;
     InterruptEvent event = *param;
-    if (param->pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMD) {
+    if (param->pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
       LLDB_LOG(log, "latest vf start pc={0:x}", m_latest_vf_start_pc);
       FixSimdPC(event.pc);
     }
@@ -666,7 +666,7 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
               (uint8_t)param->pos_type, param->thread_info.thread_dim_x, param->thread_info.thread_dim_y, param->thread_info.thread_dim_z,
               param->thread_info.thread_id, param->pc);
     std::lock_guard<std::mutex> guard(m_status_mtx);
-    if (event.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
+    if (event.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
       TryUpdateThreadIndex(event);
     }
     if (param->status == CoreStatus::BRKPT) {
@@ -816,7 +816,7 @@ void AscendProcessLinux::SetThreadOnFocus(const uint32_t &linear_idx) {
     thread->SetStopThreadIdx(m_pos_info.thread_pos.x,
                              m_pos_info.thread_pos.y,
                              m_pos_info.thread_pos.z);
-    
+
   }
 
 }
@@ -859,9 +859,9 @@ Status AscendProcessLinux::GetCoresInfo(std::vector<CoreInfo> &info) {
   if (error.Fail()) {
     return error;
   }
-  
+
   for (auto &core_info: info) {
-    if (core_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMD) {
+    if (core_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
       FixSimdPC(core_info.pc);
     }
   }
@@ -952,7 +952,7 @@ Status AscendProcessLinux::ReadDeviceRegisterList(std::vector<std::string> &reg_
   if (m_device_context == nullptr) {
     return Status("device context is null!");
   }
-  return m_device_context->ReadRegisterList(reg_list, m_pos_info.core_id, m_pos_info.core_type);
+  return Status("Unsupport read device register list");
 }
 
 Status AscendProcessLinux::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,

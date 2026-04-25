@@ -28,6 +28,7 @@ enum class GlobalDataType : uint16_t {
   ARGS = 101,
   STACK = 102,
   DEVICE_KERNEL_OBJECT = 103,   // device侧GM中算子.o数据
+  VF_STACK = 104,
   MAX
 };
 
@@ -72,7 +73,7 @@ struct GlobalMemInfo {
 struct LocalMemInfo {
   uint64_t size; //内存大小
   uint32_t section_index; // 对应哪个.ascend.local section
-  uint32_t global_section_index; //对应哪个.ascend.gloabl section， 只有dcache有效
+  uint32_t global_section_index; //对应哪个.ascend.global section， 只有dcache有效
   MemType type; // L0AL1等
   uint32_t reserve;
 };
@@ -112,6 +113,29 @@ struct LocalMemory {
   std::vector<uint8_t> data;
 };
 
+struct ThreadDim {
+  uint16_t x;
+  uint16_t y;
+  uint16_t z;
+};
+
+struct FocusPosInfo {
+  CoreType core_type;
+  // core id is unique for all aic and aic
+  CoreIDType core_id;
+  InterruptPosType pos_type{InterruptPosType::SU_INTERRUPT};
+  ThreadDim thread_dim;
+  ThreadPos thread_pos;
+};
+
+inline ThreadPos LinearIdxToThreadPos(uint32_t linear_idx, const ThreadDim &thread_dim) {
+  ThreadPos pos;
+  pos.x = linear_idx % thread_dim.x;
+  pos.y = (linear_idx / thread_dim.x) % thread_dim.y;
+  pos.z = linear_idx / (thread_dim.x * thread_dim.y);
+  return pos;
+}
+
 struct SummaryInfo {
   std::vector<CoreIDType> aiv_id;
   std::vector<CoreIDType> aic_id;
@@ -124,8 +148,7 @@ struct SummaryInfo {
   std::unordered_map<CoreIDType, std::unordered_map<lldb_private::MemType, std::vector<LocalMemory>>> local_mems;
   // map key is core_id, addr
   std::unordered_map<CoreIDType, std::unordered_map<uint64_t, std::unique_ptr<RegDataBase>>> reg_data;
-  CoreIDType focus_core_id;
-  CoreType focus_core_type;
+  FocusPosInfo focus_pos_info;
   uint64_t base_pc;
 };
 
@@ -157,6 +180,7 @@ static std::unordered_map<GlobalDataType, std::string> GlobalDataTypeToStr {
   {GlobalDataType::ARGS, "ARGS"},
   {GlobalDataType::STACK, "STACK"},
   {GlobalDataType::DEVICE_KERNEL_OBJECT, "DEVICE_KERNEL_OBJECT"},
+  {GlobalDataType::VF_STACK, "VF_STACK"},
   {GlobalDataType::MAX, "NULL"}
 };
 
@@ -171,7 +195,8 @@ static std::unordered_map<GlobalDataType, std::string> GlobalDataTypeToMemTypeSt
   {GlobalDataType::SHAPE_TENSOR, "GM"},
   {GlobalDataType::ARGS, "GM/DCACHE"},
   {GlobalDataType::STACK, "GM/DCACHE"},
-  {GlobalDataType::DEVICE_KERNEL_OBJECT, "GM"}
+  {GlobalDataType::DEVICE_KERNEL_OBJECT, "GM"},
+  {GlobalDataType::VF_STACK, "GM"},
 };
 
 static std::unordered_map<MemType, std::string> LocalDataTypeToStr {
@@ -195,7 +220,8 @@ static std::unordered_map<DeviceAddressClass, std::vector<GlobalDataType>> Addre
                              GlobalDataType::SHAPE_TENSOR,
                              GlobalDataType::ARGS,
                              GlobalDataType::DEVICE_KERNEL_OBJECT,
-                             GlobalDataType::STACK}}
+                             GlobalDataType::STACK,
+                             GlobalDataType::VF_STACK}}
 };
 
 static std::unordered_map<DeviceAddressClass, MemType> AddressClassLocalDataTypeMap = {
