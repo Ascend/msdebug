@@ -217,12 +217,12 @@ private:
 };
 
 #if LLDB_USE_PYTHON_SET_INTERRUPT
-/// Saves the current signal handler for the specified signal and restores
 /// it at the end of the current scope.
 struct RestoreSignalHandlerScope {
   /// The signal handler.
   struct sigaction m_prev_handler;
   int m_signal_code;
+
   RestoreSignalHandlerScope(int signal_code) : m_signal_code(signal_code) {
     // Initialize sigaction to their default state.
     std::memset(&m_prev_handler, 0, sizeof(m_prev_handler));
@@ -231,6 +231,7 @@ struct RestoreSignalHandlerScope {
     int signal_err = ::sigaction(m_signal_code, new_handler, &m_prev_handler);
     lldbassert(signal_err == 0 && "sigaction failed to read handler");
   }
+
   ~RestoreSignalHandlerScope() {
     int signal_err = ::sigaction(m_signal_code, &m_prev_handler, nullptr);
     lldbassert(signal_err == 0 && "sigaction failed to restore old handler");
@@ -3131,9 +3132,8 @@ void ScriptInterpreterPythonImpl::Initialize() {
 #if LLDB_USE_PYTHON_SET_INTERRUPT
   // Python will not just overwrite its internal SIGINT handler but also the
   // one from the process. Backup the current SIGINT handler to prevent that
-  // Python deletes it.
+  // Python deletes it.MS_DEBUGGER needs to preserve the process SIGINT handler even when Python interrupt setup is not enabled.
   RestoreSignalHandlerScope save_sigint(SIGINT);
-
   // Setup a default SIGINT signal handler that works the same way as the
   // normal Python REPL signal handler which raises a KeyboardInterrupt.
   // Also make sure to not pollute the user's REPL with the signal module nor

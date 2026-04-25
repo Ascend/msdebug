@@ -11,6 +11,12 @@
 #include <mutex>
 #include <optional>
 
+#ifdef MS_DEBUGGER
+#include <csignal>
+#include <termios.h>
+#include <unistd.h>
+#endif
+
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
@@ -4699,6 +4705,19 @@ public:
     // FIXME: error handling?
     llvm::consumeError(terminal.SetCanonical(false));
     llvm::consumeError(terminal.SetEcho(false));
+
+#ifdef MS_DEBUGGER
+    if (terminal.IsATerminal()) {
+      struct termios fd_termios;
+      if (::tcgetattr(read_fd, &fd_termios) == 0) {
+        fd_termios.c_lflag &= ~ISIG;
+        fd_termios.c_cc[VMIN] = 1;
+        fd_termios.c_cc[VTIME] = 0;
+        (void)::tcsetattr(read_fd, TCSANOW, &fd_termios);
+      }
+    }
+#endif
+
 // FD_ZERO, FD_SET are not supported on windows
 #ifndef _WIN32
     const int pipe_read_fd = m_pipe.GetReadFileDescriptor();
@@ -4723,6 +4742,41 @@ public:
       if (select_helper.FDIsSetRead(read_fd)) {
         n = 1;
         if (m_read_file.Read(&ch, n).Success() && n == 1) {
+
+#ifdef MS_DEBUGGER
+          if (ch == '\x03') {
+            if (StateIsRunningState(m_process->GetState())) {
+              bool signal_sent = false;
+              lldb::pid_t pid = m_process->GetID();
+              if (pid != LLDB_INVALID_PROCESS_ID) {
+                ::pid_t host_pid = static_cast<::pid_t>(pid);
+                ::pid_t pgid = ::getpgid(host_pid);
+                //short burst of SIGINTs
+                constexpr int kSigintBurstCount = 3;
+                for (int i = 0; i < kSigintBurstCount; ++i) {
+                  if (pgid > 0 && pgid != ::getpgrp() &&
+                      ::kill(-pgid, SIGINT) == 0) {
+                    signal_sent = true;
+                    continue;
+                  }
+
+                  if (::kill(host_pid, SIGINT) == 0)
+                    signal_sent = true;
+                }
+              }
+
+              if (!signal_sent)
+                m_process->SendAsyncInterrupt();
+              std::lock_guard<std::recursive_mutex> guard(GetOutputMutex());
+              lldb::StreamFileSP output_sp = GetOutputStreamFileSP();
+              if (output_sp) {
+                output_sp->Printf(
+                    "The debugging process was terminated at the user's request.\n");
+              }
+            }
+            continue;
+          }
+#endif
           if (m_write_file.Write(&ch, n).Fail() || n != 1)
             break;
         } else
@@ -4737,8 +4791,21 @@ public:
           if (ch == 'q')
             break;
           if (ch == 'i')
+          {
             if (StateIsRunningState(m_process->GetState()))
-              m_process->SendAsyncInterrupt();
+              {
+#ifdef MS_DEBUGGER
+                  // Double check the state before sending async interrupt.
+                  // This is a workaround for a Ctrl+C handling issue
+                  // Without the second check, SendAsyncInterrupt() could be called in a racy way
+                  // when the process state changes right after the first check (Ctrl+C race condition).
+                if (StateIsRunningState(m_process->GetState()))
+#endif
+              {
+                m_process->SendAsyncInterrupt();
+              }
+              }
+          }
         }
       }
     }

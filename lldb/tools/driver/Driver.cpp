@@ -28,6 +28,17 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef MS_DEBUGGER
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBProcess.h"
+#endif
+
+#ifdef MS_DEBUGGER
+#include <cerrno>
+#include <unistd.h>
+#endif
+
 #include <algorithm>
 #include <atomic>
 #include <bitset>
@@ -87,6 +98,123 @@ static struct termios g_old_stdin_termios;
 static bool disable_color(const raw_ostream &OS) { return false; }
 
 static Driver *g_driver = nullptr;
+
+#ifdef MS_DEBUGGER
+static int g_sigint_pipe_fds[2] = {-1, -1};
+static std::atomic<bool> g_sigint_thread_done = false;
+static std::thread g_sigint_thread;
+
+static void SigintRelayThread() {
+  char ch;
+  while (!g_sigint_thread_done.load(std::memory_order_relaxed)) {
+    ssize_t bytes_read = ::read(g_sigint_pipe_fds[0], &ch, 1);
+    if (bytes_read == -1) {
+      if (errno == EINTR)
+        continue;
+      break;
+    }
+
+    if (bytes_read == 0)
+      break;
+
+    if (g_sigint_thread_done.load(std::memory_order_relaxed))
+      break;
+
+    Driver *driver = g_driver;
+    if (driver != nullptr) {
+      driver->GetDebugger().DispatchInputInterrupt();
+      SBTarget target = driver->GetDebugger().GetSelectedTarget();
+      if (target.IsValid()) {
+        SBProcess process = target.GetProcess();
+        StateType state = process.GetState();
+        if (process.IsValid() &&
+            (state == eStateRunning || state == eStateStepping)) {
+          FILE *output = driver->GetDebugger().GetOutputFileHandle();
+          if (output) {
+            ::fprintf(
+                output,
+                "The debugging process was terminated at the user's request.\n");
+            ::fflush(output);
+          }
+
+          lldb::pid_t pid = process.GetProcessID();
+          ::pid_t host_pid = static_cast<::pid_t>(pid);
+          bool sigint_sent = false;
+          ::pid_t pgid = -1;
+          if (pid != LLDB_INVALID_PROCESS_ID)
+            pgid = ::getpgid(host_pid);
+          //short burst of SIGINTs
+          constexpr int kSigintBurstCount = 3;
+          for (int i = 0; i < kSigintBurstCount; ++i) {
+            if (pgid > 0 && pgid != ::getpgrp() &&
+                ::kill(-pgid, SIGINT) == 0) {
+              sigint_sent = true;
+              continue;
+            }
+
+            SBError signal_error = process.Signal(SIGINT);
+            if (signal_error.Success()) {
+              sigint_sent = true;
+              continue;
+            }
+
+            if (pid != LLDB_INVALID_PROCESS_ID && ::kill(host_pid, SIGINT) == 0)
+              sigint_sent = true;
+          }
+
+          if (sigint_sent) {
+            for (int i = 0; i < 10; ++i) {
+              StateType current_state = process.GetState();
+              if (current_state != eStateRunning &&
+                  current_state != eStateStepping)
+                break;
+              std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+          }
+
+          StateType current_state = process.GetState();
+          if (current_state == eStateRunning || current_state == eStateStepping) {
+            if (pgid > 0 && pgid != ::getpgrp())
+              (void)::kill(-pgid, SIGSTOP);
+            else if (pid != LLDB_INVALID_PROCESS_ID)
+              (void)::kill(host_pid, SIGSTOP);
+          }
+        }
+      }
+    }
+  }
+}
+
+static void StartSigintRelayThread() {
+  if (::pipe(g_sigint_pipe_fds) != 0)
+    return;
+
+  int flags = fcntl(g_sigint_pipe_fds[1], F_GETFL, 0);
+  if (flags != -1)
+    fcntl(g_sigint_pipe_fds[1], F_SETFL, flags | O_NONBLOCK);
+
+  g_sigint_thread_done.store(false, std::memory_order_relaxed);
+  g_sigint_thread = std::thread(SigintRelayThread);
+}
+
+static void StopSigintRelayThread() {
+  if (g_sigint_pipe_fds[0] == -1 || g_sigint_pipe_fds[1] == -1)
+    return;
+
+  g_sigint_thread_done.store(true, std::memory_order_relaxed);
+  const char wake_byte = '\0';
+  (void)::write(g_sigint_pipe_fds[1], &wake_byte, 1);
+
+  if (g_sigint_thread.joinable())
+    g_sigint_thread.join();
+
+  close(g_sigint_pipe_fds[0]);
+  close(g_sigint_pipe_fds[1]);
+  g_sigint_pipe_fds[0] = -1;
+  g_sigint_pipe_fds[1] = -1;
+
+}
+#endif
 
 // In the Driver::MainLoop, we change the terminal settings.  This function is
 // added as an atexit handler to make sure we clean them up.
@@ -678,10 +806,17 @@ void sigwinch_handler(int signo) {
 }
 
 void sigint_handler(int signo) {
+
+#ifdef MS_DEBUGGER
+(void)signo;
+#endif
+
 #ifdef _WIN32 // Restore handler as it is not persistent on Windows
   signal(SIGINT, sigint_handler);
 #endif
-  static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
+
+#ifndef MS_DEBUGGER
+static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver != nullptr) {
     if (!g_interrupt_sent.test_and_set()) {
       g_driver->GetDebugger().DispatchInputInterrupt();
@@ -689,8 +824,20 @@ void sigint_handler(int signo) {
       return;
     }
   }
+  _exit(signo); 
+#endif
 
-  _exit(signo);
+
+#ifdef MS_DEBUGGER
+  if (g_sigint_pipe_fds[1] != -1) {
+    const char interrupt_byte = '\x03';
+    (void)::write(g_sigint_pipe_fds[1], &interrupt_byte, 1);
+    return;
+  }
+  if (g_driver != nullptr)
+    g_driver->GetDebugger().DispatchInputInterrupt();
+#endif
+
 }
 
 #ifndef _WIN32
@@ -879,6 +1026,10 @@ int main(int argc, char const *argv[]) {
   signal(SIGTSTP, sigtstp_handler);
 #endif
 
+#ifdef MS_DEBUGGER
+  StartSigintRelayThread();
+#endif
+
   int exit_code = 0;
   // Create a scope for driver so that the driver object will destroy itself
   // before SBDebugger::Terminate() is called.
@@ -908,6 +1059,11 @@ int main(int argc, char const *argv[]) {
 
     future.wait();
   }
+
+
+#ifdef MS_DEBUGGER
+  StopSigintRelayThread();
+#endif
 
   return exit_code;
 }
