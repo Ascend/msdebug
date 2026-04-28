@@ -66,8 +66,8 @@ echo 1 > /proc/debug_switch
 
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
-\cp -f op_kernel/CMakeLists.txt op_kernel/CMakeLists.txt.orig.bak
-sed -i "1i\\add_ops_compile_options(ALL OPTIONS -g -O0)" op_kernel/CMakeLists.txt
+\cp -f op_kernel/CMakeLists.txt op_kernel/CMakeLists.txt.bak
+printf '%s\n' "if(COMMAND add_ops_compile_options)" "  add_ops_compile_options(ALL OPTIONS -sanitizer)" "elseif(COMMAND npu_op_kernel_options)" "  npu_op_kernel_options(ascendc_kernels ALL OPTIONS -sanitizer)" "endif()" | cat - op_kernel/CMakeLists.txt > tmp && mv -f tmp op_kernel/CMakeLists.txt;
 ```
 
 **2. 重新编译部署算子**
@@ -284,5 +284,5 @@ y
 
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
-\cp -f op_kernel/CMakeLists.txt.orig.bak op_kernel/CMakeLists.txt
+\cp -f op_kernel/CMakeLists.txt.bak op_kernel/CMakeLists.txt
 ```
