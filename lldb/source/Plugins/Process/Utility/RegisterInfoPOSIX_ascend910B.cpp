@@ -11,9 +11,6 @@ using namespace llvm;
 using namespace std;
 
 constexpr uint8_t ADDR_OFFSET = 48U;
-constexpr uint8_t AIC_MASK = 1U << static_cast<int>(CoreType::AIC);
-constexpr uint8_t AIV_MASK = 1U << static_cast<int>(CoreType::AIV);
-constexpr uint8_t MIX_MASK = AIC_MASK | AIV_MASK;
 constexpr uint8_t UINT32_BIT_NUM = 32U;
 
 namespace {

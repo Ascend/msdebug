@@ -2197,6 +2197,11 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
     CollectRegNums(reg_info->invalidate_regs, response, true);
     response.PutChar(';');
   }
+#ifdef MS_DEBUGGER
+  response.PutCString("scenarios_mask:");
+  response.PutHex8(reg_info->scenarios_mask);
+  response.PutChar(';');
+#endif
 
   return SendPacketNoLock(response.GetString());
 }
@@ -4383,7 +4388,7 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   response.PutCString(StringJoin(info.aic_bitmaps));
   response.PutCString("aiv_bitmaps:");
   response.PutCString(StringJoin(info.aiv_bitmaps));
- 
+
   response.PutCString("device_id:");
   response.PutHex32(info.device_id);
   response.PutChar(';');
@@ -4855,11 +4860,11 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
 
   // Ensure we have a thread.
   NativeThreadProtocol *thread = m_current_process->GetThreadAtIndex(0);
-  if (!thread) 
+  if (!thread)
     return SendErrorResponse(69);
   std::vector<std::string> reg_list;
   Status status = m_current_process->ReadDeviceRegisterList(reg_list);
-  
+
   if (status.Fail()) {
     return SendErrorResponse(status);
   }

@@ -415,10 +415,6 @@ void ProcessGDBRemote::UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamic
                           GetTarget().GetDebugger().GetID());
   }
 
-  const ArchSpec &target_arch = GetTarget().GetArchitecture();
-  const ArchSpec &remote_host_arch = m_gdb_comm.GetHostArchitecture();
-  const ArchSpec &remote_process_arch = m_gdb_comm.GetProcessArchitecture();
-
   // Use the process' architecture instead of the host arch, if available
   ArchSpec arch_to_use("hiipu64");
 
@@ -490,6 +486,11 @@ void ProcessGDBRemote::UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamic
           } else if (name == "invalidate-regs") {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
           }
+#ifdef MS_DEBUGGER
+          else if (name == "scenarios_mask") {
+            value.getAsInteger(16, reg_info.scenarios_mask);
+          }
+#endif
         }
 
         assert(reg_info.byte_size != 0);
@@ -2546,6 +2547,13 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         value.getAsInteger(16, stop_info.thread_pos.y);
       } else if (key.compare("thread_z") == 0) {
         value.getAsInteger(16, stop_info.thread_pos.z);
+      } else if (key.compare("pos_type") == 0) {
+        int integer_value;
+        if (!value.getAsInteger(RADIX_HEX, integer_value)) {
+          stop_info.pos_type = static_cast<InterruptPosType>(integer_value);
+        } else {
+          stop_info.pos_type = InterruptPosType::SU_INTERRUPT;
+        }
       } else if (key.compare("soc_type") == 0) {
         int integer_value;
         if(!value.getAsInteger(RADIX_HEX, integer_value)) {

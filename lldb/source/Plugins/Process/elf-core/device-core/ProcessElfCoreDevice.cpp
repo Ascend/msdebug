@@ -245,7 +245,7 @@ void ProcessElfCoreDevice::FocusToActiveThreadInWarp(uint8_t warp_id) {
   uint32_t exec_mask = value.GetAsUInt32();
   uint16_t thread_idx =
       warp_id * 32 + (exec_mask ? __builtin_ctz(exec_mask) : 0);
-  m_device_stop_info.thread_pos = LinearIdxToThreadPos(
+  m_summary_info.focus_pos_info.thread_pos = LinearIdxToThreadPos(
       thread_idx, m_summary_info.focus_pos_info.thread_dim);
 }
 
@@ -334,18 +334,23 @@ void ProcessElfCoreDevice::UpdateStopInfo(bool focus_named_error_core) {
   if (focus_named_error_core) {
     FocusToAnyKnownErrorAiCore();
   }
-  DeviceStopInfo stop_info;
-  stop_info.core_id = m_summary_info.focus_pos_info.core_id;
-  if (m_summary_info.focus_pos_info.core_type == CoreType::AIV) {
-    stop_info.core_id = stop_info.core_id - GetMaxAicID(m_summary_info.chip_type);
-  }
-  stop_info.core_type = m_summary_info.focus_pos_info.core_type;
   ThreadSP thread = GetThreadList().GetSelectedThread();
   string desc = "Unknown Error";
-  std::shared_ptr<void> defer(nullptr, [&stop_info, this, log, &desc] (std::nullptr_t&) {
+  std::shared_ptr<void> defer(nullptr, [this, log, &desc](std::nullptr_t &) {
+    DeviceStopInfo stop_info{};
+    stop_info.core_id = m_summary_info.focus_pos_info.core_id -
+                        GetMaxAicID(m_summary_info.chip_type);
+    stop_info.core_type = m_summary_info.focus_pos_info.core_type;
+    stop_info.pos_type = m_summary_info.focus_pos_info.pos_type;
+    if (stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+      stop_info.thread_pos = m_summary_info.focus_pos_info.thread_pos;
+    }
     stop_info.stop_description = desc;
+    stop_info.kernel_name = m_kernel_name;
     SetDeviceStopInfoCached(stop_info);
-    LLDB_LOG(log, "Set stop description={0}", stop_info.stop_description);
+    LLDB_LOG(log, "Set stop description={0}, pos_type={1}",
+             stop_info.stop_description,
+             static_cast<uint32_t>(m_summary_info.focus_pos_info.pos_type));
   });
   if (!thread) {
     LLDB_LOG(log, "Empty thread, stop update reason");
@@ -357,6 +362,9 @@ void ProcessElfCoreDevice::UpdateStopInfo(bool focus_named_error_core) {
     LLDB_LOG(log, "Cast register context to posix core ascend register context failed");
     return;
   }
+  // update pos_type
+  m_summary_info.focus_pos_info.pos_type = GetPosType(reg_ctx_sp);
+
   string reg_name = core_reg_ctx->GetStopErrorRegister();
   if (reg_name.empty()) {
     LLDB_LOG(log, "Got empty error description");
@@ -365,8 +373,9 @@ void ProcessElfCoreDevice::UpdateStopInfo(bool focus_named_error_core) {
   auto splits = llvm::StringRef(reg_name).split('_');
   desc = string(splits.first) + "_ERROR";
   if (m_summary_info.chip_type == DevdrvChipType::CHIP_CLOUD_V4 &&
-      stop_info.core_type == CoreType::AIV &&
-      GetPosType(reg_ctx_sp) == InterruptPosType::VEC_INTERRUPT_SIMT) {
+      m_summary_info.focus_pos_info.core_type == CoreType::AIV &&
+      m_summary_info.focus_pos_info.pos_type ==
+          InterruptPosType::VEC_INTERRUPT_SIMT) {
     const auto *err_info_reg =
         core_reg_ctx->GetRegisterInfoByName("VEC_ERRINFO_T0_5");
     if (!err_info_reg) {
@@ -377,17 +386,14 @@ void ProcessElfCoreDevice::UpdateStopInfo(bool focus_named_error_core) {
       return;
     }
     uint32_t reg_val = value.GetAsUInt32();
-    uint8_t is_simt = reg_val & 1;
-    if (is_simt) {
-      uint8_t warp_id = (reg_val >> 1) & 0b111111;
-      Status error =
-          GetThreadDim(core_reg_ctx, m_summary_info.focus_pos_info.thread_dim);
-      if (error.Fail()) {
-        LLDB_LOG(log, "Got threadim failed: {0}", error);
-        return;
-      }
-      FocusToActiveThreadInWarp(warp_id);
+    uint8_t warp_id = (reg_val >> 1) & 0b111111;
+    Status error =
+        GetThreadDim(core_reg_ctx, m_summary_info.focus_pos_info.thread_dim);
+    if (error.Fail()) {
+      LLDB_LOG(log, "Got threadim failed: {0}", error);
+      return;
     }
+    FocusToActiveThreadInWarp(warp_id);
   }
 }
 
@@ -905,6 +911,7 @@ size_t ProcessElfCoreDevice::ReadLocalMemory(lldb_private::MemType local_data_ty
 Status ProcessElfCoreDevice::SetAicOnFocus(const uint32_t &core_id) {
   Status error;
   // aic core_id is always correct.
+  m_summary_info.focus_pos_info = {};
   if (find(m_summary_info.aic_id.begin(), m_summary_info.aic_id.end(),
            core_id) != m_summary_info.aic_id.end()) {
     m_summary_info.focus_pos_info.core_id = core_id;
@@ -918,6 +925,7 @@ Status ProcessElfCoreDevice::SetAicOnFocus(const uint32_t &core_id) {
 
 Status ProcessElfCoreDevice::SetAivOnFocus(const uint32_t &core_id) {
   Status error;
+  m_summary_info.focus_pos_info = {};
   // aiv core_id need to add offset of MAX_AIC_NUM.
   CoreIDType aiv_core_id = core_id + GetMaxAicID(m_summary_info.chip_type);
   if (find(m_summary_info.aiv_id.begin(), m_summary_info.aiv_id.end(),
@@ -1008,7 +1016,7 @@ Status ProcessElfCoreDevice::GetCoresInfo(std::vector<CoreInfo> &info) {
   }
   m_summary_info.focus_pos_info.core_id = old_focus_core_id;
   m_summary_info.focus_pos_info.core_type = old_focus_core_type;
-  return error;
+  return Status();
 }
 
 Status ProcessElfCoreDevice::GetKernelInfo(KernelInfo &info) {

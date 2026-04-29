@@ -155,6 +155,7 @@ struct DeviceStopInfo {
   SocType soc_type;
   // used by coredump currently
   std::string stop_description;
+  InterruptPosType pos_type{InterruptPosType::SU_INTERRUPT};
   ThreadPos thread_pos;
 };
 
@@ -210,7 +211,35 @@ struct InterruptPosInfo {
   }
 };
 
+// bitmap:0|1|2|3
+//        aic|aiv|simd_vf|simt_vf
+// don't care pos_type
+constexpr uint8_t AIC_MASK = 1U << static_cast<int>(CoreType::AIC);
+constexpr uint8_t AIV_MASK = 1U << static_cast<int>(CoreType::AIV);
+constexpr uint8_t MIX_MASK = AIC_MASK | AIV_MASK;
 
+// only show on SIMD/SIMT
+constexpr uint8_t SIMD_MASK_OFFSET = 2;
+constexpr uint8_t SIMT_MASK_OFFSET = 3;
+constexpr uint8_t SIMD_VF_MASK = 1U << SIMD_MASK_OFFSET;
+constexpr uint8_t SIMT_VF_MASK = 1U << SIMT_MASK_OFFSET;
+constexpr uint8_t VF_MASK = SIMD_VF_MASK | SIMT_VF_MASK;
+
+inline bool IsRegisterSupport(CoreType core_type, InterruptPosType pos_type,
+                              uint8_t mask) {
+  // if mask not belong to simd/simt, only consider core_type
+  if ((mask & AIC_MASK) || (mask & AIV_MASK)) {
+    return mask & (1U << static_cast<int>(core_type));
+  }
+  if (pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
+    return mask & SIMD_VF_MASK;
+  }
+  if (pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+    return mask & SIMT_VF_MASK;
+  }
+  // su but register is vf
+  return false;
+}
 }
 
 #endif

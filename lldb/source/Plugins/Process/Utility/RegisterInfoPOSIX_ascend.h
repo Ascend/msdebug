@@ -217,7 +217,7 @@ enum DWARF_ASCEND_REGNUM {
   dwarf_ust1_ascend,
   dwarf_ust2_ascend,
   dwarf_ust3_ascend,
-  // simt
+  // simt r0-r126
   dwarf_r0_ascend = 265,
   dwarf_r1_ascend,
   dwarf_r2_ascend,
@@ -411,7 +411,6 @@ enum DWARF_ASCEND_REGNUM {
   dwarf_pc_ascend,
   dwarf_sqzn_ascend,
   dwarf_mask_ascend,
-  dwarf_vl_ascend,
 };
 
 // RegisterKind: EHFrame, DWARF, Generic, Process Plugin, LLDB
@@ -479,6 +478,20 @@ enum DWARF_ASCEND_REGNUM {
        nullptr, nullptr,                                                  \
   }
 
+#define ASCEND_REG_1B(reg, kind5)                                              \
+  {                                                                            \
+      #reg,                                                                    \
+      nullptr,                                                                 \
+      1,                                                                       \
+      0,                                                                       \
+      eEncodingUint,                                                           \
+      eFormatDecimal,                                                          \
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
+       LLDB_INVALID_REGNUM, kind5},                                            \
+      nullptr,                                                                 \
+      nullptr,                                                                 \
+  }
+
 struct DeviceRegisterInfo {
   RegisterInfo reg_info;
   uint64_t addr;
@@ -510,7 +523,11 @@ struct RegExtractor {
     // 寄存器信息改成可变的，为了offset赋值
     raw_register_infos.resize(tableSize);
     std::transform(table, table + tableSize, raw_register_infos.begin(),
-                   [](const DeviceRegisterInfo &info) {return RegisterInfo(info.reg_info);} );
+                   [](const DeviceRegisterInfo &info) {
+                     auto new_reg_info = RegisterInfo(info.reg_info);
+                     new_reg_info.scenarios_mask = info.core_type_support_mask;
+                     return new_reg_info;
+                   });
     register_map.clear();
     uint32_t offset = 0;
     for (size_t i = 0; i < tableSize; i++) {

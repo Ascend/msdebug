@@ -6641,23 +6641,7 @@ bool Process::IsStopInDevice() {
 }
 
 bool Process::IsStopInSimtKernel() {
-  std::vector<CoreInfo> infos;
-  Status error = GetCoresInfo(infos);
-  if (error.Fail()) {
-    return false;
-  }
-  if (infos.empty()) {
-    error.SetErrorStringWithFormat("empty cores info.");
-    return false;
-  }
-  for (uint32_t i = 0; i < infos.size(); ++i) {
-    CoreInfo core_info = infos[i];
-    if (core_info.core_id == m_device_stop_info.core_id &&
-        core_info.core_type == m_device_stop_info.core_type) {
-      return core_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT;
-    }
-  }
-  return false;
+  return m_device_stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT;
 }
 
 inline std::string GetSimpleKernelName(const std::string &name) {
@@ -6679,20 +6663,20 @@ void Process::ShowDeviceStopInfoCached(Stream &stream) {
   }
 
   std::string name = GetSimpleKernelName(m_device_stop_info.kernel_name);
-  if (name.empty()) {
-    stream.Printf("[Switching to focus on CoreId %u, Type %s]\n",
-      m_device_stop_info.core_id, core_type_str.c_str());
+  std::string kernel_name_str = "";
+  if (!name.empty()) {
+    kernel_name_str = "Kernel " + name + ", ";
+  }
+  if (IsStopInSimtKernel()) {
+    stream.Printf(
+        "[Switching to focus on %sCoreId %u, Type %s, Thread (%u, %u, %u)]\n",
+        kernel_name_str.c_str(), m_device_stop_info.core_id,
+        core_type_str.c_str(), m_device_stop_info.thread_pos.x,
+        m_device_stop_info.thread_pos.y, m_device_stop_info.thread_pos.z);
   } else {
-    if (IsStopInSimtKernel()) {
-      stream.Printf("[Switching to focus on Kernel %s, CoreId %u, Type %s, Thread (%u, %u, %u)]\n",
-                    name.c_str(), m_device_stop_info.core_id,
-                    core_type_str.c_str(), m_device_stop_info.thread_pos.x,
-                    m_device_stop_info.thread_pos.y, m_device_stop_info.thread_pos.z);
-    }else {
-      stream.Printf("[Switching to focus on Kernel %s, CoreId %u, Type %s]\n",
-      name.c_str(), m_device_stop_info.core_id,
-      core_type_str.c_str());
-    }
+    stream.Printf("[Switching to focus on %sCoreId %u, Type %s]\n",
+                  kernel_name_str.c_str(), m_device_stop_info.core_id,
+                  core_type_str.c_str());
   }
   stream.Flush();
 }

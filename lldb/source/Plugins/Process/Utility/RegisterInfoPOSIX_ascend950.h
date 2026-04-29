@@ -50,6 +50,11 @@ private:
   Status ReadVXReg(const RegisterInfo *reg_info, const InterruptPosInfo &pos,
                    const RegisterDataInterface *reg_data_reader, RegisterValue &value) const;
 
+  Status ReadSimtPReg(const RegisterInfo *reg_info, uint64_t base_addr,
+                      const InterruptPosInfo &pos,
+                      const RegisterDataInterface *reg_data_reader,
+                      RegisterValue &value) const;
+
   static bool IsSimtPC(const RegisterInfo *reg_info);
 
   static bool IsSReg(const RegisterInfo *reg_info);

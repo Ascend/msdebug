@@ -42,6 +42,9 @@ public:
     uint32_t value_reg_offset = 0;
     // Non-null if there is an XML provided type.
     const RegisterFlags *flags_type = nullptr;
+#ifdef MS_DEBUGGER
+    uint8_t scenarios_mask = 0;
+#endif
   };
 
   DynamicRegisterInfo() = default;

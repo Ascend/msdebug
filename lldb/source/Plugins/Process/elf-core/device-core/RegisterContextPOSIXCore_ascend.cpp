@@ -211,6 +211,10 @@ Status RegisterContextPOSIXCore_ascend::ReadRegister(
   }
   value.SetFromMemoryData(*reg_info, core_reg_info->GetValue(),
                           reg_info->byte_size, lldb::eByteOrderLittle, error);
+  // special fix execmask and simtpc
+  if (std::string(reg_info->name) == "EXECMASK" && value.GetAsUInt32() == 0) {
+    value.SetUInt32(UINT32_MAX);
+  }
   return error;
 }
 
@@ -230,9 +234,23 @@ bool RegisterContextPOSIXCore_ascend::ReadRegister(const RegisterInfo *reg_info,
       LLDB_LOG(log, "Get addr for register_name={0} failed", reg_name);
       return false;
     }
+    LLDB_LOG(log,
+             "Start read register value for register_name={0}, pos_type={1}, "
+             "core_type={2}, core_id={3}",
+             reg_name,
+             static_cast<uint32_t>(m_summary_info->focus_pos_info.pos_type),
+             static_cast<uint32_t>(m_summary_info->focus_pos_info.core_type),
+             m_summary_info->focus_pos_info.core_id);
     // added pos_info;
     InterruptPosInfo pos_info{};
     pos_info.core_type = m_summary_info->focus_pos_info.core_type;
+    pos_info.core_id = m_summary_info->focus_pos_info.core_id -
+                       GetMaxAicID(m_summary_info->chip_type);
+    pos_info.pos_type = m_summary_info->focus_pos_info.pos_type;
+    pos_info.thread_pos = m_summary_info->focus_pos_info.thread_pos;
+    pos_info.thread_info = {m_summary_info->focus_pos_info.thread_dim.x,
+                            m_summary_info->focus_pos_info.thread_dim.y,
+                            m_summary_info->focus_pos_info.thread_dim.y};
     error = m_register_info->ReadRegister(reg_info, pos_info, this, value);
     if (error.Fail()) {
       LLDB_LOG(log, "Read register {0} failed: {1}", reg_name, error);

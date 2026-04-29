@@ -124,7 +124,6 @@ public:
     if (!reg_ctx)
       return false; // thread has no registers (i.e. core files are corrupt,
                     // incomplete crash logs...)
-
     const RegisterSet *const reg_set = reg_ctx->GetRegisterSet(set_idx);
     if (reg_set) {
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
@@ -136,7 +135,6 @@ public:
         // Skip the dumping of derived register if primitive_only is true.
         if (primitive_only && reg_info && reg_info->value_regs)
           continue;
-
         if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
                                      /*print_flags=*/false))
           ++available_count;
@@ -163,7 +161,6 @@ public:
     if (!reg_ctx)
       return false; // thread has no registers (i.e. core files are corrupt,
                     // incomplete crash logs...)
-
     const RegisterSet *const reg_set = reg_ctx->GetRegisterSet(set_idx);
     if (!reg_set) {
       return false;
@@ -175,18 +172,23 @@ public:
     std::vector<uint32_t> reg_indices;
     const size_t num_registers = reg_set->num_registers;
 
+    DeviceStopInfo stop_info{};
+    m_exe_ctx.GetProcessPtr()->GetDeviceStopInfoCached(stop_info);
     for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
-
         if (!reg_info) {
           continue;
         }
-
         if (primitive_only && reg_info->value_regs) {
           continue;
         }
 
+        if (stop_info.core_id != UINT32_MAX &&
+            !IsRegisterSupport(stop_info.core_type, stop_info.pos_type,
+                               reg_info->scenarios_mask)) {
+          continue;
+        }
         reg_indices.push_back(reg);
     }
 

@@ -46,12 +46,10 @@ struct BlockInfo {
   uint32_t block_id;
 };
 
-}
-
-static constexpr uint32_t DEVICE_ID_WIDTH = 4;
-static bool CheckStringValid(const std::string &arg, CommandReturnObject &result) {
+constexpr uint32_t DEVICE_ID_WIDTH = 4;
+bool CheckStringValid(const std::string &arg, CommandReturnObject &result) {
   std::string msg = "";
-  if (CheckStringValid(arg, msg)) {
+  if (::CheckStringValid(arg, msg)) {
     result.AppendErrorWithFormat("Invalid character '%s'", msg.c_str());
     return false;
   }
@@ -114,6 +112,8 @@ inline void DumpBitmap(const vector<uint64_t> &bitmaps, std::ostream &os) {
     }
   }
 }
+
+} // namespace
 
 // CommandObjectAscendInfoDevices
 class CommandObjectAscendInfoDevices : public CommandObjectParsed {
@@ -601,7 +601,7 @@ void PrintDevtbl(const SummaryInfo& summary_info, const DeviceStopInfo &stop_inf
   strm << "  CoreId  CoreType        PC         DeviceId    ChipType\n";
   static constexpr uint32_t ID_WIDTH = 4;
   for (const auto &core_info: core_infos) {
-    std::stringstream ss;
+    std::stringstream ss; 
     ss << (core_info.core_type == stop_info.core_type && core_info.core_id == stop_info.core_id ? " *" : "  ");
     ss << std::setw(ID_WIDTH) << static_cast<uint64_t>(core_info.core_id) << "       " <<
         (core_info.core_type == CoreType::AIC ? "AIC" : "AIV") << "    0x" << std::hex <<
@@ -609,7 +609,7 @@ void PrintDevtbl(const SummaryInfo& summary_info, const DeviceStopInfo &stop_inf
         summary_info.dev_id << "        " <<
       DevdrvChipTypeToStr[summary_info.chip_type] << std::endl;
     strm << ss.str();
-  }
+  } 
 }
 
 void PrintTensorShape(GlobalDataType data_type, const GlobalMemInfo &mem_info, std::stringstream &ss) {
@@ -696,8 +696,9 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     Process *process = m_exe_ctx.GetProcessPtr();
-    if (process == nullptr) {
-      result.AppendError("Failed to get process info");
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (process == nullptr || target == nullptr) {
+      result.AppendError("Failed to get process info or target");
       return;
     }
     vector<CoreInfo> core_infos;
@@ -709,6 +710,7 @@ protected:
     const auto& summary_info = process->GetSummaryInfo();
     DeviceStopInfo stop_info;
     process->GetDeviceStopInfoCached(stop_info);
+
     PrintDevtbl(summary_info, stop_info, core_infos, strm);
     PrintDeviceInfo(summary_info, strm);
 
@@ -949,6 +951,7 @@ protected:
     process->GetDeviceStopInfoCached(stop_info);
     stop_info.core_id = matched_core_info.core_id;
     stop_info.core_type = matched_core_info.core_type;
+    stop_info.pos_type = matched_core_info.pos_type;
     process->SetDeviceStopInfoCached(stop_info);
     ShowInfoWhenStopped(*process, *thread, strm);
   }
@@ -1024,6 +1027,33 @@ protected:
     process->GetDeviceStopInfoCached(stop_info);
     stop_info.core_id = matched_core_info.core_id;
     stop_info.core_type = matched_core_info.core_type;
+    stop_info.pos_type = matched_core_info.pos_type;
+    if (stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+      // swtch to any active thread
+      std::vector<WarpInfo> warps_info;
+      error = process->GetWarpsInfo(warps_info);
+      if (error.Fail()) {
+        result.AppendErrorWithFormatv("Failed to get warps info: {0}", error);
+        return;
+      }
+      uint32_t linear_idx = 0;
+      for (size_t i = 0; i < warps_info.size(); i++) {
+        if (warps_info[i].exec_mask > 0) {
+          linear_idx += __builtin_ctz(warps_info[i].exec_mask);
+          break;
+        }
+        linear_idx += 32;
+      }
+      // not found any active thread, use first
+      if (linear_idx == 32 * warps_info.size()) {
+        linear_idx = 0;
+      }
+      stop_info.thread_pos =
+          LinearIdxToThreadPos(linear_idx, {matched_core_info.thread_dim_x,
+                                            matched_core_info.thread_dim_y,
+                                            matched_core_info.thread_dim_z});
+    }
+    // set thread_pos
     process->SetDeviceStopInfoCached(stop_info);
     ShowInfoWhenStopped(*process, *thread, strm);
   }
