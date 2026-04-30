@@ -2,27 +2,14 @@
 
 <br>
 
+## 1. 安装说明
+
 msDebug工具的安装方式包括：
 
-- 二进制安装：msDebug工具完整功能已集成在CANN包中发布，可直接安装CANN包，具体请参见[二进制安装](#1-二进制安装)。
-- 源码安装：如需使用最新代码的功能，或对源码进行修改以增强功能，可下载本仓库代码，自行编译、打包工具并完成安装，具体请参见[源码安装](#2-源码安装)。
+- 使用CANN包安装：msDebug工具完整功能已集成在CANN包中，请参考《[CANN 快速安装](https://www.hiascend.com/cann/download)》安装昇腾NPU驱动和CANN软件（包含Toolkit和ops包），并配置环境变量。
+- 源码编译安装：如需使用最新代码的功能，或对源码进行修改以增强功能，可下载本仓库代码，自行编译、打包工具并完成安装，具体请参见[源码编译安装](#2-源码编译安装)。
 
-## 1. 二进制安装
-
-MindStudio工具链是集成到CANN包中发布的，msDebug在`{install_cann_path}/cann/tools/msdebug`路径下，可通过以下方式安装CANN包：
-
-### 方式一：依据 CANN 官方文档安装
-
-请参考《[CANN 官方安装指南](https://www.hiascend.com/cann/download)》，按文档逐步完成安装与配置。
-
-### 方式二：使用CANN官方容器镜像
-
-请访问<a href="https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884" target="_blank">《CANN官方镜像仓库》</a>，
-按照仓库中的指引完成镜像拉取及容器启动。
-
-<br>
-
-## 2. 源码安装
+## 2. 源码编译安装
 
 如需使用最新代码的功能，或对源码进行修改以增强功能，可下载本仓库代码，自行编译、打包工具并完成安装。
 
@@ -40,15 +27,24 @@ MindStudio工具链是集成到CANN包中发布的，msDebug在`{install_cann_pa
 
 ### 2.2 执行编译打包
 
-通过一键式脚本自动完成依赖仓库的下载与构建流程：
+- 克隆本仓库
 
-```shell
-python build.py
-```
+    ```sh
+    git clone https://gitcode.com/Ascend/msdebug.git
+    ```
+
+- 构建打包
+
+    通过一键式脚本自动完成依赖仓库的下载与构建流程：
+
+    ```shell
+    cd msdebug
+    python build.py
+    ```
 
 > [!NOTE]  
 >
-> 如果本地更改了依赖子仓库中的代码，不想构建过程中执行更新动作，可以执行```python build.py local```。
+> 如果本地更改了依赖子仓库中的代码，不想构建过程中执行更新动作，可以执行`python build.py local`。
 
 当回显包含以下信息时，表示软件包构建成功，生成run包：
 
