@@ -301,7 +301,8 @@ ProcessElfCoreDevice::GetPosType(RegisterContextSP reg_ctx_sp) {
         break;
       }
       if (!reg_ctx_sp->ReadRegister(err_reg_info, value)) {
-        break;
+        // maybe no vector error register, so we show all registers
+        return InterruptPosType::UNKNOWN_INTERRUPT_TYPE;
       }
       if (value.GetAsUInt32() > 0) {
         is_vf_err = true;
@@ -338,9 +339,11 @@ void ProcessElfCoreDevice::UpdateStopInfo(bool focus_named_error_core) {
   string desc = "Unknown Error";
   std::shared_ptr<void> defer(nullptr, [this, log, &desc](std::nullptr_t &) {
     DeviceStopInfo stop_info{};
-    stop_info.core_id = m_summary_info.focus_pos_info.core_id -
-                        GetMaxAicID(m_summary_info.chip_type);
+    stop_info.core_id = m_summary_info.focus_pos_info.core_id;
     stop_info.core_type = m_summary_info.focus_pos_info.core_type;
+    if (stop_info.core_type == CoreType::AIV) {
+      stop_info.core_id -= GetMaxAicID(m_summary_info.chip_type);
+    }
     stop_info.pos_type = m_summary_info.focus_pos_info.pos_type;
     if (stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
       stop_info.thread_pos = m_summary_info.focus_pos_info.thread_pos;

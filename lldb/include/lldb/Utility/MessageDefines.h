@@ -58,7 +58,8 @@ enum class MemType : uint32_t {
 enum class InterruptPosType : uint8_t {
   SU_INTERRUPT = 0,
   VEC_INTERRUPT_SIMD = 1,
-  VEC_INTERRUPT_SIMT = 2
+  VEC_INTERRUPT_SIMT = 2,
+  UNKNOWN_INTERRUPT_TYPE = 200
 };
 
 struct CoreInfo {
@@ -227,6 +228,11 @@ constexpr uint8_t VF_MASK = SIMD_VF_MASK | SIMT_VF_MASK;
 
 inline bool IsRegisterSupport(CoreType core_type, InterruptPosType pos_type,
                               uint8_t mask) {
+  // use by coredump when we don't detect error register
+  // we maybe just show all registers
+  if (pos_type == InterruptPosType::UNKNOWN_INTERRUPT_TYPE) {
+    return true;
+  }
   // if mask not belong to simd/simt, only consider core_type
   if ((mask & AIC_MASK) || (mask & AIV_MASK)) {
     return mask & (1U << static_cast<int>(core_type));

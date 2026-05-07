@@ -9,6 +9,7 @@ using namespace lldb;
 
 namespace {
 enum LLDB_ASCEND_RENUM {
+  lldb_pc_ascend,
   k_first_gpr_ascend,
   lldb_x0_ascend = k_first_gpr_ascend,
   lldb_x1_ascend,
@@ -43,7 +44,6 @@ enum LLDB_ASCEND_RENUM {
   lldb_x30_ascend,
   lldb_x31_ascend,
   k_last_gpr_ascend = lldb_x31_ascend,
-  lldb_pc_ascend,
   lldb_blockid_ascend,
   lldb_status_ascend,
   lldb_ctrl_ascend,
@@ -113,7 +113,9 @@ enum LLDB_ASCEND_RENUM {
 };
 } // namespace
 
+// clang-format off
 static const uint32_t g_regnums_ascend310p[] = {
+  lldb_pc_ascend,
   lldb_x0_ascend,  lldb_x1_ascend,  lldb_x2_ascend, lldb_x3_ascend,
   lldb_x4_ascend,  lldb_x5_ascend, lldb_x6_ascend,  lldb_x7_ascend,
   lldb_x8_ascend, lldb_x9_ascend,  lldb_x10_ascend, lldb_x11_ascend,
@@ -122,7 +124,7 @@ static const uint32_t g_regnums_ascend310p[] = {
   lldb_x20_ascend, lldb_x21_ascend, lldb_x22_ascend, lldb_x23_ascend,
   lldb_x24_ascend, lldb_x25_ascend, lldb_x26_ascend, lldb_x27_ascend,
   lldb_x28_ascend, lldb_x29_ascend, lldb_x30_ascend, lldb_x31_ascend,
-  lldb_pc_ascend, lldb_blockid_ascend, lldb_status_ascend, lldb_ctrl_ascend,
+  lldb_blockid_ascend, lldb_status_ascend, lldb_ctrl_ascend,
   lldb_para_base_ascend, lldb_data_main_base_ascend, lldb_data_ub_base_ascend,
   lldb_data_size_ascend, lldb_lpcnt_ascend, lldb_blockdim_ascend,
   lldb_fmatrix_ascend, lldb_condition_flag_ascend, lldb_deqscale_ascend,
@@ -144,6 +146,7 @@ static const uint32_t g_regnums_ascend310p[] = {
   lldb_varf2_ascend, lldb_varf3_ascend, lldb_varf4_ascend, lldb_varf5_ascend,
   lldb_varf6_ascend, lldb_varf7_ascend, lldb_mask_ascend, lldb_cmpmask_ascend,
   LLDB_INVALID_REGNUM};
+// clang-format on
 
 static const RegisterSet g_reg_sets_ascend310p[] = {
   {"Registers", "register", lldb_cmpmask_ascend - lldb_x0_ascend + 1,

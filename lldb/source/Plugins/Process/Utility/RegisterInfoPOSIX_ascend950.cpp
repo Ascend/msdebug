@@ -13,6 +13,7 @@ using namespace std;
 namespace {
 
 enum LLDB_ASCEND_RENUM {
+  lldb_pc_ascend,
   k_first_gpr_ascend,
   lldb_x0_ascend = k_first_gpr_ascend,
   lldb_x1_ascend,
@@ -47,7 +48,6 @@ enum LLDB_ASCEND_RENUM {
   lldb_x30_ascend,
   lldb_x31_ascend,
   k_last_gpr_ascend = lldb_x31_ascend,
-  lldb_pc_ascend,
   lldb_status_ascend,
   lldb_ctrl_su_ascend,
   lldb_condition_flag_ascend,
@@ -101,6 +101,10 @@ enum LLDB_ASCEND_RENUM {
   lldb_pcie_rd_ctrl_ascend,
   lldb_pcie_wr_ctrl_ascend,
   k_last_mte_reg_ascend = lldb_pcie_wr_ctrl_ascend,
+  lldb_simt_pc_ascend,
+  lldb_vthreaddim_x_ascend,
+  lldb_vthreaddim_y_ascend,
+  lldb_vthreaddim_z_ascend,
   lldb_v0_ascend,
   lldb_v1_ascend,
   lldb_v2_ascend,
@@ -405,10 +409,6 @@ enum LLDB_ASCEND_RENUM {
   lldb_ust_ele_ofs_3_ascend,
   lldb_core_id_ascend,
   lldb_vec_core_id_ascend,
-  lldb_vthreaddim_x_ascend,
-  lldb_vthreaddim_y_ascend,
-  lldb_vthreaddim_z_ascend,
-  lldb_simt_pc_ascend,
   lldb_su_pc_ascend,
   lldb_simt_p0_ascend,
   lldb_simt_p1_ascend,
@@ -625,7 +625,10 @@ enum {
   k_num_register_sets = 6
 };
 
+// clang-format off
 static const uint32_t g_su_regnums_ascend950[] = {
+// show pc register first
+  lldb_pc_ascend,
   lldb_x0_ascend, lldb_x1_ascend, lldb_x2_ascend, lldb_x3_ascend,
   lldb_x4_ascend, lldb_x5_ascend, lldb_x6_ascend, lldb_x7_ascend,
   lldb_x8_ascend, lldb_x9_ascend, lldb_x10_ascend, lldb_x11_ascend,
@@ -634,7 +637,7 @@ static const uint32_t g_su_regnums_ascend950[] = {
   lldb_x20_ascend, lldb_x21_ascend, lldb_x22_ascend, lldb_x23_ascend,
   lldb_x24_ascend, lldb_x25_ascend, lldb_x26_ascend, lldb_x27_ascend,
   lldb_x28_ascend, lldb_x29_ascend, lldb_x30_ascend, lldb_x31_ascend,
-  lldb_pc_ascend, lldb_status_ascend, lldb_ctrl_su_ascend, lldb_condition_flag_ascend,
+  lldb_status_ascend, lldb_ctrl_su_ascend, lldb_condition_flag_ascend,
   lldb_cond_ascend, lldb_sys_cnt_ascend, lldb_safety_crc_excpt_ascend, lldb_call_depth_cnt_ascend,
   lldb_icache_prl_st_ascend, lldb_ffts_base_addr_ascend, lldb_kick_start_pc_ascend,
   lldb_su_warn_status_0_ascend, lldb_su_warn_status_1_ascend,
@@ -644,6 +647,7 @@ static const uint32_t g_su_regnums_ascend950[] = {
   lldb_glb_get_cnt_ascend, lldb_glb_rel_cnt_ascend, lldb_set_cross_core_cnt_ascend,
   lldb_set_intra_blk_cnt_ascend, LLDB_INVALID_REGNUM
 };
+// clang-format on
 
 static_assert(sizeof(g_su_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_su_registers,
               "Invalid size of g_su_regnums_ascend950");
@@ -663,7 +667,11 @@ static const uint32_t g_mte_regnums_ascend950[] = {
 static_assert(sizeof(g_mte_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_mte_registers,
               "Invalid size of g_mte_regnums_ascend950");
 
+// clang-format off
 static const uint32_t g_vecrb_regnums_ascend950[] = {
+  // show pc and import register first
+    lldb_simt_pc_ascend, lldb_vthreaddim_x_ascend, lldb_vthreaddim_y_ascend,
+    lldb_vthreaddim_z_ascend,
     lldb_v0_ascend, lldb_v1_ascend, lldb_v2_ascend, lldb_v3_ascend,
     lldb_v4_ascend, lldb_v5_ascend, lldb_v6_ascend, lldb_v7_ascend,
     lldb_v8_ascend, lldb_v9_ascend, lldb_v10_ascend, lldb_v11_ascend,
@@ -767,8 +775,7 @@ static const uint32_t g_vecrb_regnums_ascend950[] = {
     lldb_agu_am_const_63_ascend, lldb_ust_ele_ofs_0_ascend,
     lldb_ust_ele_ofs_1_ascend, lldb_ust_ele_ofs_2_ascend,
     lldb_ust_ele_ofs_3_ascend, lldb_core_id_ascend, lldb_vec_core_id_ascend,
-    lldb_vthreaddim_x_ascend, lldb_vthreaddim_y_ascend,
-    lldb_vthreaddim_z_ascend, lldb_simt_pc_ascend, lldb_su_pc_ascend,
+    lldb_su_pc_ascend,
     lldb_simt_p0_ascend, lldb_simt_p1_ascend, lldb_simt_p2_ascend,
     lldb_simt_p3_ascend, lldb_simt_p4_ascend, lldb_simt_p5_ascend,
     lldb_simt_p6_ascend, lldb_simt_p7_ascend, lldb_execmask_ascend,
@@ -804,6 +811,8 @@ static const uint32_t g_vecrb_regnums_ascend950[] = {
     lldb_r116_ascend, lldb_r117_ascend, lldb_r118_ascend, lldb_r119_ascend,
     lldb_r120_ascend, lldb_r121_ascend, lldb_r122_ascend, lldb_r123_ascend,
     lldb_r124_ascend, lldb_r125_ascend, lldb_r126_ascend, LLDB_INVALID_REGNUM};
+
+// clang-format on
 
 static_assert(sizeof(g_vecrb_regnums_ascend950) / sizeof(uint32_t) - 1 == k_num_vecrb_registers,
               "Invalid size of g_vecrb_regnums_ascend950");
@@ -862,6 +871,8 @@ static constexpr uint64_t ID_OFFSET = 52UL;
 
 // The array should be POD type.
 static const DeviceRegisterInfo REGISTER_950_INFO[] = {
+    {ASCEND_GPR(PC, pc, LLDB_REGNUM_GENERIC_PC), SU_ID << ID_OFFSET | 64,
+     MIX_MASK},
     {ASCEND_GPR(GPR0, x0, LLDB_INVALID_REGNUM), SU_ID << ID_OFFSET | 0,
      MIX_MASK},
     {ASCEND_GPR(GPR1, x1, LLDB_INVALID_REGNUM), SU_ID << ID_OFFSET | 1,
@@ -926,8 +937,6 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
      SU_ID << ID_OFFSET | 30, MIX_MASK},
     {ASCEND_GPR_ALT(GPR31, x31, lr, LLDB_REGNUM_GENERIC_RA),
      SU_ID << ID_OFFSET | 31, MIX_MASK},
-    {ASCEND_GPR(PC, pc, LLDB_REGNUM_GENERIC_PC), SU_ID << ID_OFFSET | 64,
-     MIX_MASK},
     {ASCEND_REG(STATUS, lldb_status_ascend), SU_ID << ID_OFFSET | 65, MIX_MASK},
     {ASCEND_REG(CTRL_SU, lldb_ctrl_su_ascend), SU_ID << ID_OFFSET | 66,
      MIX_MASK},
@@ -1030,6 +1039,14 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
     {ASCEND_REG(PCIE_WR_CTRL, lldb_pcie_wr_ctrl_ascend),
      MTE_ID << ID_OFFSET | 2UL << 48 | 30, AIV_MASK},
     // Vector Registers
+    {ASCEND_REG(SIMT_PC, lldb_simt_pc_ascend),
+     VEC_ID << ID_OFFSET | 9UL << 48 | 16384, AIV_MASK},
+    {ASCEND_REG_2B(VTHREADDIM_X, lldb_vthreaddim_x_ascend),
+     VEC_ID << ID_OFFSET | 9UL << 48 | 2, AIV_MASK},
+    {ASCEND_REG_2B(VTHREADDIM_Y, lldb_vthreaddim_y_ascend),
+     VEC_ID << ID_OFFSET | 9UL << 48 | 3, AIV_MASK},
+    {ASCEND_REG_2B(VTHREADDIM_Z, lldb_vthreaddim_z_ascend),
+     VEC_ID << ID_OFFSET | 9UL << 48 | 4, AIV_MASK},
     {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V0, v0, 256),
      VEC_ID << ID_OFFSET | 2UL << 48, SIMD_VF_MASK},
     {ASCEND_GPR_NBYTES_VEC_FORMAT_UINT32(V1, v1, 256),
@@ -1538,14 +1555,6 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
      VEC_ID << ID_OFFSET | 9UL << 48, AIV_MASK},
     {ASCEND_REG_2B(VEC_CORE_ID, lldb_vec_core_id_ascend),
      VEC_ID << ID_OFFSET | 9UL << 48 | 1, AIV_MASK},
-    {ASCEND_REG_2B(VTHREADDIM_X, lldb_vthreaddim_x_ascend),
-     VEC_ID << ID_OFFSET | 9UL << 48 | 2, AIV_MASK},
-    {ASCEND_REG_2B(VTHREADDIM_Y, lldb_vthreaddim_y_ascend),
-     VEC_ID << ID_OFFSET | 9UL << 48 | 3, AIV_MASK},
-    {ASCEND_REG_2B(VTHREADDIM_Z, lldb_vthreaddim_z_ascend),
-     VEC_ID << ID_OFFSET | 9UL << 48 | 4, AIV_MASK},
-    {ASCEND_REG(SIMT_PC, lldb_simt_pc_ascend),
-     VEC_ID << ID_OFFSET | 9UL << 48 | 16384, AIV_MASK},
     {ASCEND_REG(SU_PC, lldb_su_pc_ascend), SU_ID << ID_OFFSET | 64, MIX_MASK},
     // SIMT P_REGISTER
     {ASCEND_REG_4B(SIMT_P0, lldb_simt_p0_ascend),

@@ -15,6 +15,7 @@ constexpr uint8_t UINT32_BIT_NUM = 32U;
 
 namespace {
 enum LLDB_ASCEND_RENUM {
+  lldb_pc_ascend,
   k_first_gpr_ascend,
   lldb_x0_ascend = k_first_gpr_ascend,
   lldb_x1_ascend,
@@ -49,7 +50,6 @@ enum LLDB_ASCEND_RENUM {
   lldb_x30_ascend,
   lldb_x31_ascend,
   k_last_gpr_ascend = lldb_x31_ascend,
-  lldb_pc_ascend,
   lldb_status_ascend,
   lldb_ctrl_ascend,
   lldb_lpcnt_ascend,
@@ -126,7 +126,10 @@ enum {
   k_num_register_sets = 3
 };
 
+// clang-format off
 static const uint32_t g_dbg_regnums[] = {
+  // show pc first
+  lldb_pc_ascend,
   lldb_x0_ascend,  lldb_x1_ascend,  lldb_x2_ascend, lldb_x3_ascend,
   lldb_x4_ascend,  lldb_x5_ascend, lldb_x6_ascend,  lldb_x7_ascend,
   lldb_x8_ascend, lldb_x9_ascend,  lldb_x10_ascend, lldb_x11_ascend,
@@ -135,7 +138,7 @@ static const uint32_t g_dbg_regnums[] = {
   lldb_x20_ascend, lldb_x21_ascend, lldb_x22_ascend, lldb_x23_ascend,
   lldb_x24_ascend, lldb_x25_ascend, lldb_x26_ascend, lldb_x27_ascend,
   lldb_x28_ascend, lldb_x29_ascend, lldb_x30_ascend, lldb_x31_ascend,
-  lldb_pc_ascend, lldb_status_ascend, lldb_ctrl_ascend, lldb_lpcnt_ascend,
+  lldb_status_ascend, lldb_ctrl_ascend, lldb_lpcnt_ascend,
   lldb_condition_flag_ascend, lldb_cond_ascend, lldb_sys_cnt_ascend,
   lldb_safety_crc_en_ascend, lldb_call_depth_cnt_ascend,
   lldb_icache_prl_st_ascend, lldb_st_atomic_cfg_ascend,
@@ -151,6 +154,7 @@ static const uint32_t g_dbg_regnums[] = {
   lldb_varf0_ascend, lldb_varf1_ascend, lldb_varf2_ascend, lldb_varf3_ascend,
   lldb_varf4_ascend, lldb_varf5_ascend, lldb_varf6_ascend, lldb_varf7_ascend,
   LLDB_INVALID_REGNUM};
+// clang-format on
 
 static const uint32_t g_aic_err_regnums[] = {
   lldb_aic_error_0, lldb_aic_error_1, lldb_aic_error_2,
@@ -171,6 +175,7 @@ static const RegisterSet g_reg_sets_ascend910b[k_num_register_sets_default] = {
 
 // The array should be POD type.
 static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
+    {ASCEND_GPR(PC, pc, LLDB_REGNUM_GENERIC_PC), 64, MIX_MASK},
     {ASCEND_GPR(GPR0, x0, LLDB_INVALID_REGNUM), 0, MIX_MASK},
     {ASCEND_GPR(GPR1, x1, LLDB_INVALID_REGNUM), 1, MIX_MASK},
     {ASCEND_GPR(GPR2, x2, LLDB_INVALID_REGNUM), 2, MIX_MASK},
@@ -203,7 +208,6 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_GPR_ALT(GPR29, x29, fp, LLDB_REGNUM_GENERIC_FP), 29, MIX_MASK},
     {ASCEND_GPR_ALT(GPR30, x30, sp, LLDB_REGNUM_GENERIC_SP), 30, MIX_MASK},
     {ASCEND_GPR_ALT(GPR31, x31, lr, LLDB_REGNUM_GENERIC_RA), 31, MIX_MASK},
-    {ASCEND_GPR(PC, pc, LLDB_REGNUM_GENERIC_PC), 64, MIX_MASK},
     {ASCEND_REG(STATUS, lldb_status_ascend), 66, MIX_MASK},
     {ASCEND_REG(CTRL, lldb_ctrl_ascend), 67, MIX_MASK},
     {ASCEND_REG(LPCNT, lldb_lpcnt_ascend), 68, MIX_MASK},
@@ -218,25 +222,40 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_REG(VEC_EVENT_TABLE, lldb_vec_event_table_ascend), 131, AIV_MASK},
     {ASCEND_REG(CUBE_EVENT_TABLE, lldb_cube_event_table_ascend), 132, AIC_MASK},
     {ASCEND_REG(FIXP_EVENT_TABLE, lldb_fixp_event_table_ascend), 133, AIC_MASK},
-    {ASCEND_REG(SCALAR_EVENT_TABLE, lldb_scalar_event_table_ascend), 134, MIX_MASK},
+    {ASCEND_REG(SCALAR_EVENT_TABLE, lldb_scalar_event_table_ascend), 134,
+     MIX_MASK},
     {ASCEND_REG(MTE1_EVENT_TABLE, lldb_mte1_event_table_ascend), 135, AIC_MASK},
     {ASCEND_REG(MTE2_EVENT_TABLE, lldb_mte2_event_table_ascend), 136, MIX_MASK},
     {ASCEND_REG(MTE3_EVENT_TABLE, lldb_mte3_event_table_ascend), 137, AIV_MASK},
     {ASCEND_REG(MASK, lldb_mask_ascend), 256ULL << ADDR_OFFSET | 0, AIV_MASK},
-    {ASCEND_REG(CMPMASK, lldb_cmpmask_ascend), 256ULL << ADDR_OFFSET | 1, AIV_MASK},
-    {ASCEND_REG(DEQSCALE, lldb_deqscale_ascend), 256ULL << ADDR_OFFSET | 2, AIV_MASK},
-    {ASCEND_REG(RPN_COR_IR, lldb_rpn_cor_ir_ascend), 256UL << ADDR_OFFSET | 3, AIV_MASK},
-    {ASCEND_REG(VMS4_SR, lldb_vms4_sr_ascend), 256ULL << ADDR_OFFSET | 4, AIV_MASK},
-    {ASCEND_REG(DATA_EXP0, lldb_data_exp0_ascend), 256ULL << ADDR_OFFSET | 5, AIV_MASK},
-    {ASCEND_REG(DATA_EXP1, lldb_data_exp1_ascend), 256ULL << ADDR_OFFSET | 6, AIV_MASK},
-    {ASCEND_REG(DATA_EXP2, lldb_data_exp2_ascend), 256ULL << ADDR_OFFSET | 7, AIV_MASK},
-    {ASCEND_REG(DATA_EXP3, lldb_data_exp3_ascend), 256ULL << ADDR_OFFSET | 8, AIV_MASK},
-    {ASCEND_REG(RPN_OFFSET, lldb_rpn_offset_ascend), 256ULL << ADDR_OFFSET | 9, AIV_MASK},
-    {ASCEND_REG(RSVD_CNT, lldb_rsvd_cnt_ascend), 256ULL << ADDR_OFFSET | 11, AIV_MASK},
-    {ASCEND_REG(PNT_COE, lldb_pnt_coe_ascend), 256ULL << ADDR_OFFSET | 12, AIV_MASK},
-    {ASCEND_REG(LRELU_ALPHA, lldb_lrelu_alpha_ascend), 256ULL << ADDR_OFFSET | 13, AIV_MASK},
-    {ASCEND_REG(MAXMIN_CNT, lldb_maxmin_cnt_ascend), 256ULL << ADDR_OFFSET | 14, AIV_MASK},
-    {ASCEND_REG(ACC_VAL, lldb_acc_val_ascend), 256ULL << ADDR_OFFSET | 15, AIV_MASK},
+    {ASCEND_REG(CMPMASK, lldb_cmpmask_ascend), 256ULL << ADDR_OFFSET | 1,
+     AIV_MASK},
+    {ASCEND_REG(DEQSCALE, lldb_deqscale_ascend), 256ULL << ADDR_OFFSET | 2,
+     AIV_MASK},
+    {ASCEND_REG(RPN_COR_IR, lldb_rpn_cor_ir_ascend), 256UL << ADDR_OFFSET | 3,
+     AIV_MASK},
+    {ASCEND_REG(VMS4_SR, lldb_vms4_sr_ascend), 256ULL << ADDR_OFFSET | 4,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP0, lldb_data_exp0_ascend), 256ULL << ADDR_OFFSET | 5,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP1, lldb_data_exp1_ascend), 256ULL << ADDR_OFFSET | 6,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP2, lldb_data_exp2_ascend), 256ULL << ADDR_OFFSET | 7,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP3, lldb_data_exp3_ascend), 256ULL << ADDR_OFFSET | 8,
+     AIV_MASK},
+    {ASCEND_REG(RPN_OFFSET, lldb_rpn_offset_ascend), 256ULL << ADDR_OFFSET | 9,
+     AIV_MASK},
+    {ASCEND_REG(RSVD_CNT, lldb_rsvd_cnt_ascend), 256ULL << ADDR_OFFSET | 11,
+     AIV_MASK},
+    {ASCEND_REG(PNT_COE, lldb_pnt_coe_ascend), 256ULL << ADDR_OFFSET | 12,
+     AIV_MASK},
+    {ASCEND_REG(LRELU_ALPHA, lldb_lrelu_alpha_ascend),
+     256ULL << ADDR_OFFSET | 13, AIV_MASK},
+    {ASCEND_REG(MAXMIN_CNT, lldb_maxmin_cnt_ascend), 256ULL << ADDR_OFFSET | 14,
+     AIV_MASK},
+    {ASCEND_REG(ACC_VAL, lldb_acc_val_ascend), 256ULL << ADDR_OFFSET | 15,
+     AIV_MASK},
     {ASCEND_REG(VARF0, lldb_varf0_ascend), 257ULL << ADDR_OFFSET | 0, AIV_MASK},
     {ASCEND_REG(VARF1, lldb_varf1_ascend), 257ULL << ADDR_OFFSET | 1, AIV_MASK},
     {ASCEND_REG(VARF2, lldb_varf2_ascend), 257ULL << ADDR_OFFSET | 2, AIV_MASK},
@@ -245,7 +264,7 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_REG(VARF5, lldb_varf5_ascend), 257ULL << ADDR_OFFSET | 5, AIV_MASK},
     {ASCEND_REG(VARF6, lldb_varf6_ascend), 257ULL << ADDR_OFFSET | 6, AIV_MASK},
     {ASCEND_REG(VARF7, lldb_varf7_ascend), 257ULL << ADDR_OFFSET | 7, AIV_MASK},
-  // for core file only. if you add new both reg, please insert before
+    // for core file only. if you add new both reg, please insert before
     {ASCEND_REG_4B(AIC_ERROR_0, lldb_aic_error_0), 0x700, MIX_MASK},
     {ASCEND_REG_4B(AIC_ERROR_1, lldb_aic_error_1), 0x704, MIX_MASK},
     {ASCEND_REG_4B(AIC_ERROR_2, lldb_aic_error_2), 0x760, MIX_MASK},
@@ -265,9 +284,9 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_REG_4B(VEC_ERR_INFO_0, lldb_vec_err_info_0), 0x738, MIX_MASK},
     {ASCEND_REG_4B(VEC_ERR_INFO_1, lldb_vec_err_info_1), 0x73C, MIX_MASK},
     {ASCEND_REG_4B(FIXP_ERR_INFO_0, lldb_fixp_err_info_0), 0x78C, MIX_MASK},
-    {ASCEND_REG_4B(SU_DC_ECC_1BIT_ERR_INFO, lldb_su_dc_ecc_1bit_err_info), 0x7C4, MIX_MASK},
-    {ASCEND_REG_4B(FIXP_ERR_INFO_1, lldb_fixp_err_info_1), 0x7C8, MIX_MASK}
-};
+    {ASCEND_REG_4B(SU_DC_ECC_1BIT_ERR_INFO, lldb_su_dc_ecc_1bit_err_info),
+     0x7C4, MIX_MASK},
+    {ASCEND_REG_4B(FIXP_ERR_INFO_1, lldb_fixp_err_info_1), 0x7C8, MIX_MASK}};
 
 static_assert(sizeof(REGISTER_910B_INFO) / sizeof(DeviceRegisterInfo) == k_num_registers_ascend,
               "REGISTER_910B_INFO size is invalid");
