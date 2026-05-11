@@ -410,6 +410,9 @@ HANDLE_DW_AT(0x89, export_symbols, 5, DWARF)
 HANDLE_DW_AT(0x8a, deleted, 5, DWARF)
 HANDLE_DW_AT(0x8b, defaulted, 5, DWARF)
 HANDLE_DW_AT(0x8c, loclists_base, 5, DWARF)
+// MS_DEBUGGER
+HANDLE_DW_AT(0x8d, function_class, 5, DWARF)
+// MS_DEBUGGER
 
 // Vendor extensions:
 HANDLE_DW_AT(0x806, GHS_namespace_alias, 0, GHS)

@@ -1530,6 +1530,14 @@ public:
   /// Print all the signals set in this target.
   void PrintDummySignals(Stream &strm, Args &signals);
 
+#ifdef MS_DEBUGGER
+  void UpdateBreakpoints(const lldb::ModuleSP &old_module_sp,
+                          const lldb::ModuleSP &new_module_sp) {
+    ModuleList module_list;
+    return NotifyModuleUpdated(module_list, old_module_sp, new_module_sp);
+  }
+#endif
+
 protected:
   /// Implementing of ModuleList::Notifier.
 

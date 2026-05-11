@@ -255,6 +255,7 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
 /// @}
 
 //
+#ifndef MS_DEBUGGER
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
                    const AddressRange &range)
@@ -264,6 +265,18 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
   m_block.SetParentScope(this);
   assert(comp_unit != nullptr);
 }
+
+#else
+Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
+                   lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
+                   const AddressRange &range, uint32_t function_class)
+    : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
+      m_type(type), m_mangled(mangled), m_block(func_uid), m_range(range),
+      m_frame_base(), m_flags(), m_prologue_byte_size(0), m_function_class(function_class) {
+  m_block.SetParentScope(this);
+  assert(comp_unit != nullptr);
+}
+#endif
 
 Function::~Function() = default;
 

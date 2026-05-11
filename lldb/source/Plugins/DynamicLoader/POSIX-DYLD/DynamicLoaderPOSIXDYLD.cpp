@@ -491,11 +491,14 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
     // remove this module from loaded modules if any one of these conditions below are met:
     // 1. it is a hiipu64-module and we need to reset all device binary.
     // 2. it is a duplicate module. we replace the old one with it in loaded modules.
-    if ((reset_all_device_binary &&
-        module_sp->GetArchitecture().GetTriple().getArch() == llvm::Triple::hiipu64) ||
-        (!reset_all_device_binary &&
-        module_sp && module_sp->GetUUID() == device_module->GetUUID())) {
+    if (reset_all_device_binary &&
+        module_sp->GetArchitecture().GetTriple().getArch() ==
+            llvm::Triple::hiipu64) {
       old_modules.Append(module_sp);
+    } else if (!reset_all_device_binary && module_sp &&
+               module_sp->GetUUID() == device_module->GetUUID()) {
+      old_modules.Append(module_sp);
+      m_process->GetTarget().UpdateBreakpoints(module_sp, device_module);
     }
   }
 
@@ -504,7 +507,7 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
     UnloadSections(module_sp);
   }
   loaded_modules.Remove(old_modules);
-  m_process->GetTarget().ModulesDidUnload(old_modules, false);
+  m_process->GetTarget().ModulesDidUnload(old_modules, true);
 
   // added new modules
   new_modules.Append(device_module);
@@ -558,9 +561,10 @@ void DynamicLoaderPOSIXDYLD::AddRendezvousVFCallBreakpoint(ModuleSP device_modul
     uint64_t break_addr = par.first;
     auto dyld_break = target.CreateBreakpoint(break_addr + base_pc + smallest_instr_bytes, true, false);
     if (dyld_break->GetNumResolvedLocations() != 1) {
-      LLDB_LOG(log, "Rendezvoud vf_call breakpoint has abnormal number of"
+      LLDB_LOG(log,
+               "Rendezvoud vf_call breakpoint has abnormal number of"
                " resolved locations {0}. It's supposed to be exactly 1",
-               dyld_break->GetNumResolvedLocations()); 
+               dyld_break->GetNumResolvedLocations());
       target.RemoveBreakpointByID(dyld_break->GetID());
       continue;
     }

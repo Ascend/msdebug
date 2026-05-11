@@ -2402,9 +2402,16 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   if (tag != DW_TAG_subprogram)
     return nullptr;
 
+#ifndef MS_DEBUGGER
   if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
                                decl_column, call_file, call_line, call_column,
                                &frame_base)) {
+#else
+  std::optional<int> function_class;
+  if (die.GetDIENamesAndRanges(name, mangled, func_ranges, decl_file, decl_line,
+                               decl_column, call_file, call_line, call_column,
+                               function_class, &frame_base)) {
+#endif
     Mangled func_name;
     if (mangled)
       func_name.SetValue(ConstString(mangled));
@@ -2436,11 +2443,19 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
     assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
 
     const user_id_t func_user_id = die.GetID();
+#ifndef MS_DEBUGGER
     func_sp =
         std::make_shared<Function>(&comp_unit,
                                    func_user_id, // UserID is the DIE offset
                                    func_user_id, func_name, func_type,
                                    func_range); // first address range
+#else
+    func_sp =
+        std::make_shared<Function>(&comp_unit,
+                                   func_user_id, // UserID is the DIE offset
+                                   func_user_id, func_name, func_type,
+                                   func_range, function_class ? function_class.value() : 0); // first address range
+#endif
 
     if (func_sp.get() != nullptr) {
       if (frame_base.IsValid())

@@ -116,12 +116,21 @@ static void ExtractAttrAndFormValue(
 //
 // Gets the valid address ranges for a given DIE by looking for a
 // DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
+#ifndef MS_DEBUGGER
 bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
     DWARFUnit *cu, const char *&name, const char *&mangled,
     DWARFRangeList &ranges, std::optional<int> &decl_file,
     std::optional<int> &decl_line, std::optional<int> &decl_column,
     std::optional<int> &call_file, std::optional<int> &call_line,
     std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
+#else
+bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
+    DWARFUnit *cu, const char *&name, const char *&mangled,
+    DWARFRangeList &ranges, std::optional<int> &decl_file,
+    std::optional<int> &decl_line, std::optional<int> &decl_column,
+    std::optional<int> &call_file, std::optional<int> &call_line,
+    std::optional<int> &call_column, std::optional<int> &function_class, DWARFExpressionList *frame_base) const {
+#endif
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
@@ -252,6 +261,12 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
             }
           }
           break;
+#ifdef MS_DEBUGGER
+        case DW_AT_function_class:
+          if (!function_class) {
+            function_class = form_value.Unsigned();
+          }
+#endif
 
         default:
           break;
@@ -278,9 +293,16 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   if (ranges.IsEmpty() || name == nullptr || mangled == nullptr) {
     for (const DWARFDIE &die : dies) {
       if (die) {
+#ifndef MS_DEBUGGER
         die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
                                            decl_file, decl_line, decl_column,
                                            call_file, call_line, call_column);
+#else
+        std::optional<int> function_class;
+        die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
+                                           decl_file, decl_line, decl_column,
+                                           call_file, call_line, call_column, function_class);
+#endif
       }
     }
   }

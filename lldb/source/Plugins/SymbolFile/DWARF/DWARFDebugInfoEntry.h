@@ -106,6 +106,7 @@ public:
 
   const char *GetPubname(const DWARFUnit *cu) const;
 
+#ifndef MS_DEBUGGER
   bool GetDIENamesAndRanges(DWARFUnit *cu, const char *&name,
                             const char *&mangled, DWARFRangeList &rangeList,
                             std::optional<int> &decl_file,
@@ -115,6 +116,18 @@ public:
                             std::optional<int> &call_line,
                             std::optional<int> &call_column,
                             DWARFExpressionList *frame_base = nullptr) const;
+#else
+  bool GetDIENamesAndRanges(DWARFUnit *cu, const char *&name,
+                            const char *&mangled, DWARFRangeList &rangeList,
+                            std::optional<int> &decl_file,
+                            std::optional<int> &decl_line,
+                            std::optional<int> &decl_column,
+                            std::optional<int> &call_file,
+                            std::optional<int> &call_line,
+                            std::optional<int> &call_column,
+                            std::optional<int> &function_class,
+                            DWARFExpressionList *frame_base = nullptr) const;
+#endif
 
   const llvm::DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const;

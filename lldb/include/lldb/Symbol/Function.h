@@ -426,9 +426,15 @@ public:
   ///
   /// \param[in] range
   ///     The section offset based address for this function.
+#ifndef MS_DEBUGGER
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
            Type *func_type, const AddressRange &range);
+#else
+  Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
+           lldb::user_id_t func_type_uid, const Mangled &mangled,
+           Type *func_type, const AddressRange &range, uint32_t function_class = 0);
+#endif
 
   /// Destructor.
   ~Function() override;
@@ -445,6 +451,11 @@ public:
   Function *CalculateSymbolContextFunction() override;
 
   const AddressRange &GetAddressRange() { return m_range; }
+
+#ifdef MS_DEBUGGER
+  uint32_t GetFunctionClass() const { return m_function_class; }
+  void SetFunctionClass(uint32_t function_class) { m_function_class = function_class; }
+#endif
 
   lldb::LanguageType GetLanguage() const;
   /// Find the file and line number of the source location of the start of the
@@ -671,6 +682,10 @@ protected:
 
   /// Outgoing call edges.
   std::vector<std::unique_ptr<CallEdge>> m_call_edges;
+
+#ifdef MS_DEBUGGER
+  uint32_t m_function_class;
+#endif
 
 private:
   Function(const Function &) = delete;
