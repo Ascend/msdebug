@@ -1996,6 +1996,11 @@ bool CMICmnLLDBDebuggerHandleEvents::GetProcessStderr() {
         break;
 
       const CMIUtilString line(text.substr(0, nNewLine + 1));
+
+#ifdef MS_DEBUGGER
+      text.erase(0, nNewLine + 1);
+#endif
+
       const bool bEscapeQuotes(true);
       CMICmnMIValueConst miValueConst(line.Escape(bEscapeQuotes));
       CMICmnMIOutOfBandRecord miOutOfBandRecord(
