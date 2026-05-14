@@ -1468,6 +1468,15 @@ bool SBProcess::IsSBStopInDevice() {
   }
 }
 
+bool SBProcess::IsSBStopInSimt() {
+  ProcessSP process_sp(GetSP());
+  if (process_sp && process_sp->IsStopInSimtKernel()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 bool SBProcess::HandleDeviceSBProcessStateChanged() {
   ProcessSP process_sp(GetSP());
   if (process_sp && Process::HandleDeviceProcessStateChanged(process_sp)) {

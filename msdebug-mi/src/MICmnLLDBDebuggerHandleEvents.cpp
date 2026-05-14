@@ -123,6 +123,19 @@ static inline CMICmnMIValueResult GetMiValueResultIsDevice(lldb::SBProcess sbPro
   return miValueResult;
 }
 
+static inline CMICmnMIValueResult
+GetMiValueResultIsSimt(lldb::SBProcess sbProcess) {
+  std::string stopInSimt;
+  if (sbProcess && sbProcess.IsSBStopInSimt()) {
+    stopInSimt = "true";
+  } else {
+    stopInSimt = "false";
+  }
+  const CMICmnMIValueConst miValueConst(stopInSimt);
+  const CMICmnMIValueResult miValueResult("is-simt", miValueConst);
+  return miValueResult;
+}
+
 #endif
 
 //++
@@ -1568,6 +1581,7 @@ bool CMICmnLLDBDebuggerHandleEvents::MiStoppedAtBreakPoint(
     miOutOfBandRecord.Add(miValueResult6);
 #ifdef MS_DEBUGGER
     miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+    miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
 #endif
     bOk = bOk && MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
@@ -1619,6 +1633,7 @@ bool CMICmnLLDBDebuggerHandleEvents::MiStoppedAtBreakPoint(
     miOutOfBandRecord.Add(miValueResult9);
 #ifdef MS_DEBUGGER
     miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+    miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
 #endif
     bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
@@ -1727,6 +1742,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStopReasonTrace() {
     miOutOfBandRecord.Add(miValueResult2);
 #ifdef MS_DEBUGGER
     miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+    miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
 #endif
     bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
@@ -1767,6 +1783,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStopReasonTrace() {
 
 #ifdef MS_DEBUGGER
   miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+  miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
 #endif
 
   bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
