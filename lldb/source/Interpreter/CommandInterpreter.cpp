@@ -3215,18 +3215,7 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
   if (process) {
     StateType state = process->GetState();
     if (StateIsRunningState(state)) {
-      Status error = process->Halt();
-#ifdef MS_DEBUGGER
-      if (error.Success()) {
-        std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-        lldb::StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
-        if (output_sp)
-          output_sp->Printf(
-              "The debugging process was terminated at the user's request.\n");
-      }
-#else
-      (void)error;
-#endif
+      process->Halt();
       return true; // Don't do any updating when we are running
     }
   }
