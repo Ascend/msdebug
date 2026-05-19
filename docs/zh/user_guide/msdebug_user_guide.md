@@ -10,15 +10,15 @@ MindStudio Debugger（算子调试工具，msDebug）是一款面向昇腾设备
 
 - Kernel直调算子开发：Kernel直调。
 
-    Kernel直调的场景，详细信息可参考《Ascend C算子开发指南》中“[基于样例工程完成Kernel直调](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)”章节。具体操作请参见[上板调试Vector算子](../best_practices/basic_cases.md#上板调试vector算子)。
+    Kernel直调的场景，详细信息可参考《Ascend C算子开发指南》中“[基于样例工程完成Kernel直调](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)”章节。具体操作请参见[上板调试Vector算子](../best_practices/msdebug_basic_cases.md#上板调试vector算子)。
 
 - 工程化算子开发：单算子API调用。
 
-    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \>  [单算子API调用](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)”章节。具体操作请参见[调用Ascend CL单算子](../best_practices/basic_cases.md#调用ascend-cl单算子)。
+    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \>  [单算子API调用](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)”章节。具体操作请参见[调用Ascend CL单算子](../best_practices/msdebug_basic_cases.md#调用ascend-cl单算子)。
 
 - AI框架算子适配：PyTorch框架。
 
-    通过PyTorch框架进行单算子调用的场景，详细信息可参考《Ascend Extension for PyTorch 套件与三方库支持清单》中“[昇腾自研插件](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)”章节中OpPlugin插件。具体操作请参见[调试PyTorch接口调用的算子](../best_practices/basic_cases.md#调试pytorch接口调用的算子)。
+    通过PyTorch框架进行单算子调用的场景，详细信息可参考《Ascend Extension for PyTorch 套件与三方库支持清单》中“[昇腾自研插件](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)”章节中OpPlugin插件。具体操作请参见[调试PyTorch接口调用的算子](../best_practices/msdebug_basic_cases.md#调试pytorch接口调用的算子)。
 
 **补充说明**
 
@@ -351,7 +351,7 @@ Command Options Usage:
 
 **导入调试信息**
 
-算子调试前，需先启用调试`-g -O0`编译选项重新编译，使算子二进制带上调试信息，具体方法可参考[基于样例工程编译算子](../best_practices/basic_cases.md#上板调试vector算子)。算子调试信息会自动被导入msDebug工具。
+算子调试前，需先启用调试`-g -O0`编译选项重新编译，使算子二进制带上调试信息，具体方法可参考[基于样例工程编译算子](../best_practices/msdebug_basic_cases.md#上板调试vector算子)。算子调试信息会自动被导入msDebug工具。
 
 **启动工具**
 
