@@ -113,6 +113,74 @@ inline void DumpBitmap(const vector<uint64_t> &bitmaps, std::ostream &os) {
   }
 }
 
+struct LineInfo {
+  std::string filename{"unknown"};
+  uint32_t line{0};
+};
+
+bool GetLineEntryForPC(Target *target, uint64_t pc, LineInfo &line_entry) {
+  // 从PC地址获取符号上下文
+  SymbolContext sc;
+  Address pc_address;
+  if (target->ResolveLoadAddress(pc, pc_address)) {
+    if (target->GetImages().ResolveSymbolContextForAddress(
+            pc_address, lldb::eSymbolContextLineEntry, sc) != 0) {
+      if (sc.line_entry.IsValid()) {
+        line_entry.filename = sc.line_entry.GetFile().GetFilename().GetString();
+        line_entry.line = sc.line_entry.line;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void PrettyPrintTable(vector<string> headers, vector<vector<string>> rows,
+                      int focus_row, Stream &strm) {
+  stringstream ss;
+  int num_cols = headers.size();
+  int num_rows = rows.size();
+
+  std::vector<int> col_widths(num_cols, 0);
+  // 考虑表头宽度
+  for (int i = 0; i < num_cols; i++) {
+    col_widths[i] = std::max(col_widths[i], (int)headers[i].length());
+  }
+  // 考虑数据行宽度
+  for (int r = 0; r < num_rows; r++) {
+    for (int c = 0; c < num_cols; c++) {
+      int width = (int)rows[r][c].length();
+      if (c == 0 && r == focus_row) {
+        width += 2; // 星号占2个字符
+      }
+      col_widths[c] = std::max(col_widths[c], width);
+    }
+  }
+  // 为每列添加边距
+  for (int i = 0; i < num_cols; i++) {
+    col_widths[i] += 1; // 左加一个空格
+  }
+  // 打印表头
+  ss << std::right;
+  for (int i = 0; i < num_cols; i++) {
+    ss << std::setw(col_widths[i]) << headers[i];
+  }
+  ss << "\n";
+  // 打印数据行
+  for (int r = 0; r < num_rows; r++) {
+    for (int c = 0; c < num_cols; c++) {
+      if (c == 0 && r == focus_row) {
+        // 焦点行第一列：先打印星号，然后右对齐
+        ss << "* " << std::setw(col_widths[c] - 2) << std::right << rows[r][c];
+      } else {
+        ss << std::setw(col_widths[c]) << std::right << rows[r][c];
+      }
+    }
+    ss << "\n";
+  }
+  strm << ss.str();
+}
+
 } // namespace
 
 // CommandObjectAscendInfoDevices
@@ -601,7 +669,7 @@ void PrintDevtbl(const SummaryInfo& summary_info, const DeviceStopInfo &stop_inf
   strm << "  CoreId  CoreType        PC         DeviceId    ChipType\n";
   static constexpr uint32_t ID_WIDTH = 4;
   for (const auto &core_info: core_infos) {
-    std::stringstream ss; 
+    std::stringstream ss;
     ss << (core_info.core_type == stop_info.core_type && core_info.core_id == stop_info.core_id ? " *" : "  ");
     ss << std::setw(ID_WIDTH) << static_cast<uint64_t>(core_info.core_id) << "       " <<
         (core_info.core_type == CoreType::AIC ? "AIC" : "AIV") << "    0x" << std::hex <<
@@ -609,7 +677,7 @@ void PrintDevtbl(const SummaryInfo& summary_info, const DeviceStopInfo &stop_inf
         summary_info.dev_id << "        " <<
       DevdrvChipTypeToStr[summary_info.chip_type] << std::endl;
     strm << ss.str();
-  } 
+  }
 }
 
 void PrintTensorShape(GlobalDataType data_type, const GlobalMemInfo &mem_info, std::stringstream &ss) {
@@ -759,6 +827,11 @@ protected:
       result.AppendError("Failed to get process info");
       return;
     }
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (target == nullptr) {
+      result.AppendError("Failed to get target");
+      return;
+    }
 
     if (!process->IsStopInSimtKernel()) {
       result.AppendError("The ascend info threads command can only run on in simt kernel.");
@@ -794,12 +867,15 @@ protected:
         ComputeLinearIdx(stop_info.thread_pos, thread_dim);
     // 属于哪个warp，用于突出展示
     uint32_t current_warp_id = current_linear / WARP_SIZE;
-
-    strm << "  ThreadIdx  to  ThreadIdx  ActiveCount  " << CenterAlign("PC", 14)
-         << "  " << CenterAlign("ActiveMask", 10) << "\n";
+    const static vector<string> headers{"ThreadIdx",   "To",  "ThreadIdx",
+                                        "ActiveCount", "PC",  "ActiveMask",
+                                        "Filename",    "Line"};
+    vector<vector<string>> rows;
 
     // 按照warp维度展示线程信息，每行一个warp
+    int focus_row = 0;
     for (const auto &warp : warps_info) {
+      vector<string> row;
       // 计算每个线程的warp范围
       uint32_t start_linear = warp.warp_id * WARP_SIZE;
       uint32_t end_linear = start_linear + WARP_SIZE - 1;
@@ -808,27 +884,42 @@ protected:
 
       // 统计活跃线程数量
       uint32_t active_count = __builtin_popcount(warp.exec_mask);
-      std::stringstream ss, start_ss, end_ss;
+      std::stringstream start_ss, end_ss;
       FormatThreadIdx(start_pos, start_ss);
       FormatThreadIdx(end_pos, end_ss);
       // 标明当前线程
       if (warp.warp_id == current_warp_id) {
-        strm << "* ";
-      }else {
-        strm << "  ";
+        focus_row = rows.size();
       }
+      row.push_back(start_ss.str());               // ThreadIdx
+      row.push_back(" ");                          // To
+      row.push_back(end_ss.str());                 // ThreadIdx
+      row.push_back(std::to_string(active_count)); // ActiveCount
 
-      ss << std::left << std::setw(9) << CenterAlign(start_ss.str(), 9) << "  ";
-      ss << std::left << std::setw(2) << "to" << "  ";
-      ss << std::left << std::setw(9) << CenterAlign(end_ss.str(), 9) << "  ";
-      ss << std::left << std::setw(11) << CenterAlign(std::to_string(active_count), 11) << "  ";
-      ss << "0x" << std::hex << std::setfill('0') << std::setw(8) << warp.simt_pc << "  ";
-      ss << "0x" << std::hex << std::setfill('0') << std::setw(8) << warp.exec_mask << "  ";
-      ss << std::dec;
-      strm << ss.str();
-      strm.EOL();
+      if (warp.simt_pc > 0) {
+        std::stringstream ss;
+        ss << "0x" << std::hex << warp.simt_pc;
+        row.push_back(ss.str());
+      } else {
+        row.push_back("END");
+      }
+      {
+        std::stringstream ss;
+        ss << "0x" << std::hex << std::setfill('0') << std::setw(8)
+           << warp.exec_mask;
+        row.push_back(ss.str());
+      }
+      LineInfo line_info;
+      if (warp.simt_pc && GetLineEntryForPC(target, warp.simt_pc, line_info)) {
+        row.push_back(line_info.filename);
+        row.push_back(to_string(line_info.line));
+      } else {
+        row.push_back("NA");
+        row.push_back("NA");
+      }
+      rows.push_back(row);
     }
-
+    PrettyPrintTable(headers, rows, focus_row, strm);
     strm.Flush();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }

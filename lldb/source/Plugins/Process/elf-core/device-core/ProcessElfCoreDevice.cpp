@@ -85,11 +85,6 @@ ProcessSP ProcessElfCoreDevice::CreateInstance(TargetSP target_sp,
 Status ProcessElfCoreDevice::UpdateTargetKernel() {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
-  llvm::StringRef kernel_name{m_kernel_name};
-  LLDB_LOG(log, "{0}, kernel_name = {1}", __FUNCTION__, kernel_name);
-  if (m_kernel_name.empty()) {
-    return error;
-  }
   auto &target = GetTarget();
   auto executable_module = target.GetExecutableModule();
   if (!executable_module) {
@@ -105,6 +100,11 @@ Status ProcessElfCoreDevice::UpdateTargetKernel() {
       target.SetExecutableModule(dev_module);
       return error;
     }
+    return error;
+  }
+  llvm::StringRef kernel_name{m_kernel_name};
+  LLDB_LOG(log, "{0}, kernel_name = {1}", __FUNCTION__, kernel_name);
+  if (m_kernel_name.empty()) {
     return error;
   }
   auto *object_file = executable_module->GetObjectFile();
@@ -396,6 +396,7 @@ void ProcessElfCoreDevice::UpdateStopInfo(bool focus_named_error_core) {
       LLDB_LOG(log, "Got threadim failed: {0}", error);
       return;
     }
+    m_summary_info.focus_pos_info.err_warp_id = warp_id;
     FocusToActiveThreadInWarp(warp_id);
   }
 }
@@ -1074,13 +1075,43 @@ Status ProcessElfCoreDevice::GetWarpsInfo(std::vector<WarpInfo> &info) {
     if (reg_info && reg_ctx_sp->ReadRegister(reg_info, value)) {
       warp_info.exec_mask = value.GetAsUInt32();
     }
-    reg_info = reg_ctx_sp->GetRegisterInfoByName("SIMT_PC");
-    if (reg_info && reg_ctx_sp->ReadRegister(reg_info, value)) {
-      warp_info.simt_pc = value.GetAsUInt64();
+
+    if (warp_id == m_summary_info.focus_pos_info.err_warp_id) {
+      warp_info.simt_pc = reg_ctx_sp->GetPC(UINT64_MAX);
+    } else {
+      // other pc is 0
+      reg_info = reg_ctx_sp->GetRegisterInfoByName("SIMT_PC");
+      if (reg_info && reg_ctx_sp->ReadRegister(reg_info, value)) {
+        warp_info.simt_pc = value.GetAsUInt64();
+      }
     }
+
     info.push_back(warp_info);
   }
   m_summary_info.focus_pos_info.thread_pos = old_thread_pos;
+  return error;
+}
+
+Status ProcessElfCoreDevice::SetThreadOnFocus(const uint32_t &linear_idx) {
+  Status error;
+  ThreadSP thread_sp = GetThreadList().GetSelectedThread();
+  if (!thread_sp) {
+    error.SetErrorStringWithFormatv("Got empty thread.");
+    return error;
+  }
+  RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+  if (!reg_ctx_sp) {
+    error.SetErrorStringWithFormatv("Got empty register context.");
+    return error;
+  }
+  ThreadDim thread_dim;
+  error = GetThreadDim(reg_ctx_sp, thread_dim);
+  if (error.Fail()) {
+    error.SetErrorStringWithFormatv("GetThreadDim failed: {0}", error);
+    return error;
+  }
+  m_summary_info.focus_pos_info.thread_pos =
+      LinearIdxToThreadPos(linear_idx, thread_dim);
   return error;
 }
 

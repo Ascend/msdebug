@@ -95,6 +95,8 @@ private:
 
   InterruptPosType GetPosType(lldb::RegisterContextSP reg_ctx_sp);
 
+  Status SetThreadOnFocus(const uint32_t &linear_idx) override;
+
 private:
   device_core::SummaryInfo m_summary_info;
   SectionList m_section_list;

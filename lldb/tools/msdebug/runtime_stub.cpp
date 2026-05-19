@@ -497,7 +497,7 @@ std::string GetKernelNameByTilingKey(const void *hdl, uint64_t tilingKey)
 {
     std::string nameSuffix = "_" + std::to_string(tilingKey);
     std::vector<std::string> suffixNames = {nameSuffix, nameSuffix + MIX_AIC_TAIL, nameSuffix + MIX_AIV_TAIL};
- 
+
     auto kernelInfo = MapManager::Instance().GetKernelInfo(hdl);
     for (const auto &name: kernelInfo.kernelNames) {
         for (const auto &suffix: suffixNames) {
@@ -540,11 +540,11 @@ uint64_t GetFixedPcStartAddr(const KernelInfo &kernelInfo,
     uint64_t kernelOffset = UINT64_MAX;
     for (size_t i = 0; i < kernelInfo.kernelNames.size(); i++) {
         const auto &kernelName = kernelInfo.kernelNames[i];
-        if (kernelName == targetKernelName 
-            || targetKernelName + mix_aic == kernelName
-            || targetKernelName + mix_aiv == kernelName) {
-            kernelOffset = kernelInfo.kernelOffsets[i];
-            break;
+        if (kernelName == targetKernelName ||
+            targetKernelName + mix_aic == kernelName ||
+            targetKernelName + mix_aiv == kernelName) {
+          kernelOffset = kernelInfo.kernelOffsets[i];
+          break;
         }
     }
     if (kernelOffset == UINT64_MAX) {
@@ -606,7 +606,8 @@ static void SetMemoryWritable(uint64_t pcStartAddr)
                 "it may lead to failure in setting breakpoints.\n");
         return;
     }
-    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize = %lu", pcStartAddr, (uint64_t)base_ptr, psize);
+    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize=%lu\n",
+                     pcStartAddr, (uint64_t)base_ptr, psize);
     int32_t deviceId{0};
     GetDeviceId(&deviceId);
     if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {

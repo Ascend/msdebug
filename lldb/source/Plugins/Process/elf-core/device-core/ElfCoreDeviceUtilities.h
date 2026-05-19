@@ -126,6 +126,7 @@ struct FocusPosInfo {
   InterruptPosType pos_type{InterruptPosType::SU_INTERRUPT};
   ThreadDim thread_dim;
   ThreadPos thread_pos;
+  uint8_t err_warp_id;
 };
 
 inline ThreadPos LinearIdxToThreadPos(uint32_t linear_idx, const ThreadDim &thread_dim) {
