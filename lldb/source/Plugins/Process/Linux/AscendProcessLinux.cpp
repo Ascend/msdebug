@@ -937,6 +937,12 @@ Status AscendProcessLinux::ReadDeviceRegisterValue(const RegisterInfo *reg_info,
   }
   Status error;
   if (reg_info->kinds[lldb::eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
+    if (m_pos_info.pc != -1 &&
+        m_pos_info.first_stop_core_type == m_pos_info.core_type &&
+        m_pos_info.first_stop_core_id == m_pos_info.core_id) {
+      value.SetUInt64(m_pos_info.pc);
+      return error;
+    }
     uint64_t pc = 0;
     error = GetStoppedCorePC(pc);
     if (error.Fail()) {

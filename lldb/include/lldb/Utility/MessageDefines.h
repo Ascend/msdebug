@@ -178,18 +178,23 @@ struct InterruptPosInfo {
   ThreadPos thread_pos;
   uint64_t pc;
   ThreadInfo thread_info;
+  uint32_t first_stop_core_id;
+  CoreType first_stop_core_type;
 
   void Update(const InterruptEvent &event) {
-   core_id = event.core_id;
-   core_type = (CoreType)event.core_type;
-   pos_type = event.pos_type;
-   pc = event.pc;
-   thread_info = event.thread_info;
-   if (thread_info.thread_dim_x && thread_info.thread_dim_y && thread_info.thread_dim_z) {
-     thread_pos.x = thread_info.thread_id % thread_info.thread_dim_x;
-     thread_pos.y = thread_info.thread_id / thread_info.thread_dim_x % thread_info.thread_dim_y;
-     thread_pos.z = thread_info.thread_id / thread_info.thread_dim_x / thread_info.thread_dim_y;
-   }
+    first_stop_core_id = core_id = event.core_id;
+    first_stop_core_type = core_type = (CoreType)event.core_type;
+    pos_type = event.pos_type;
+    pc = event.pc;
+    thread_info = event.thread_info;
+    if (thread_info.thread_dim_x && thread_info.thread_dim_y &&
+        thread_info.thread_dim_z) {
+      thread_pos.x = thread_info.thread_id % thread_info.thread_dim_x;
+      thread_pos.y = thread_info.thread_id / thread_info.thread_dim_x %
+                     thread_info.thread_dim_y;
+      thread_pos.z = thread_info.thread_id / thread_info.thread_dim_x /
+                     thread_info.thread_dim_y;
+    }
   }
 
   void Reset() {
