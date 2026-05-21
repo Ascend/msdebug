@@ -1976,7 +1976,7 @@ const vector<vector<ErrRegMask>> *RegisterInfoPOSIXCore_ascend950::GetAicErrorRe
 
   auto addMask = [&](const auto& err_info, uint32_t mask) {
       vector<ErrRegMask> err_infos;
-      AddMaskCommon(err_info, mask, err_infos);
+      AddMaskCommon(mask, err_info, err_infos);
       table.push_back(err_infos);
   };
 
