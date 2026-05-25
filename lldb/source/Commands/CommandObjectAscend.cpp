@@ -249,7 +249,7 @@ public:
 
   // 获取当前聚焦的core id
   uint8_t m_focused_info_index;
-  DeviceStopInfo m_stop_info;
+  DeviceStopInfo m_stop_info{};
 
   Status GetCommonInfo(Process *process) {
     Status error = process->GetDeviceInfo(m_device_info);

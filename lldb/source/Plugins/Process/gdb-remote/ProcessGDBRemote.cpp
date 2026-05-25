@@ -2363,10 +2363,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     uint64_t queue_serial_number = 0;
     ExpeditedRegisterMap expedited_register_map;
 #ifdef MS_DEBUGGER
-    DeviceStopInfo stop_info;
-    stop_info.core_type = CoreType::UNKNOWN_CORE_TYPE;
-    stop_info.core_id = UINT32_MAX;
-    stop_info.kernel_name = "unknown";
+    DeviceStopInfo stop_info{};
     static constexpr unsigned RADIX_HEX = 16;
 #endif
     AddressableBits addressable_bits;

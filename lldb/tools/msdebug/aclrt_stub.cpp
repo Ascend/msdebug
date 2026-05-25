@@ -44,46 +44,67 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
 {
     static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
     if (stubFuncInfoMap.size() == 0) {
-        stubFuncInfoMap = {
-            {"aclrtGetDeviceImpl",
-                  {"aclrtGetDeviceImpl", ACLRT_GET_DEVICE_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtSetDeviceImpl",
-                {"aclrtSetDeviceImpl", ACLRT_SET_DEVICE_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtCreateContextImpl",
-                {"aclrtCreateContextImpl", ACLRT_CREATE_CONTEXT_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtBinaryGetFunctionImpl",
-                {"aclrtBinaryGetFunctionImpl", ACLRT_BINARY_GET_FUNCTION_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtBinaryGetFunctionByEntryImpl",
-                {"aclrtBinaryGetFunctionByEntryImpl", ACLRT_BINARY_GET_FUNCTION_BY_ENTRY_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtLaunchKernelImpl",
-                {"aclrtLaunchKernelImpl", ACLRT_LAUNCH_KERNEL_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtLaunchKernelWithConfigImpl",
-                {"aclrtLaunchKernelWithConfigImpl", ACLRT_LAUNCH_KERNEL_WITH_CONFIG_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtLaunchKernelWithHostArgsImpl",
-                {"aclrtLaunchKernelWithHostArgsImpl", ACLRT_LAUNCH_KERNEL_WITH_HOST_ARGS_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtLaunchKernelV2Impl",
-                {"aclrtLaunchKernelV2Impl", ACLRT_LAUNCH_KERNEL_V2_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtGetFunctionAddrImpl",
-                {"aclrtGetFunctionAddrImpl", ACLRT_GET_FUNCTION_ADDR_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtGetSocNameImpl",
-                {"aclrtGetSocNameImpl", ACLRT_GET_SOC_NAME_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtBinaryLoadFromFileImpl",
-                {"aclrtBinaryLoadFromFileImpl", ACLRT_BINARY_LOAD_FROM_FILE_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtCreateBinaryImpl",
-                {"aclrtCreateBinaryImpl", ACLRT_CREATE_BINARY_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtBinaryLoadImpl",
-                {"aclrtBinaryLoadImpl", ACLRT_BINARY_LOAD_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtBinaryLoadFromDataImpl",
-                {"aclrtBinaryLoadFromDataImpl", ACLRT_BINARY_LOAD_FROM_DATA_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtStreamGetIdImpl",
-                {"aclrtStreamGetIdImpl", ACLRT_STREAM_GET_ID_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtSynchronizeStreamImpl",
-                {"aclrtSynchronizeStreamImpl", ACLRT_SYNC_STREAM_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtMemGetAddressRangeImpl",
-                {"aclrtMemGetAddressRangeImpl", ACLRT_MEM_GET_ADDRESS_RANGE_IMPL_NOT_FOUND_ERR, nullptr}},
-            {"aclrtSynchronizeStreamWithTimeoutImpl",
-                {"aclrtSynchronizeStreamWithTimeoutImpl", ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}}
-        };
+      stubFuncInfoMap = {
+          {"aclrtGetDeviceImpl",
+           {"aclrtGetDeviceImpl", ACLRT_GET_DEVICE_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtSetDeviceImpl",
+           {"aclrtSetDeviceImpl", ACLRT_SET_DEVICE_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtCreateContextImpl",
+           {"aclrtCreateContextImpl", ACLRT_CREATE_CONTEXT_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtBinaryGetFunctionImpl",
+           {"aclrtBinaryGetFunctionImpl",
+            ACLRT_BINARY_GET_FUNCTION_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtBinaryGetFunctionByEntryImpl",
+           {"aclrtBinaryGetFunctionByEntryImpl",
+            ACLRT_BINARY_GET_FUNCTION_BY_ENTRY_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtLaunchKernelImpl",
+           {"aclrtLaunchKernelImpl", ACLRT_LAUNCH_KERNEL_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtLaunchKernelWithConfigImpl",
+           {"aclrtLaunchKernelWithConfigImpl",
+            ACLRT_LAUNCH_KERNEL_WITH_CONFIG_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtLaunchKernelWithHostArgsImpl",
+           {"aclrtLaunchKernelWithHostArgsImpl",
+            ACLRT_LAUNCH_KERNEL_WITH_HOST_ARGS_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtLaunchKernelV2Impl",
+           {"aclrtLaunchKernelV2Impl",
+            ACLRT_LAUNCH_KERNEL_V2_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtGetFunctionAddrImpl",
+           {"aclrtGetFunctionAddrImpl",
+            ACLRT_GET_FUNCTION_ADDR_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtGetSocNameImpl",
+           {"aclrtGetSocNameImpl", ACLRT_GET_SOC_NAME_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtBinaryLoadFromFileImpl",
+           {"aclrtBinaryLoadFromFileImpl",
+            ACLRT_BINARY_LOAD_FROM_FILE_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtCreateBinaryImpl",
+           {"aclrtCreateBinaryImpl", ACLRT_CREATE_BINARY_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtBinaryLoadImpl",
+           {"aclrtBinaryLoadImpl", ACLRT_BINARY_LOAD_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtBinaryLoadFromDataImpl",
+           {"aclrtBinaryLoadFromDataImpl",
+            ACLRT_BINARY_LOAD_FROM_DATA_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtStreamGetIdImpl",
+           {"aclrtStreamGetIdImpl", ACLRT_STREAM_GET_ID_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtSynchronizeStreamImpl",
+           {"aclrtSynchronizeStreamImpl", ACLRT_SYNC_STREAM_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtMemGetAddressRangeImpl",
+           {"aclrtMemGetAddressRangeImpl",
+            ACLRT_MEM_GET_ADDRESS_RANGE_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtGetUserDevIdByLogicDevIdImpl",
+           {"aclrtGetUserDevIdByLogicDevIdImpl",
+            ACLRT_GET_USER_DEVID_BY_LOGIC_DEVID_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtSynchronizeStreamWithTimeoutImpl",
+           {"aclrtSynchronizeStreamWithTimeoutImpl",
+            ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}}};
     }
     return stubFuncInfoMap;
 }
@@ -167,6 +188,18 @@ aclError aclrtSynchronizeStreamImpl(aclrtStream stream)
         return ret;
     }
     return ret;
+}
+
+aclError aclrtGetUserDevIdByLogicDevIdImpl(const int32_t logicDevId,
+                                           int32_t *const userDevid) {
+  using FuncType = decltype(&aclrtGetUserDevIdByLogicDevIdImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
+  auto ret = func(logicDevId, userDevid);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    return ret;
+  }
+  return ret;
 }
 
 void OpenAclrtLib()
@@ -462,8 +495,14 @@ int32_t ConvertToVisibleDeviceIdIfPossible(int32_t devId)
     try {
         convertedId = ConvertToVisibleDeviceId(devId);
     } catch (...) {
-        RT_STUB_LOG_ERROR("Try to convert visible device id failed, do not set ASCEND_RT_VISIBLE_DEVICES env");
+      RT_STUB_LOG_INFO("Try to convert visible device id failed, try to use "
+                       "aclrt api again.");
+      auto ret = aclrtGetUserDevIdByLogicDevIdImpl(devId, &convertedId);
+      if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_INFO("Try to convert visible device id failed, do not "
+                         "set ASCEND_RT_VISIBLE_DEVICES env");
         convertedId = devId;
+      }
     }
     return convertedId;
 }
@@ -588,7 +627,7 @@ aclError aclrtLaunchKernelWithHostArgsImpl(aclrtFuncHandle funcHandle,
     }
     return ret;
 }
- 
+
 aclError aclrtLaunchKernelV2Impl(aclrtFuncHandle funcHandle, uint32_t blockDim,
         const void *argsData, size_t argsSize, aclrtLaunchKernelCfg *cfg, aclrtStream stream)
 {

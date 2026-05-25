@@ -149,15 +149,15 @@ struct KernelInfo {
 
 // used by lldb-client
 struct DeviceStopInfo {
-  CoreType core_type;
-  uint32_t core_id;
-  std::string kernel_name;
-  uint64_t base_pc;
-  SocType soc_type;
+  CoreType core_type{CoreType::UNKNOWN_CORE_TYPE};
+  uint32_t core_id{UINT32_MAX};
+  std::string kernel_name{"unknown"};
+  uint64_t base_pc{0};
+  SocType soc_type{SocType::SOC_BEGIN};
   // used by coredump currently
-  std::string stop_description;
+  std::string stop_description{};
   InterruptPosType pos_type{InterruptPosType::SU_INTERRUPT};
-  ThreadPos thread_pos;
+  ThreadPos thread_pos{};
 };
 
 // Message from lldb-client to lldb-server

@@ -2732,7 +2732,7 @@ void PruneThreadPlans();
   ///
   /// Each Process type that supports using an asynchronous StructuredData
   /// feature should implement this to enable/disable/configure the feature.
-  /// The default implementation here will always return an error indiciating
+  /// The default implementation here will always return an error indicating
   /// the feature is unsupported.
   ///
   /// StructuredDataPlugin implementations will call this to configure a
@@ -2823,9 +2823,9 @@ void PruneThreadPlans();
   lldb::addr_t FindInMemory(const uint8_t *buf, uint64_t size,
                             const AddressRange &range, size_t alignment,
                             Status &error);
- 
+
 #ifdef MS_DEBUGGER
-  DeviceStopInfo m_device_stop_info{CoreType::UNKNOWN_CORE_TYPE, UINT32_MAX, "", 0, SocType::SOC_BEGIN};
+  DeviceStopInfo m_device_stop_info{};
   bool m_single_core_mode {false};
   std::map<std::string, std::string> m_device_core_stop_reason;
   bool m_device_coredump {false};
