@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2026. All rights reserved.
  */
 
 #ifdef MS_DEBUGGER
@@ -40,7 +40,7 @@ typedef rtError_t (*rtKernelGetAddrAndPrefCntFunc)(void *, const uint64_t,
 typedef rtError_t (*rtGetSocVersion)(char *, const uint32_t);
 typedef rtError_t (*rtDevBinaryRegisterFunc)(const rtDevBinary_t *, void **);
 typedef rtError_t (*rtRegisterAllKernelFunc)(const rtDevBinary_t *, void **);
-typedef rtError_t (*rtGetTaskIdAndStreamIDFunc)(uint32_t *taskId, uint32_t *streamId);
+typedef rtError_t (*rtGetStreamId)(rtStream_t stm, int32_t *streamId);
 typedef rtError_t (*rtStreamSynchronizeWithTimeoutFunc)(rtStream_t stream, int32_t timeout);
 typedef rtError_t (*rtStreamSynchronizeFunc)(rtStream_t stream);
 typedef rtError_t (*rtGetVisibleDeviceIdByLogicDeviceIdFunc)(const int32_t, int32_t * const);
@@ -50,11 +50,13 @@ typedef pid_t (*drvDeviceGetBareTgidFunc)(void);
 constexpr uint8_t SOC_VERSION_LEN = 32;
 constexpr uint32_t BUFFER_SIZE = 2048; // lldb-server侧buffer大小
 constexpr uint32_t KERNEL_NAME_SIZE = 2047; // lldb-client侧为2048
-static void *GetStubFuncPtr(const std::string funcName);
+static void *GetStubFuncPtr(const std::string funcName, bool throw_error=true);
 static bool g_isInited = false;
 static std::mutex g_initMtx;
 static std::mutex g_initStubFunc;
 static void *g_handle = nullptr;
+static void *g_drvHandle = nullptr;
+static void GetDeviceId(int32_t* device);
 
 static std::map<const void *, std::string>& GetStubFuncToNameMap()
 {
@@ -90,22 +92,37 @@ static std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
                 {"rtDevBinaryRegister", RT_DEV_BIN_REG_NOT_FOUND_ERR, nullptr}},
             {"rtRegisterAllKernel",
                 {"rtRegisterAllKernel", RT_REG_ALL_KERNEL_NOT_FOUND_ERR, nullptr}},
-            {"rtGetTaskIdAndStreamID",
-                {"rtGetTaskIdAndStreamID", RT_GET_TASK_ID_AND_STREAM_ID_NOT_FOUND_ERR, nullptr}},
+            {"rtGetStreamId",
+                {"rtGetStreamId", RT_GET_TASK_ID_AND_STREAM_ID_NOT_FOUND_ERR, nullptr}},
             {"rtStreamSynchronizeWithTimeout",
                 {"rtStreamSynchronizeWithTimeout", RT_STREAM_SYNC_WITH_TIMEOUT_NOT_FOUND_ERR, nullptr}},
             {"rtStreamSynchronize",
                 {"rtStreamSynchronize", RT_STREAM_SYNC_NOT_FOUND_ERR, nullptr}},
             {"rtGetVisibleDeviceIdByLogicDeviceId",
                 {"rtGetVisibleDeviceIdByLogicDeviceId", RT_GET_VISIBLE_DEVID_BY_LOGIC_DEVID_NOT_FOUND_ERR, nullptr}},
-            {"drvDeviceGetBareTgid",
-                {"drvDeviceGetBareTgid", DRV_DEV_GET_BARE_TGID_NOT_FOUND_ERR, nullptr}},
+            {"rtMemGetAddressRange",
+                {"rtMemGetAddressRange", RT_MEM_GET_ADDRESS_RANGE_NOT_FOUND_ERR, nullptr}},
             {"rtGetDevice",
                   {"rtGetDevice", RT_GET_DEVICE_NOT_FOUND_ERR, nullptr}},
         };
     }
     return stubFuncInfoMap;
 }
+
+static std::map<std::string, StubFuncInfo>& GetDrvStubFuncInfoMap()
+{
+    static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
+    if (stubFuncInfoMap.size() == 0) {
+        stubFuncInfoMap = {
+            {"drvDeviceGetBareTgid",
+                {"drvDeviceGetBareTgid", DRV_DEV_GET_BARE_TGID_NOT_FOUND_ERR, nullptr}},
+            {"halMemAdvise",
+                {"halMemAdvise", HAL_MEM_ADVISE_NOT_FOUND_ERR, nullptr}},
+        };
+    }
+    return stubFuncInfoMap;
+}
+
 
 static void GetDeviceId(int32_t* device)
 {
@@ -230,17 +247,16 @@ static int32_t SetDevicePost(int32_t device)
     return SendDeviceInfo(device, socVersion, tgid);
 }
 
-static rtError_t GetStreamID(uint32_t &streamId)
+static rtError_t GetStreamID(rtStream_t stream, int32_t &streamId)
 {
-  rtGetTaskIdAndStreamIDFunc func = (rtGetTaskIdAndStreamIDFunc)GetStubFuncPtr("rtGetTaskIdAndStreamID");
-  uint32_t taskId;
-  int32_t ret = func(&taskId, &streamId);
+  rtGetStreamId func = (rtGetStreamId)GetStubFuncPtr("rtGetStreamId");
+  auto ret = func(stream, &streamId);
   if (ret != 0) {
       RT_STUB_LOG_ERROR("Get stream id failed!\n");
       PrintErrorCode(RT_KERNEL_GET_ADDR_AND_PREF_CNT_FAILED_ERR);
       return ret;
   }
-  RT_STUB_LOG_INFO("rtGetTaskIdAndStreamID done. streamId=%u, taskId=%u\n", streamId, taskId);
+  RT_STUB_LOG_INFO("rtGetStreamId done. streamId=%d\n", streamId);
   return ret;
 }
 
@@ -266,10 +282,6 @@ int32_t SendStreamId(uint32_t streamId)
 
 static void LaunchKernelPost(rtStream_t stream)
 {
-    uint32_t streamId{0};
-    if (GetStreamID(streamId) == 0) {
-      SendStreamId(streamId);
-    }
     rtStreamSynchronize(stream);
 }
 
@@ -298,7 +310,7 @@ static string GetEscapedBytes(const vector<char> &raw) {
 }
 
 int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash,
-                       const std::vector<char> &elf, uint64_t pcAddr)
+                       const std::vector<char> &elf, uint64_t pcAddr, int32_t stream_id)
 {
   int32_t deviceId;
   GetDeviceId(&deviceId);
@@ -309,7 +321,7 @@ int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelH
   if (cutKernelName.length() > KERNEL_NAME_SIZE) {
     cutKernelName.resize(KERNEL_NAME_SIZE);
   }
-  std::string buf = "$kernel_name:" + cutKernelName + ";";
+  std::string buf = "$kernel_name:" + cutKernelName + ";stream_id:" + to_string(stream_id) + ";";
   {
     std::unique_lock<std::mutex> lk(mtx);
     if (sentBinaries.find(sendKey) == sentBinaries.end()) {
@@ -345,8 +357,31 @@ static void OpenRtLib()
     for (auto &it : GetStubFuncInfoMap()) {
         it.second.funcPtr = dlsym(g_handle, it.second.name.c_str());
         if (it.second.funcPtr == nullptr) {
-            ThrowErrorCode(it.second.errorCode);
+            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
+                                it.second.name.c_str());
+            continue;
         }
+    }
+}
+
+static void OpenDrvLib()
+{
+    if (g_drvHandle == nullptr) {
+        g_drvHandle = dlopen("libascend_hal.so", RTLD_NOW | RTLD_GLOBAL);
+        if (g_drvHandle == nullptr) {
+            ThrowErrorCode(LIB_ASCEND_HAL_NOT_FOUND_ERR);
+        }
+        RT_STUB_LOG_INFO("dlopen hal done\n");
+    }
+
+    for (auto &it : GetDrvStubFuncInfoMap()) {
+        it.second.funcPtr = dlsym(g_drvHandle, it.second.name.c_str());
+        if (it.second.funcPtr == nullptr) {
+            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
+                                it.second.name.c_str());
+            continue;
+        }
+        GetStubFuncInfoMap()[it.first] = it.second;
     }
 }
 
@@ -393,6 +428,8 @@ static void StubInit()
     RT_STUB_LOG_INFO("LogInit done\n");
 
     OpenRtLib();
+    // need be open after OpenRtLib
+    OpenDrvLib();
 
     EnvCheck();
 
@@ -460,7 +497,7 @@ std::string GetKernelNameByTilingKey(const void *hdl, uint64_t tilingKey)
 {
     std::string nameSuffix = "_" + std::to_string(tilingKey);
     std::vector<std::string> suffixNames = {nameSuffix, nameSuffix + MIX_AIC_TAIL, nameSuffix + MIX_AIV_TAIL};
- 
+
     auto kernelInfo = MapManager::Instance().GetKernelInfo(hdl);
     for (const auto &name: kernelInfo.kernelNames) {
         for (const auto &suffix: suffixNames) {
@@ -472,18 +509,24 @@ std::string GetKernelNameByTilingKey(const void *hdl, uint64_t tilingKey)
     return "";
 }
 
-static void *GetStubFuncPtr(const std::string funcName)
+static void *GetStubFuncPtr(const std::string funcName, bool throw_error)
 {
     RT_STUB_LOG_INFO("GetStubFuncPtr funcName=%s\n", funcName.c_str());
     auto it = GetStubFuncInfoMap().find(funcName);
     if (it == GetStubFuncInfoMap().end()) {
-        ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        if (throw_error) {
+            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        }
+        return nullptr;
     }
     if (it->second.funcPtr == nullptr) {
         StubInit();
     }
     if (it->second.funcPtr == nullptr) {
-        ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        if (throw_error) {
+            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        }
+        return nullptr;
     }
     // if StubInit() returns, all stub functions are supposed to be loaded
     return it->second.funcPtr;
@@ -497,11 +540,11 @@ uint64_t GetFixedPcStartAddr(const KernelInfo &kernelInfo,
     uint64_t kernelOffset = UINT64_MAX;
     for (size_t i = 0; i < kernelInfo.kernelNames.size(); i++) {
         const auto &kernelName = kernelInfo.kernelNames[i];
-        if (kernelName == targetKernelName 
-            || targetKernelName + mix_aic == kernelName
-            || targetKernelName + mix_aiv == kernelName) {
-            kernelOffset = kernelInfo.kernelOffsets[i];
-            break;
+        if (kernelName == targetKernelName ||
+            targetKernelName + mix_aic == kernelName ||
+            targetKernelName + mix_aiv == kernelName) {
+          kernelOffset = kernelInfo.kernelOffsets[i];
+          break;
         }
     }
     if (kernelOffset == UINT64_MAX) {
@@ -516,6 +559,64 @@ uint64_t GetFixedPcStartAddr(const KernelInfo &kernelInfo,
     RT_STUB_LOG_INFO("kernel_name=%s, kernel_offset=0x%lx, return pc_start_addr=0x%lx\n",
                 targetKernelName.c_str(), kernelOffset, pcStartAddr);
     return pcStartAddr;
+}
+
+static rtError_t rtMemGetAddressRange(void *ptr, void **pbase, size_t *psize)
+{
+    using FuncType = decltype(&rtMemGetAddressRange);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+    if (func == nullptr) {
+        RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+        return 1;
+    }
+    auto ret = func(ptr, pbase, psize);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+        ThrowErrorCode(ACLRT_GET_DEVICE_IMPL_FAILED_ERR);
+    }
+    return ret;
+}
+
+static drvError_t halMemAdvise(DVdeviceptr ptr, size_t count, unsigned int advise, DVdevice device)
+{
+    RT_STUB_LOG_INFO("Enter %s, ptr=%#llx, count=%lu, advise=%u\n", __FUNCTION__, ptr, count, advise);
+    using FuncType = decltype(&halMemAdvise);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+    if (func == nullptr) {
+        return 1;
+    }
+    return func(ptr, count, advise, device);
+}
+
+
+static void SetMemoryWritable(uint64_t pcStartAddr)
+{
+    static std::string soc_version = GetSocName();
+    // 950
+    if (!StartsWith(soc_version, "Ascend950")) {
+      return;
+    }
+    void *ptr = reinterpret_cast<void *>(pcStartAddr);
+    uint64_t *base_ptr{};
+    uint64_t psize{};
+    int ret = rtMemGetAddressRange(ptr, (void**)&base_ptr, &psize);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_WARNING("rtMemGetAddressRange get addr size failed, "
+                "If the memory used by your process is in a read-only state, "
+                "it may lead to failure in setting breakpoints.\n");
+        return;
+    }
+    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize=%lu\n",
+                     pcStartAddr, (uint64_t)base_ptr, psize);
+    int32_t deviceId{0};
+    GetDeviceId(&deviceId);
+    if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {
+        RT_STUB_LOG_WARNING("halMemAdvise failed, "
+                "If the memory used by your process is in a read-only state, "
+                "it may lead to failure in setting breakpoints.\n");
+        return;
+    }
+    return;
 }
 
 static uint64_t GetPcStartAddrDynamic(void *hdl, const uint64_t tilingKey)
@@ -535,7 +636,9 @@ static uint64_t GetPcStartAddrDynamic(void *hdl, const uint64_t tilingKey)
 
     std::string targetKernelName = GetKernelNameByTilingKey(hdl, tilingKey);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(hdl);
-    return GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    pcStartAddr = GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    SetMemoryWritable(pcStartAddr);
+    return pcStartAddr;
 }
 
 static uint64_t GetPcStartAddrStatic(const void *stubFunc)
@@ -558,7 +661,9 @@ static uint64_t GetPcStartAddrStatic(const void *stubFunc)
     std::string targetKernelName = GetKernelNameFromStubFunc(stubFunc);
     const void *handle = MapManager::Instance().GetHandle(stubFunc);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    return GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    pcStartAddr = GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    SetMemoryWritable(pcStartAddr);
+    return pcStartAddr;
 }
 
 bool BinaryRegisterPost(const rtDevBinary_t *bin, void *hdl, const string &hash, string &err)
@@ -675,8 +780,10 @@ rtError_t rtKernelLaunch(const void *stubFunc, uint32_t blockDim,
     const void *handle = MapManager::Instance().GetHandle(stubFunc);
     uint64_t pcStartAddr = GetPcStartAddrStatic(stubFunc);
 
+    int32_t streamId;
+    GetStreamID(stream, streamId);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
 
     rtError_t result = func(stubFunc, blockDim, args, argsSize, smDesc, stream);
     if (result == 0) {
@@ -701,8 +808,10 @@ rtError_t rtKernelLaunchWithFlagV2(const void *stubFunc, uint32_t blockDim, rtAr
     const void *handle = MapManager::Instance().GetHandle(stubFunc);
     uint64_t pcStartAddr = GetPcStartAddrStatic(stubFunc);
 
+    int32_t streamId;
+    GetStreamID(stm, streamId);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
 
     rtError_t result = func(stubFunc, blockDim, argsInfo, smDesc, stm, flags, cfgInfo);
     if (result == 0) {
@@ -735,7 +844,9 @@ rtError_t rtKernelLaunchWithHandleV2(void *hdl, const uint64_t tilingKey,
 
     if (pcStartAddr) {
       const auto &kernelInfo = MapManager::Instance().GetKernelInfo(hdl);
-      SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+      int32_t streamId;
+      GetStreamID(stm, streamId);
+      SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
     }
 
     rtError_t result = func(hdl, tilingKey, blockDim, argsInfo, smDesc, stm, cfgInfo);

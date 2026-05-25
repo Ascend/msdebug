@@ -1368,9 +1368,17 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
       std::optional<int> call_file;
       std::optional<int> call_line;
       std::optional<int> call_column;
+
+#ifndef MS_DEBUGGER
       if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
                                    decl_line, decl_column, call_file, call_line,
                                    call_column, nullptr)) {
+#else
+      std::optional<int> function_class;
+      if (die.GetDIENamesAndRanges(name, mangled_name, ranges, decl_file,
+                                   decl_line, decl_column, call_file, call_line,
+                                   call_column, function_class, nullptr)) {
+#endif
         if (tag == DW_TAG_subprogram) {
           assert(subprogram_low_pc == LLDB_INVALID_ADDRESS);
           subprogram_low_pc = ranges.GetMinRangeBase(0);
@@ -1773,7 +1781,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
       // We have a SymbolFileDWARFDebugMap, so let it find the right file
     if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
-    
+
     // Handle the .dwp file case correctly
     if (*file_index == DIERef::k_file_index_mask)
       return GetDwpSymbolFile().get(); // DWP case

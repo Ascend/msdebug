@@ -189,8 +189,16 @@ public:
     return;
   }
 
+  void SetThreadOnFocus(const uint32_t &linear_id) override {
+    return;
+  }
+
   void SetSingleCoreRunFlag(bool isSingleCoreRun) override {
     return;
+  }
+
+  bool GetSingleCoreRunFlag() override {
+    return false;
   }
 
   Status GetDeviceInfo(DeviceInfo &info) override {
@@ -201,6 +209,10 @@ public:
     return Status();
   }
 
+  Status GetWarpsInfo(std::vector<WarpInfo> &warps_info) override {
+    return Status();
+  }
+
   Status GetKernelInfo(KernelInfo &info) override {
     return Status();
   }
@@ -208,6 +220,8 @@ public:
   void SetClientDeviceId(const int32_t device_id) override {
     return;
   }
+
+  void SetVFStartPC(uint64_t device_id) override { return; }
 #endif
 
 protected:

@@ -130,12 +130,11 @@ public:
 #ifdef MS_DEBUGGER
     eServerPacketType_qDeviceRegisterValue,
     eServerPacketType_qDeviceRegisterList,
-    eServerPacketType_qDeviceAic,
-    eServerPacketType_qDeviceAiv,
     eServerPacketType_qDeviceInfo,
     eServerPacketType_qDeviceCoresInfo,
     eServerPacketType_qDeviceKernelInfo,
     eServerPacketType_qDeviceBinaryInfo,
+    eServerPacketType_qDeviceWarpsInfo,
 #endif
 
     eServerPacketType_jSignalsInfo,
@@ -144,6 +143,10 @@ public:
 #ifdef MS_DEBUGGER
     eServerPacketType_vDeviceSingleCoreRun,
     eServerPacketType_vDeviceId,
+    eServerPacketType_vDeviceAic,
+    eServerPacketType_vDeviceAiv,
+    eServerPacketType_vDeviceThread,
+    eServerPacketType_vVFStartPC,
 #endif
     eServerPacketType_vAttach,
     eServerPacketType_vAttachWait,

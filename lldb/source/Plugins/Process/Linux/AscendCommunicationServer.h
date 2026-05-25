@@ -80,19 +80,6 @@ private:
   HandlerFunc m_handler;
 };
 
-class StreamHandler : public MsgHandler {
-public:
-  using HandlerFunc = std::function<HandleResult(uint32_t)>;
-
-  StreamHandler(const HandlerFunc& handler) : m_handler(handler) {}
-  HandleResult Parse(const std::string& msg) override;
-  HandleResult Handle() override { return m_handler(m_stream_id); }
-
-private:
-  uint32_t m_stream_id = 0;
-  HandlerFunc m_handler;
-};
-
 class MsgParser {
 public:
   void Register(const std::string& prefix, std::shared_ptr<MsgHandler> handler);

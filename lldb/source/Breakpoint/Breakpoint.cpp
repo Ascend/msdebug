@@ -250,6 +250,23 @@ bool Breakpoint::IsInternal() const { return LLDB_BREAK_ID_IS_INTERNAL(m_bid); }
 
 BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                              bool *new_location) {
+#ifdef MS_DEBUGGER
+  const auto *function = addr.CalculateSymbolContextFunction();
+  if (function) {
+    Log *log = GetLog(LLDBLog::Breakpoints);
+    LLDB_LOG(log, "Detect function_calss={0:x}, with addr={1:x}",
+             function->GetFunctionClass(), addr.GetOffset());
+    if (function->GetFunctionClass() &
+        (static_cast<uint32_t>(DeviceFunctionClass::SIMD_CALLEE) |
+         static_cast<uint32_t>(DeviceFunctionClass::SIMT_CALLEE) |
+         static_cast<uint32_t>(DeviceFunctionClass::SIMT_ENTRY) |
+         static_cast<uint32_t>(DeviceFunctionClass::SIMT_ENTRY))) {
+      m_hardware = true;
+      LLDB_LOG(log, "Simt/Simd function only support hardware breakpoint, auto "
+                    "change breakpoint type to hardware");
+    }
+  }
+#endif
   return m_locations.AddLocation(addr, m_resolve_indirect_symbols,
                                  new_location);
 }

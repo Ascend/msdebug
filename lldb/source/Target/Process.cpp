@@ -6573,6 +6573,10 @@ bool Process::IsStopInDevice() {
   return m_device_stop_info.core_id != UINT32_MAX;
 }
 
+bool Process::IsStopInSimtKernel() {
+  return m_device_stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT;
+}
+
 inline std::string GetSimpleKernelName(const std::string &name) {
   constexpr size_t MAX_SIZE = 64;
   return name.substr(0, std::min(MAX_SIZE, name.length()));
@@ -6590,15 +6594,22 @@ void Process::ShowDeviceStopInfoCached(Stream &stream) {
   } else {
     core_type_str = "unknown";
   }
- 
+
   std::string name = GetSimpleKernelName(m_device_stop_info.kernel_name);
-  if (name.empty()) {
-    stream.Printf("[Switching to focus on CoreId %u, Type %s]\n",
-      m_device_stop_info.core_id, core_type_str.c_str());
+  std::string kernel_name_str = "";
+  if (!name.empty()) {
+    kernel_name_str = "Kernel " + name + ", ";
+  }
+  if (IsStopInSimtKernel()) {
+    stream.Printf(
+        "[Switching to focus on %sCoreId %u, Type %s, Thread (%u, %u, %u)]\n",
+        kernel_name_str.c_str(), m_device_stop_info.core_id,
+        core_type_str.c_str(), m_device_stop_info.thread_pos.x,
+        m_device_stop_info.thread_pos.y, m_device_stop_info.thread_pos.z);
   } else {
-    stream.Printf("[Switching to focus on Kernel %s, CoreId %u, Type %s]\n",
-    name.c_str(), m_device_stop_info.core_id,
-    core_type_str.c_str());
+    stream.Printf("[Switching to focus on %sCoreId %u, Type %s]\n",
+                  kernel_name_str.c_str(), m_device_stop_info.core_id,
+                  core_type_str.c_str());
   }
   stream.Flush();
 }
@@ -6618,7 +6629,7 @@ void Process::RefreshStopReason(lldb::ThreadSP &threadSp) {
     return;
   }
   if (m_single_core_mode) {
-    std::string key = std::to_string(static_cast<uint8_t>(m_device_stop_info.core_type)) 
+    std::string key = std::to_string(static_cast<uint8_t>(m_device_stop_info.core_type))
         + '_' + std::to_string(m_device_stop_info.core_id);
     m_device_core_stop_reason[key] = reason;
   } else {

@@ -58,6 +58,20 @@ enum class AddressClass {
 };
 
 #ifdef MS_DEBUGGER
+enum class DeviceFunctionClass {
+  NONE = 0U,
+  HOST = 1U << 0,
+  KERNEL = 1U << 1,
+  AICORE = 1U << 2,
+  AICPU = 1U << 3,
+  AICUBE = 1U << 4,
+  AIVEC = 1U << 5,
+  SIMT_ENTRY = 1U << 6,  // simt vector function
+  SIMT_CALLEE = 1U << 7, // function called by simt vector function
+  SIMD_ENTRY = 1U << 8,  // simd vector function
+  SIMD_CALLEE = 1U << 9  // function called by simd vector function
+};
+
 enum class DeviceAddressClass {
     NONE = 0U,
     GM = 1U << 0,

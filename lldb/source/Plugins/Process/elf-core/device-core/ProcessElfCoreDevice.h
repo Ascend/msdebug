@@ -50,7 +50,9 @@ public:
   DataExtractor GetAuxvData() override;
 
   Status GetCoresInfo(std::vector<CoreInfo> &info) override;
- 
+
+  Status GetWarpsInfo(std::vector<WarpInfo> &info) override;
+
   // Update which pipe_err we got, depends on register values.
   void UpdateStopInfo(bool focus_known_error_core = false) override;
 
@@ -71,6 +73,8 @@ private:
 
   Status ParseKernelInfo(const lldb::SectionSP& section, ConstString section_name);
 
+  Status ParseHostKernelObject(const lldb::SectionSP& section, ConstString section_name);
+
   template<typename T>
   Status ParseRegData(const lldb::SectionSP& section, uint64_t core_id);
 
@@ -85,10 +89,19 @@ private:
 
   void FocusToAnyKnownErrorAiCore();
 
+  Status GetThreadDim(lldb::RegisterContextSP reg_ctx_sp, device_core::ThreadDim &thread_dim);
+
+  void FocusToActiveThreadInWarp(uint8_t warp_id);
+
+  InterruptPosType GetPosType(lldb::RegisterContextSP reg_ctx_sp);
+
+  Status SetThreadOnFocus(const uint32_t &linear_idx) override;
+
 private:
   device_core::SummaryInfo m_summary_info;
   SectionList m_section_list;
   std::string m_kernel_name{""};
+  std::shared_ptr<ModuleSpec> m_device_module_spec{};
 };
 }
 

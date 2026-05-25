@@ -274,19 +274,25 @@ protected:
 #ifdef MS_DEBUGGER
   PacketResult Handle_vDeviceSingleCoreRun(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_qDeviceAic(StringExtractorGDBRemote &packet);
+  PacketResult Handle_vDeviceAic(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_qDeviceAiv(StringExtractorGDBRemote &packet);
+  PacketResult Handle_vDeviceAiv(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_vDeviceThread(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qDeviceInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qDeviceCoresInfo(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_qDeviceWarpsInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qDeviceKernelInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qDeviceBinaryInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_vDeviceId(StringExtractorGDBRemote &packet);
+	 
+  PacketResult Handle_vVFStartPC(StringExtractorGDBRemote &packet);
 #endif
 
   void SetCurrentThreadID(lldb::tid_t tid);

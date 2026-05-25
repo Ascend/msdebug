@@ -404,7 +404,7 @@ public:
   /// Return the list of memory regions within the process.
   ///
   /// \return
-  ///     A list of all witin the process memory regions.
+  ///     A list of all within the process memory regions.
   lldb::SBMemoryRegionInfoList GetMemoryRegions();
 
   /// Return information about the process.
@@ -578,6 +578,8 @@ public:
 #ifdef MS_DEBUGGER
 
   bool IsSBStopInDevice();
+
+  bool IsSBStopInSimt();
 
   bool HandleDeviceSBProcessStateChanged();
 #endif

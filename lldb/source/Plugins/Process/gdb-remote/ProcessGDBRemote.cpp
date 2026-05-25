@@ -375,8 +375,10 @@ static size_t SplitCommaSeparatedRegisterNumberString(
 #ifdef MS_DEBUGGER
 void ProcessGDBRemote::UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamicRegisterInfo> &device_registers,
                                                 bool force) {
-  if (!force && m_device_register_info_sp)
+  if (!force && m_device_register_info_sp) {
+    device_registers = m_device_register_info_sp;
     return;
+  }
 
   m_device_register_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>();
 
@@ -412,10 +414,6 @@ void ProcessGDBRemote::UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamic
                               " failed to parse",
                           GetTarget().GetDebugger().GetID());
   }
-
-  const ArchSpec &target_arch = GetTarget().GetArchitecture();
-  const ArchSpec &remote_host_arch = m_gdb_comm.GetHostArchitecture();
-  const ArchSpec &remote_process_arch = m_gdb_comm.GetProcessArchitecture();
 
   // Use the process' architecture instead of the host arch, if available
   ArchSpec arch_to_use("hiipu64");
@@ -488,6 +486,11 @@ void ProcessGDBRemote::UpdateDeviceRegisterInfo(std::shared_ptr<GDBRemoteDynamic
           } else if (name == "invalidate-regs") {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
           }
+#ifdef MS_DEBUGGER
+          else if (name == "scenarios_mask") {
+            value.getAsInteger(16, reg_info.scenarios_mask);
+          }
+#endif
         }
 
         assert(reg_info.byte_size != 0);
@@ -2538,6 +2541,19 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         stop_info.core_id = UINT32_MAX;
       } else if (key.compare("kernel_name") == 0) {
         stop_info.kernel_name = value.str();
+      }else if (key.compare("thread_x") == 0) {
+        value.getAsInteger(16, stop_info.thread_pos.x);
+      } else if (key.compare("thread_y") == 0) {
+        value.getAsInteger(16, stop_info.thread_pos.y);
+      } else if (key.compare("thread_z") == 0) {
+        value.getAsInteger(16, stop_info.thread_pos.z);
+      } else if (key.compare("pos_type") == 0) {
+        int integer_value;
+        if (!value.getAsInteger(RADIX_HEX, integer_value)) {
+          stop_info.pos_type = static_cast<InterruptPosType>(integer_value);
+        } else {
+          stop_info.pos_type = InterruptPosType::SU_INTERRUPT;
+        }
       } else if (key.compare("soc_type") == 0) {
         int integer_value;
         if(!value.getAsInteger(RADIX_HEX, integer_value)) {
@@ -2951,7 +2967,7 @@ Status ProcessGDBRemote::FlashErase(lldb::addr_t addr, size_t size) {
     return status;
 
   // The gdb spec doesn't say if erasures are allowed across multiple regions,
-  // but we'll disallow it to be safe and to keep the logic simple by worring
+  // but we'll disallow it to be safe and to keep the logic simple by worrying
   // about only one region's block size.  DoMemoryWrite is this function's
   // primary user, and it can easily keep writes within a single memory region
   if (addr + size > region.GetRange().GetRangeEnd()) {
@@ -4467,7 +4483,7 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
   Log *log(GetLog(GDBRLog::Process));
   // We will use the last instance of each value. Also we preserve the order
   // of declaration in the XML, as it may not be numerical.
-  // For example, hardware may intially release with two states that softwware
+  // For example, hardware may initially release with two states that softwware
   // can read from a register field:
   // 0 = startup, 1 = running
   // If in a future hardware release, the designers added a pre-startup state:
@@ -5683,6 +5699,16 @@ Status ProcessGDBRemote::SetAivOnFocus(const uint32_t &core_id)
   return error;
 }
 
+Status ProcessGDBRemote::SetThreadOnFocus(const uint32_t &linear_idx)
+{
+  Status error;
+  uint8_t error_no = m_gdb_comm.SendDeviceThreadOnFocusPacket(linear_idx, std::chrono::seconds(3));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d sending changing thread on focus", error_no);
+  }
+  return error;
+}
+
 Status ProcessGDBRemote::GetDeviceInfo(DeviceInfo &info)
 {
   Status error;
@@ -5716,6 +5742,19 @@ Status ProcessGDBRemote::GetCoresInfo(std::vector<CoreInfo> &info)
       error.SetErrorStringWithFormat("error: %d get cores info", error_no);
       break;
     }
+  }
+  return error;
+}
+
+Status ProcessGDBRemote::GetWarpsInfo(std::vector<WarpInfo> &warps_info)
+{
+  Status error;
+  static constexpr uint32_t DURATION_SEC = 3;
+  uint8_t error_no = m_gdb_comm.SendAndWaitGDBAscendInfoWarpsPacket(warps_info,
+                                                                    std::chrono::seconds(DURATION_SEC));
+  if (error_no != 0) {
+    error.SetErrorStringWithFormat("error: %d get warps info", error_no);
+    return error;
   }
   return error;
 }
@@ -6299,4 +6338,14 @@ Status ProcessGDBRemote::SendDeviceId(const int32_t device_id) {
   }
   return error;
 }
+
+Status ProcessGDBRemote::UpdateVFStartPC(const uint64_t start_pc) {
+  Status error;
+  uint8_t error_no = m_gdb_comm.UpdateVFStartPC(start_pc);
+  if (error_no != 0) {
+    error.SetErrorStringWithFormatv("error: {0} update vf start pc 0x{1:x} failed", error_no, start_pc);
+  }
+  return error;
+}
+
 #endif

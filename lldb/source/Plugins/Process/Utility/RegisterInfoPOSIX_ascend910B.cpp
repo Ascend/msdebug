@@ -11,13 +11,11 @@ using namespace llvm;
 using namespace std;
 
 constexpr uint8_t ADDR_OFFSET = 48U;
-constexpr uint8_t AIC_MASK = 1U << static_cast<int>(CoreType::AIC);
-constexpr uint8_t AIV_MASK = 1U << static_cast<int>(CoreType::AIV);
-constexpr uint8_t MIX_MASK = AIC_MASK | AIV_MASK;
 constexpr uint8_t UINT32_BIT_NUM = 32U;
 
 namespace {
 enum LLDB_ASCEND_RENUM {
+  lldb_pc_ascend,
   k_first_gpr_ascend,
   lldb_x0_ascend = k_first_gpr_ascend,
   lldb_x1_ascend,
@@ -52,7 +50,6 @@ enum LLDB_ASCEND_RENUM {
   lldb_x30_ascend,
   lldb_x31_ascend,
   k_last_gpr_ascend = lldb_x31_ascend,
-  lldb_pc_ascend,
   lldb_status_ascend,
   lldb_ctrl_ascend,
   lldb_lpcnt_ascend,
@@ -97,27 +94,27 @@ enum LLDB_ASCEND_RENUM {
   k_num_dbg_registers_ascend,
   // Above registers is used for both coredump and onboard.
   // If you add a new shared register, please insert it before this line.
-  lldb_aic_error_0 = k_num_dbg_registers_ascend, 
+  lldb_aic_error_0 = k_num_dbg_registers_ascend,
   lldb_aic_error_1,
-  lldb_aic_error_2, 
-  lldb_aic_error_3, 
-  lldb_aic_error_4, 
-  lldb_aic_error_5, 
+  lldb_aic_error_2,
+  lldb_aic_error_3,
+  lldb_aic_error_4,
+  lldb_aic_error_5,
   lldb_biu_err_info_0,
-  lldb_biu_err_info_1, 
-  lldb_ccu_err_info_0, 
-  lldb_ccu_err_info_1, 
-  lldb_cube_err_info, 
-  lldb_biu_err_info_2, 
-  lldb_ifu_err_info_0, 
-  lldb_ifu_err_info_1, 
-  lldb_mte_err_info_0, 
-  lldb_mte_err_info_1, 
-  lldb_vec_err_info_0, 
-  lldb_vec_err_info_1, 
-  lldb_fixp_err_info_0, 
-  lldb_su_dc_ecc_1bit_err_info, 
-  lldb_fixp_err_info_1, 
+  lldb_biu_err_info_1,
+  lldb_ccu_err_info_0,
+  lldb_ccu_err_info_1,
+  lldb_cube_err_info,
+  lldb_biu_err_info_2,
+  lldb_ifu_err_info_0,
+  lldb_ifu_err_info_1,
+  lldb_mte_err_info_0,
+  lldb_mte_err_info_1,
+  lldb_vec_err_info_0,
+  lldb_vec_err_info_1,
+  lldb_fixp_err_info_0,
+  lldb_su_dc_ecc_1bit_err_info,
+  lldb_fixp_err_info_1,
   k_num_registers_ascend
 };
 
@@ -129,7 +126,10 @@ enum {
   k_num_register_sets = 3
 };
 
+// clang-format off
 static const uint32_t g_dbg_regnums[] = {
+  // show pc first
+  lldb_pc_ascend,
   lldb_x0_ascend,  lldb_x1_ascend,  lldb_x2_ascend, lldb_x3_ascend,
   lldb_x4_ascend,  lldb_x5_ascend, lldb_x6_ascend,  lldb_x7_ascend,
   lldb_x8_ascend, lldb_x9_ascend,  lldb_x10_ascend, lldb_x11_ascend,
@@ -138,7 +138,7 @@ static const uint32_t g_dbg_regnums[] = {
   lldb_x20_ascend, lldb_x21_ascend, lldb_x22_ascend, lldb_x23_ascend,
   lldb_x24_ascend, lldb_x25_ascend, lldb_x26_ascend, lldb_x27_ascend,
   lldb_x28_ascend, lldb_x29_ascend, lldb_x30_ascend, lldb_x31_ascend,
-  lldb_pc_ascend, lldb_status_ascend, lldb_ctrl_ascend, lldb_lpcnt_ascend,
+  lldb_status_ascend, lldb_ctrl_ascend, lldb_lpcnt_ascend,
   lldb_condition_flag_ascend, lldb_cond_ascend, lldb_sys_cnt_ascend,
   lldb_safety_crc_en_ascend, lldb_call_depth_cnt_ascend,
   lldb_icache_prl_st_ascend, lldb_st_atomic_cfg_ascend,
@@ -154,18 +154,19 @@ static const uint32_t g_dbg_regnums[] = {
   lldb_varf0_ascend, lldb_varf1_ascend, lldb_varf2_ascend, lldb_varf3_ascend,
   lldb_varf4_ascend, lldb_varf5_ascend, lldb_varf6_ascend, lldb_varf7_ascend,
   LLDB_INVALID_REGNUM};
+// clang-format on
 
 static const uint32_t g_aic_err_regnums[] = {
-  lldb_aic_error_0, lldb_aic_error_1, lldb_aic_error_2, 
+  lldb_aic_error_0, lldb_aic_error_1, lldb_aic_error_2,
   lldb_aic_error_3, lldb_aic_error_4, lldb_aic_error_5,
   LLDB_INVALID_REGNUM};
 
 static const uint32_t g_err_info_regnums[] = {
-  lldb_biu_err_info_0, lldb_biu_err_info_1, lldb_ccu_err_info_0, 
-  lldb_ccu_err_info_1, lldb_cube_err_info, lldb_biu_err_info_2, 
-  lldb_ifu_err_info_0, lldb_ifu_err_info_1, lldb_mte_err_info_0, 
-  lldb_mte_err_info_1, lldb_vec_err_info_0, lldb_vec_err_info_1, 
-  lldb_fixp_err_info_0, lldb_su_dc_ecc_1bit_err_info, lldb_fixp_err_info_1, 
+  lldb_biu_err_info_0, lldb_biu_err_info_1, lldb_ccu_err_info_0,
+  lldb_ccu_err_info_1, lldb_cube_err_info, lldb_biu_err_info_2,
+  lldb_ifu_err_info_0, lldb_ifu_err_info_1, lldb_mte_err_info_0,
+  lldb_mte_err_info_1, lldb_vec_err_info_0, lldb_vec_err_info_1,
+  lldb_fixp_err_info_0, lldb_su_dc_ecc_1bit_err_info, lldb_fixp_err_info_1,
   LLDB_INVALID_REGNUM};
 
 static const RegisterSet g_reg_sets_ascend910b[k_num_register_sets_default] = {
@@ -174,6 +175,7 @@ static const RegisterSet g_reg_sets_ascend910b[k_num_register_sets_default] = {
 
 // The array should be POD type.
 static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
+    {ASCEND_GPR(PC, pc, LLDB_REGNUM_GENERIC_PC), 64, MIX_MASK},
     {ASCEND_GPR(GPR0, x0, LLDB_INVALID_REGNUM), 0, MIX_MASK},
     {ASCEND_GPR(GPR1, x1, LLDB_INVALID_REGNUM), 1, MIX_MASK},
     {ASCEND_GPR(GPR2, x2, LLDB_INVALID_REGNUM), 2, MIX_MASK},
@@ -206,7 +208,6 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_GPR_ALT(GPR29, x29, fp, LLDB_REGNUM_GENERIC_FP), 29, MIX_MASK},
     {ASCEND_GPR_ALT(GPR30, x30, sp, LLDB_REGNUM_GENERIC_SP), 30, MIX_MASK},
     {ASCEND_GPR_ALT(GPR31, x31, lr, LLDB_REGNUM_GENERIC_RA), 31, MIX_MASK},
-    {ASCEND_GPR(PC, pc, LLDB_REGNUM_GENERIC_PC), 64, MIX_MASK},
     {ASCEND_REG(STATUS, lldb_status_ascend), 66, MIX_MASK},
     {ASCEND_REG(CTRL, lldb_ctrl_ascend), 67, MIX_MASK},
     {ASCEND_REG(LPCNT, lldb_lpcnt_ascend), 68, MIX_MASK},
@@ -221,25 +222,40 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_REG(VEC_EVENT_TABLE, lldb_vec_event_table_ascend), 131, AIV_MASK},
     {ASCEND_REG(CUBE_EVENT_TABLE, lldb_cube_event_table_ascend), 132, AIC_MASK},
     {ASCEND_REG(FIXP_EVENT_TABLE, lldb_fixp_event_table_ascend), 133, AIC_MASK},
-    {ASCEND_REG(SCALAR_EVENT_TABLE, lldb_scalar_event_table_ascend), 134, MIX_MASK},
+    {ASCEND_REG(SCALAR_EVENT_TABLE, lldb_scalar_event_table_ascend), 134,
+     MIX_MASK},
     {ASCEND_REG(MTE1_EVENT_TABLE, lldb_mte1_event_table_ascend), 135, AIC_MASK},
     {ASCEND_REG(MTE2_EVENT_TABLE, lldb_mte2_event_table_ascend), 136, MIX_MASK},
     {ASCEND_REG(MTE3_EVENT_TABLE, lldb_mte3_event_table_ascend), 137, AIV_MASK},
     {ASCEND_REG(MASK, lldb_mask_ascend), 256ULL << ADDR_OFFSET | 0, AIV_MASK},
-    {ASCEND_REG(CMPMASK, lldb_cmpmask_ascend), 256ULL << ADDR_OFFSET | 1, AIV_MASK},
-    {ASCEND_REG(DEQSCALE, lldb_deqscale_ascend), 256ULL << ADDR_OFFSET | 2, AIV_MASK},
-    {ASCEND_REG(RPN_COR_IR, lldb_rpn_cor_ir_ascend), 256UL << ADDR_OFFSET | 3, AIV_MASK},
-    {ASCEND_REG(VMS4_SR, lldb_vms4_sr_ascend), 256ULL << ADDR_OFFSET | 4, AIV_MASK},
-    {ASCEND_REG(DATA_EXP0, lldb_data_exp0_ascend), 256ULL << ADDR_OFFSET | 5, AIV_MASK},
-    {ASCEND_REG(DATA_EXP1, lldb_data_exp1_ascend), 256ULL << ADDR_OFFSET | 6, AIV_MASK},
-    {ASCEND_REG(DATA_EXP2, lldb_data_exp2_ascend), 256ULL << ADDR_OFFSET | 7, AIV_MASK},
-    {ASCEND_REG(DATA_EXP3, lldb_data_exp3_ascend), 256ULL << ADDR_OFFSET | 8, AIV_MASK},
-    {ASCEND_REG(RPN_OFFSET, lldb_rpn_offset_ascend), 256ULL << ADDR_OFFSET | 9, AIV_MASK},
-    {ASCEND_REG(RSVD_CNT, lldb_rsvd_cnt_ascend), 256ULL << ADDR_OFFSET | 11, AIV_MASK},
-    {ASCEND_REG(PNT_COE, lldb_pnt_coe_ascend), 256ULL << ADDR_OFFSET | 12, AIV_MASK},
-    {ASCEND_REG(LRELU_ALPHA, lldb_lrelu_alpha_ascend), 256ULL << ADDR_OFFSET | 13, AIV_MASK},
-    {ASCEND_REG(MAXMIN_CNT, lldb_maxmin_cnt_ascend), 256ULL << ADDR_OFFSET | 14, AIV_MASK},
-    {ASCEND_REG(ACC_VAL, lldb_acc_val_ascend), 256ULL << ADDR_OFFSET | 15, AIV_MASK},
+    {ASCEND_REG(CMPMASK, lldb_cmpmask_ascend), 256ULL << ADDR_OFFSET | 1,
+     AIV_MASK},
+    {ASCEND_REG(DEQSCALE, lldb_deqscale_ascend), 256ULL << ADDR_OFFSET | 2,
+     AIV_MASK},
+    {ASCEND_REG(RPN_COR_IR, lldb_rpn_cor_ir_ascend), 256UL << ADDR_OFFSET | 3,
+     AIV_MASK},
+    {ASCEND_REG(VMS4_SR, lldb_vms4_sr_ascend), 256ULL << ADDR_OFFSET | 4,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP0, lldb_data_exp0_ascend), 256ULL << ADDR_OFFSET | 5,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP1, lldb_data_exp1_ascend), 256ULL << ADDR_OFFSET | 6,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP2, lldb_data_exp2_ascend), 256ULL << ADDR_OFFSET | 7,
+     AIV_MASK},
+    {ASCEND_REG(DATA_EXP3, lldb_data_exp3_ascend), 256ULL << ADDR_OFFSET | 8,
+     AIV_MASK},
+    {ASCEND_REG(RPN_OFFSET, lldb_rpn_offset_ascend), 256ULL << ADDR_OFFSET | 9,
+     AIV_MASK},
+    {ASCEND_REG(RSVD_CNT, lldb_rsvd_cnt_ascend), 256ULL << ADDR_OFFSET | 11,
+     AIV_MASK},
+    {ASCEND_REG(PNT_COE, lldb_pnt_coe_ascend), 256ULL << ADDR_OFFSET | 12,
+     AIV_MASK},
+    {ASCEND_REG(LRELU_ALPHA, lldb_lrelu_alpha_ascend),
+     256ULL << ADDR_OFFSET | 13, AIV_MASK},
+    {ASCEND_REG(MAXMIN_CNT, lldb_maxmin_cnt_ascend), 256ULL << ADDR_OFFSET | 14,
+     AIV_MASK},
+    {ASCEND_REG(ACC_VAL, lldb_acc_val_ascend), 256ULL << ADDR_OFFSET | 15,
+     AIV_MASK},
     {ASCEND_REG(VARF0, lldb_varf0_ascend), 257ULL << ADDR_OFFSET | 0, AIV_MASK},
     {ASCEND_REG(VARF1, lldb_varf1_ascend), 257ULL << ADDR_OFFSET | 1, AIV_MASK},
     {ASCEND_REG(VARF2, lldb_varf2_ascend), 257ULL << ADDR_OFFSET | 2, AIV_MASK},
@@ -248,7 +264,7 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_REG(VARF5, lldb_varf5_ascend), 257ULL << ADDR_OFFSET | 5, AIV_MASK},
     {ASCEND_REG(VARF6, lldb_varf6_ascend), 257ULL << ADDR_OFFSET | 6, AIV_MASK},
     {ASCEND_REG(VARF7, lldb_varf7_ascend), 257ULL << ADDR_OFFSET | 7, AIV_MASK},
-  // for core file only. if you add new both reg, please insert before
+    // for core file only. if you add new both reg, please insert before
     {ASCEND_REG_4B(AIC_ERROR_0, lldb_aic_error_0), 0x700, MIX_MASK},
     {ASCEND_REG_4B(AIC_ERROR_1, lldb_aic_error_1), 0x704, MIX_MASK},
     {ASCEND_REG_4B(AIC_ERROR_2, lldb_aic_error_2), 0x760, MIX_MASK},
@@ -268,9 +284,9 @@ static const DeviceRegisterInfo REGISTER_910B_INFO[] = {
     {ASCEND_REG_4B(VEC_ERR_INFO_0, lldb_vec_err_info_0), 0x738, MIX_MASK},
     {ASCEND_REG_4B(VEC_ERR_INFO_1, lldb_vec_err_info_1), 0x73C, MIX_MASK},
     {ASCEND_REG_4B(FIXP_ERR_INFO_0, lldb_fixp_err_info_0), 0x78C, MIX_MASK},
-    {ASCEND_REG_4B(SU_DC_ECC_1BIT_ERR_INFO, lldb_su_dc_ecc_1bit_err_info), 0x7C4, MIX_MASK},
-    {ASCEND_REG_4B(FIXP_ERR_INFO_1, lldb_fixp_err_info_1), 0x7C8, MIX_MASK}
-};
+    {ASCEND_REG_4B(SU_DC_ECC_1BIT_ERR_INFO, lldb_su_dc_ecc_1bit_err_info),
+     0x7C4, MIX_MASK},
+    {ASCEND_REG_4B(FIXP_ERR_INFO_1, lldb_fixp_err_info_1), 0x7C8, MIX_MASK}};
 
 static_assert(sizeof(REGISTER_910B_INFO) / sizeof(DeviceRegisterInfo) == k_num_registers_ascend,
               "REGISTER_910B_INFO size is invalid");
@@ -298,28 +314,56 @@ const char *AIC_ERROR_1_BIT_NAMES[UINT32_BIT_NUM] = {
 };
 
 const char *AIC_ERROR_2_BIT_NAMES[UINT32_BIT_NUM] = {
-    "ccu_sbuf_ecc", "vec_col2img_rd_fm_addr_ovflow", "vec_col2img_rd_dfm_addr_ovfflow",
-    "vec_col2img_illegal_fm_size", "vec_col2img_illegal_stride", "vec_col2img_illegal_1st_win_pos",
-    "vec_col2img_illegal_fetch_pos", "vec_col2img_illegal_k_size", "ccu_inf_nan",
-    "mte_illegal_schn_cfg", "mte_atm_addr_misalg", "vec_instr_addr_misalign",
-    "vec_instr_illegal_cfg", "vec_instr_undef", "ccu_addr_err",
-    "ccu_bus_err", "mte_err_addr_misalign", "mte_err_dw_pad_conf_err",
-    "mte_err_dw_fmap_h_illegal", "mte_err_wino_l0b_write_overflow", "mte_err_wino_l0b_read_overflow",
-    "mte_err_illegal_v_cov_pad_ctl", "mte_err_illegal_h_cov_pad_ctl", "mte_err_illegal_w_size",
-    "mte_err_illegal_h_size", "mte_err_illegal_chn_size", "mte_err_illegal_k_m_ext_step",
-    "mte_err_illegal_k_m_start_pos", "mte_err_illegal_smallk_cfg", "mte_err_read_3d_overflow",
-    "ccu_veciq_ecc", "ccu_dc_data_ecc"
-};
+    "ccu_sbuf_ecc", "vec_col2img_rd_fm_addr_ovflow",
+    "vec_col2img_rd_dfm_addr_ovfflow", "vec_col2img_illegal_fm_size",
+    "vec_col2img_illegal_stride", "vec_col2img_illegal_1st_win_pos",
+    "vec_col2img_illegal_fetch_pos", "vec_col2img_illegal_k_size",
+    "ccu_inf_nan", "mte_illegal_schn_cfg", "mte_atm_addr_misalg",
+    "vec_instr_addr_misalign", "vec_instr_illegal_cfg", "vec_instr_undef",
+    "ccu_addr_err",
+    // ccu bus error can't find pc
+    "reserved_ccu_bus_err", "mte_err_addr_misalign", "mte_err_dw_pad_conf_err",
+    "mte_err_dw_fmap_h_illegal", "mte_err_wino_l0b_write_overflow",
+    "mte_err_wino_l0b_read_overflow", "mte_err_illegal_v_cov_pad_ctl",
+    "mte_err_illegal_h_cov_pad_ctl", "mte_err_illegal_w_size",
+    "mte_err_illegal_h_size", "mte_err_illegal_chn_size",
+    "mte_err_illegal_k_m_ext_step", "mte_err_illegal_k_m_start_pos",
+    "mte_err_illegal_smallk_cfg", "mte_err_read_3d_overflow", "ccu_veciq_ecc",
+    "ccu_dc_data_ecc"};
 
 const char *AIC_ERROR_3_BIT_NAMES[UINT32_BIT_NUM] = {
-    "mte_gdma_read_overflow", "mte_gdma_write_overflow", "mte_comp", "mte_illegal_fm_size",
-    "mte_illegal_l1_3d_size", "mte_illegal_stride", "mte_l0a_rdwr_cflt", "mte_l0b_rdwr_cflt",
-    "mte_l1_ecc", "mte_padding_cfg", "mte_read_overflow", "mte_rob_ecc",
-    "mte_tlu_ecc", "mte_ub_ecc", "mte_unzip", "mte_write_3d_overflow",
-    "mte_write_overflow", "vec_data_excp_ccu", "vec_data_excp_mte", "vec_data_excp_vec",
-    "vec_div0", "vec_illegal_mask", "vec_inf_nan", "vec_l0c_ecc",
-    "vec_l0c_rdwr_cflt", "vec_neg_ln", "vec_neg_sqrt", "vec_same_blk_addr",
-    "vec_ub_ecc", "vec_ub_self_rdwr_cflt", "vec_ub_wrap_around", "biu_dfx_err",
+    "ccu_dc_tag_ecc",
+    "ccu_div0_fp",
+    "ccu_neg_sqrt_fp",
+    "cnt_sw_bus_err",
+    "fixp_err_instr_addr_misal",
+    "fixp_err_illegal_cfg",
+    "fixp_err_read_l0c_ovflw",
+    "fixp_err_read_l1_ovflw",
+    "fixp_err_read_ub_ovflw",
+    "fixp_err_write_l1_ovflw",
+    "fixp_err_write_ub_ovflw",
+    "fixp_err_fbuf_write_ovflw",
+    "fixp_err_fbuf_read_ovflw",
+    "sc_reg_parity_err",
+    "mte_err_fifo_parity",
+    "mte_err_waitset",
+    "ccu_err_parity_err",
+    "mte_err_cache_ecc",
+    "cube_err_hset_cnt_unf",
+    "cube_err_hset_cnt_ovf",
+    "mte_err_instr_illegal_cfg",
+    "mte_err_hebcd",
+    "mte_err_hebce",
+    "mte_err_waipp",
+    "ccu_seq_err",
+    "ccu_mpu_err",
+    "ccu_lsu_err",
+    "ccu_pb_ecc_err",
+    "mte_ub_wr_ovflw",
+    "mte_ub_rd_ovflw",
+    "cube_illegal_instr",
+    "ccu_safety_crc_err",
 };
 
 const char *AIC_ERROR_4_BIT_NAMES[UINT32_BIT_NUM] = {
@@ -485,8 +529,8 @@ const vector<vector<ErrRegMask>> *RegisterInfoPOSIXCore_ascend910B::GetAicErrorR
 
 const RegExtractor &RegisterInfoPOSIX_ascend910B::GetRegExtractor() {
   static RegExtractor instance(REGISTER_910B_INFO, k_num_dbg_registers_ascend);
-  LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
-            instance.raw_register_infos.size());
+  LLDB_LOG_ONCE(GetLog(LLDBLog::Process), "raw_register_infos_size={0}",
+          instance.raw_register_infos.size());
   return instance;
 }
 
@@ -511,8 +555,9 @@ const RegisterSet* RegisterInfoPOSIX_ascend910B::GetRegisterSet(size_t set_index
   return nullptr;
 }
 
-Status RegisterInfoPOSIX_ascend910B::GetRegisterAddr(const llvm::StringRef reg_name,
-  CoreType core_type, uint64_t &addr) {
+Status RegisterInfoPOSIX_ascend910B::GetRegisterAddr(
+    const llvm::StringRef reg_name, CoreType core_type,
+    InterruptPosType pos_type, uint64_t &addr) {
   Status error;
   auto reg_info = m_register_map.find(reg_name.str());
   if (reg_info == m_register_map.end()) {
@@ -532,8 +577,7 @@ Status RegisterInfoPOSIX_ascend910B::GetRegisterAddr(const llvm::StringRef reg_n
 
 const RegExtractor &RegisterInfoPOSIXCore_ascend910B::GetRegExtractor() {
   static RegExtractor instance(REGISTER_910B_INFO, k_num_registers_ascend);
-  LLDB_LOGF(GetLog(LLDBLog::Process), "raw_register_infos_size=%lu",
-            instance.raw_register_infos.size());
+  LLDB_LOG_ONCE(GetLog(LLDBLog::Process), "raw_register_infos_size={0}",instance.raw_register_infos.size() );
   return instance;
 }
 

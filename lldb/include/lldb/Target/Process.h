@@ -439,6 +439,12 @@ public:
         "error: {0} does not support switch aiv on focus.", GetPluginName());
     return error;
   }
+  virtual Status SetThreadOnFocus(const uint32_t &linear_idx) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support switch thread on focus.", GetPluginName());
+    return error;
+  }
   virtual Status GetDeviceInfo(DeviceInfo &info) {
     Status error;
     error.SetErrorStringWithFormatv(
@@ -449,6 +455,12 @@ public:
     Status error;
     error.SetErrorStringWithFormatv(
         "error: {0} does not support get ascend cores info.", GetPluginName());
+    return error;
+  }
+  virtual Status GetWarpsInfo(std::vector<WarpInfo> &info) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support get ascend warps info.", GetPluginName());
     return error;
   }
   virtual Status GetKernelInfo(KernelInfo &info) {
@@ -469,10 +481,21 @@ public:
         "error: {0} does not support send device id.", GetPluginName());
     return error;
   }
+
+  // simd vf only record last 18 bit pc,
+  // we need update start pc for server
+  virtual Status UpdateVFStartPC(const uint64_t start_pc) {
+    Status error;
+    error.SetErrorStringWithFormatv(
+            "error: {0} does not support update vf start pc.", GetPluginName());
+    return error;
+  }
+
   virtual void GetDeviceStopInfoCached(DeviceStopInfo &info) const;
   virtual void SetDeviceStopInfoCached(const DeviceStopInfo &info);
   virtual void ShowDeviceStopInfoCached(Stream &stream);
   virtual bool IsStopInDevice();
+  virtual bool IsStopInSimtKernel();
   virtual void RefreshStopReason(lldb::ThreadSP &threadSp);
   virtual const std::map<std::string, std::string>& GetCoreStopReason();
   static bool HandleDeviceProcessStateChanged(const lldb::ProcessSP &process_sp);

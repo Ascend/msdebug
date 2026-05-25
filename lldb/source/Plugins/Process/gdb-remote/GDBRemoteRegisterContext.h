@@ -127,6 +127,7 @@ protected:
 
 #ifdef MS_DEBUGGER
   void SetAllDeviceRegisterValid(bool b);
+  void InvalidateSimtRegisters() override;
 
   bool GetDeviceRegisterIsValid(uint32_t reg) const {
     assert(reg < m_device_reg_valid.size());

@@ -194,14 +194,12 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qDeviceRegisterValue;
       if (PACKET_STARTS_WITH("qDeviceRegisterList"))
         return eServerPacketType_qDeviceRegisterList;
-      if (PACKET_STARTS_WITH("qDeviceAic"))
-        return eServerPacketType_qDeviceAic;
-      if (PACKET_STARTS_WITH("qDeviceAiv"))
-        return eServerPacketType_qDeviceAiv;
       if (PACKET_STARTS_WITH("qDeviceInfo"))
         return eServerPacketType_qDeviceInfo;
       if (PACKET_STARTS_WITH("qDeviceCoresInfo"))
         return eServerPacketType_qDeviceCoresInfo;
+      if (PACKET_STARTS_WITH("qDeviceWarpsInfo"))
+ 	      return eServerPacketType_qDeviceWarpsInfo;
       if (PACKET_STARTS_WITH("qDeviceKernelInfo"))
         return eServerPacketType_qDeviceKernelInfo;
       if (PACKET_STARTS_WITH("qDeviceBinaryInfo"))
@@ -385,6 +383,14 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_vDeviceSingleCoreRun;
       if (PACKET_STARTS_WITH("vDeviceId"))
         return eServerPacketType_vDeviceId;
+      if (PACKET_STARTS_WITH("vDeviceAic"))
+        return eServerPacketType_vDeviceAic;
+      if (PACKET_STARTS_WITH("vDeviceAiv"))
+        return eServerPacketType_vDeviceAiv;
+      if (PACKET_STARTS_WITH("vDeviceThread"))
+        return eServerPacketType_vDeviceThread;
+      if (PACKET_STARTS_WITH("vVFStartPC"))
+ 	    return eServerPacketType_vVFStartPC;
 #endif
       if (PACKET_STARTS_WITH("vAttach;"))
         return eServerPacketType_vAttach;

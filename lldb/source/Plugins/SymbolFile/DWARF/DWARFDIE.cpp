@@ -574,6 +574,7 @@ bool DWARFDIE::IsMethod() const {
   return false;
 }
 
+#ifndef MS_DEBUGGER
 bool DWARFDIE::GetDIENamesAndRanges(
     const char *&name, const char *&mangled, DWARFRangeList &ranges,
     std::optional<int> &decl_file, std::optional<int> &decl_line,
@@ -587,6 +588,22 @@ bool DWARFDIE::GetDIENamesAndRanges(
   } else
     return false;
 }
+#else
+bool DWARFDIE::GetDIENamesAndRanges(
+    const char *&name, const char *&mangled, DWARFRangeList &ranges,
+    std::optional<int> &decl_file, std::optional<int> &decl_line,
+    std::optional<int> &decl_column, std::optional<int> &call_file,
+    std::optional<int> &call_line, std::optional<int> &call_column,
+    std::optional<int> &function_class,
+    lldb_private::DWARFExpressionList *frame_base) const {
+  if (IsValid()) {
+    return m_die->GetDIENamesAndRanges(
+        GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column,
+        call_file, call_line, call_column, function_class, frame_base);
+  } else
+    return false;
+}
+#endif
 
 llvm::iterator_range<DWARFDIE::child_iterator> DWARFDIE::children() const {
   return llvm::make_range(child_iterator(*this), child_iterator());

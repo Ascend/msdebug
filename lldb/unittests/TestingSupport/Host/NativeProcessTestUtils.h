@@ -59,12 +59,17 @@ public:
   MOCK_METHOD2(GetFileLoadAddress,
                Status(const llvm::StringRef &FileName, addr_t &Addr));
 #ifdef MS_DEBUGGER
+  MOCK_METHOD1(SetThreadOnFocus, void(const uint32_t &linear_idx));
   MOCK_METHOD1(SetAicOnFocus, void(const uint32_t &core_id));
   MOCK_METHOD1(SetAivOnFocus, void(const uint32_t &core_id));
   MOCK_METHOD1(SetSingleCoreRunFlag, void(bool isSingleCoreRun));
+  MOCK_METHOD0(GetSingleCoreRunFlag, bool());
   MOCK_METHOD1(SetClientDeviceId, void(const int32_t device_id));
+  MOCK_METHOD1(SetVFStartPC, void(uint64_t start_pc));
   MOCK_METHOD1(GetDeviceInfo, Status(DeviceInfo &device_info));
   MOCK_METHOD1(GetCoresInfo, Status(std::vector<CoreInfo> &info));
+  MOCK_METHOD1(GetCoreInfo, Status(CoreInfo &info));
+  MOCK_METHOD1(GetWarpsInfo, Status(std::vector<WarpInfo> &info));
   MOCK_METHOD1(GetStoppedCorePC, Status(lldb::addr_t &pc));
   MOCK_METHOD1(GetKernelInfo, Status(KernelInfo &info));
   MOCK_METHOD2(ReadDeviceRegisterValue, Status(const RegisterInfo *reg_info,

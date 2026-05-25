@@ -23,7 +23,7 @@ namespace {
 
 typedef pid_t (*drvDeviceGetBareTgidFunc)(void);
 
-void *GetStubFuncPtr(const std::string funcName);
+void *GetStubFuncPtr(const std::string funcName, bool throw_error=true);
 void *g_handle = nullptr;
 void *g_drvHandle = nullptr;
 
@@ -79,6 +79,8 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
                 {"aclrtStreamGetIdImpl", ACLRT_STREAM_GET_ID_IMPL_NOT_FOUND_ERR, nullptr}},
             {"aclrtSynchronizeStreamImpl",
                 {"aclrtSynchronizeStreamImpl", ACLRT_SYNC_STREAM_IMPL_NOT_FOUND_ERR, nullptr}},
+            {"aclrtMemGetAddressRangeImpl",
+                {"aclrtMemGetAddressRangeImpl", ACLRT_MEM_GET_ADDRESS_RANGE_IMPL_NOT_FOUND_ERR, nullptr}},
             {"aclrtSynchronizeStreamWithTimeoutImpl",
                 {"aclrtSynchronizeStreamWithTimeoutImpl", ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}}
         };
@@ -93,6 +95,8 @@ std::map<std::string, StubFuncInfo>& GetDrvStubFuncInfoMap()
         stubFuncInfoMap = {
             {"drvDeviceGetBareTgid",
                 {"drvDeviceGetBareTgid", DRV_DEV_GET_BARE_TGID_NOT_FOUND_ERR, nullptr}},
+            {"halMemAdvise",
+                {"halMemAdvise", HAL_MEM_ADVISE_NOT_FOUND_ERR, nullptr}},
         };
     }
     return stubFuncInfoMap;
@@ -110,6 +114,22 @@ std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
         stubFuncInfoMap.insert(stubMap.begin(), stubMap.end());
     }
     return stubFuncInfoMap;
+}
+
+aclError aclrtMemGetAddressRangeImpl(void *ptr, void **pbase, size_t *psize)
+{
+    using FuncType = decltype(&aclrtMemGetAddressRangeImpl);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+    if (func == nullptr) {
+        RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+        return 1;
+    }
+    auto ret = func(ptr, pbase, psize);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+        ThrowErrorCode(ACLRT_GET_DEVICE_IMPL_FAILED_ERR);
+    }
+    return ret;
 }
 
 aclError aclrtGetDeviceImpl(int32_t *deviceId)
@@ -198,7 +218,9 @@ void OpenDrvLib()
     for (auto &it : GetDrvStubFuncInfoMap()) {
         it.second.funcPtr = dlsym(g_drvHandle, it.second.name.c_str());
         if (it.second.funcPtr == nullptr) {
-            ThrowErrorCode(it.second.errorCode);
+            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
+                                it.second.name.c_str());
+            continue;
         }
         GetStubFuncInfoMap()[it.first] = it.second;
     }
@@ -243,21 +265,45 @@ std::string GetKernelNameFromStubFunc(const void *stubFunc)
     return "anonymous";
 }
 
-void *GetStubFuncPtr(const std::string funcName)
+void *GetStubFuncPtr(const std::string funcName, bool throw_error)
 {
     RT_STUB_LOG_INFO("GetStubFuncPtr funcName=%s\n", funcName.c_str());
     auto it = GetStubFuncInfoMap().find(funcName);
     if (it == GetStubFuncInfoMap().end()) {
-        ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        if (throw_error) {
+            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        }
+        return nullptr;
     }
     if (it->second.funcPtr == nullptr) {
         StubInit();
     }
     if (it->second.funcPtr == nullptr) {
-        ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        if (throw_error) {
+            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
+        }
+        return nullptr;
     }
     // if StubInit() returns, all stub functions are supposed to be loaded
     return it->second.funcPtr;
+}
+
+drvError_t halMemAdvise(DVdeviceptr ptr, size_t count, unsigned int advise, DVdevice device)
+{
+    RT_STUB_LOG_INFO("Enter %s, ptr=%#llx, count=%lu, advise=%u\n", __FUNCTION__, ptr, count, advise);
+    using FuncType = decltype(&halMemAdvise);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+    if (func == nullptr) {
+        return 1;
+    }
+    return func(ptr, count, advise, device);
+}
+
+const char *aclrtGetSocNameImpl()
+{
+    using FuncType = decltype(&aclrtGetSocNameImpl);
+    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
+    return func();
 }
 
 uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle)
@@ -287,14 +333,33 @@ uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle)
     const void *handle = MapManager::Instance().GetHandle(funcHandle);
 
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    return GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
-}
-
-const char *aclrtGetSocNameImpl()
-{
-    using FuncType = decltype(&aclrtGetSocNameImpl);
-    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    return func();
+    pcStartAddr = GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+    static std::string soc_version = aclrtGetSocNameImpl();
+    // 950
+    if (!StartsWith(soc_version, "Ascend950")) {
+      return pcStartAddr;
+    }
+    void *ptr = reinterpret_cast<void *>(pcStartAddr);
+    uint64_t *base_ptr{};
+    uint64_t psize{};
+    ret = aclrtMemGetAddressRangeImpl(ptr, (void**)&base_ptr, &psize);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_WARNING("aclrtMemGetAddressRange get addr size failed, "
+                "If the memory used by your process is in a read-only state, "
+                "it may lead to failure in setting breakpoints.\n");
+        PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
+        return pcStartAddr;
+    }
+    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize = %lu", pcStartAddr, (uint64_t)base_ptr, psize);
+    int32_t deviceId{0};
+    aclrtGetDeviceImpl(&deviceId);
+    if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {
+        RT_STUB_LOG_WARNING("halMemAdvise failed, "
+                "If the memory used by your process is in a read-only state, "
+                "it may lead to failure in setting breakpoints.\n");
+        return pcStartAddr;
+    }
+    return pcStartAddr;
 }
 
 size_t ReadBinary(std::string const &filename, vector<uint8_t> &data)
@@ -362,7 +427,7 @@ int32_t SetDevicePost(int32_t device)
     return SendDeviceInfo(device, socVersion, tgid);
 }
 
-void LaunchKernelPre(aclrtFuncHandle funcHandle)
+void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)
 {
     // 打印launch info
     std::string kernelName = GetKernelNameFromStubFunc(funcHandle);
@@ -378,17 +443,16 @@ void LaunchKernelPre(aclrtFuncHandle funcHandle)
     }
     const auto *binHandle = MapManager::Instance().GetHandle(funcHandle);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(binHandle);
-    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr);
+    int32_t streamId{};
+    auto ret = aclrtStreamGetIdImpl(stream, &streamId);
+    if (ret != ACL_SUCCESS) {
+      RT_STUB_LOG_WARNING("Get stream id failed, use streamId=0");
+    }
+    SendKernelInfo(kernelName, kernelInfo.kernelHash, kernelInfo.elf, pcStartAddr, streamId);
 }
 
 void LaunchKernelPost(aclrtStream stream)
 {
-    int32_t streamId{0};
-    auto ret = aclrtStreamGetIdImpl(stream, &streamId);
-    if (ret != ACL_SUCCESS) {
-      return;
-    }
-    SendStreamId(streamId);
     aclrtSynchronizeStreamImpl(stream);
 }
 
@@ -503,7 +567,7 @@ aclError aclrtLaunchKernelWithConfigImpl(aclrtFuncHandle funcHandle,
 {
     using FuncType = decltype(&aclrtLaunchKernelWithConfigImpl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, stream, cfg, argsHandle, reserve);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);
@@ -517,7 +581,7 @@ aclError aclrtLaunchKernelWithHostArgsImpl(aclrtFuncHandle funcHandle,
 {
     using FuncType = decltype(&aclrtLaunchKernelWithHostArgsImpl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, stream, cfg, hostArgs, argsSize, placeHolderArray, placeHolderNum);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);
@@ -530,7 +594,7 @@ aclError aclrtLaunchKernelV2Impl(aclrtFuncHandle funcHandle, uint32_t blockDim,
 {
     using FuncType = decltype(&aclrtLaunchKernelV2Impl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, argsData, argsSize, cfg, stream);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);
@@ -543,7 +607,7 @@ aclError aclrtLaunchKernelImpl(aclrtFuncHandle funcHandle,
 {
     using FuncType = decltype(&aclrtLaunchKernelImpl);
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    LaunchKernelPre(funcHandle);
+    LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, argsData, argsSize, stream);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);

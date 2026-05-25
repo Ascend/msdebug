@@ -250,8 +250,10 @@ public:
 #ifdef MS_DEBUGGER
   Status SetAicOnFocus(const uint32_t &core_id) override;
   Status SetAivOnFocus(const uint32_t &core_id) override;
+  Status SetThreadOnFocus(const uint32_t &linear_idx) override;
   Status GetDeviceInfo(DeviceInfo &info) override;
   Status GetCoresInfo(std::vector<CoreInfo> &info) override;
+ 	Status GetWarpsInfo(std::vector<WarpInfo> &warps_info) override;
   Status GetKernelInfo(KernelInfo &info) override;
   Status SetDeviceSingleCoreRunFlag(bool isSingleCoreRunning) override;
   Status GetDeviceRegisterInfo(const llvm::StringRef reg_name, uint64_t &reg_value) override;
@@ -260,6 +262,7 @@ public:
                                 bool force);
   Status GetDeviceBinaryInfo(DeviceBinaryInfo &info) override;
   Status SendDeviceId(const int32_t device_id) override;
+  Status UpdateVFStartPC(const uint64_t start_pc) override;
 #endif
 
 protected:

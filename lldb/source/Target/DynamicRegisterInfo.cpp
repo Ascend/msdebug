@@ -422,6 +422,9 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
           // value_regs and invalidate_regs are filled by Finalize()
           nullptr, nullptr, reg.flags_type
     };
+#ifdef MS_DEBUGGER
+    reg_info.scenarios_mask = reg.scenarios_mask;
+#endif
 
     m_regs.push_back(reg_info);
 

@@ -18,6 +18,10 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Target/DynamicLoader.h"
 
+#ifdef MS_DEBUGGER
+#include "InstructionMatcher.h"
+#endif
+
 class AuxVector;
 
 class DynamicLoaderPOSIXDYLD : public lldb_private::DynamicLoader {
@@ -63,6 +67,8 @@ public:
   /// Helper method for RendezvousKernelLaunchBreakpointHit.
   /// Updates LLDB's current set of loaded device modules.
   void RefreshDeviceModules();
+
+  void AddRendezvousVFCallBreakpoint(lldb::ModuleSP device_module, const uint64_t base_pc);
 #endif
 
 protected:
@@ -81,8 +87,10 @@ protected:
   /// Rendezvous breakpoint.
   lldb::break_id_t m_dyld_bid;
 #ifdef MS_DEBUGGER
-  /// Rendezvous breakpoint before runtime KernelLaunch StubFunction.
-  lldb::break_id_t m_kernel_launch_bid;
+  /// Rendezvous breakpoint on simt/d_call.
+  std::vector<lldb::break_id_t> m_vf_call_bid_list;
+  /// Rendezvous breakpoint on simt/d_call.
+  std::vector<std::shared_ptr<VFBreakpointHitCallback>> m_vf_callbacks;
 #endif
 
   /// Contains AT_SYSINFO_EHDR, which means a vDSO has been

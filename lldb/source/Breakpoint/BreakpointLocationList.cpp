@@ -236,7 +236,7 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
       if (m_locations.empty()) {
         return nullptr;
       }
-      ModuleSP module_sp = m_locations.back()->GetAddress().GetModule();
+      ModuleSP module_sp = bp_loc_sp->GetAddress().GetModule();
       if ((!module_sp) || module_sp->GetArchitecture().GetMachine() != llvm::Triple::hiipu64) {
         return nullptr;
       }

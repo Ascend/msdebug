@@ -13,6 +13,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -20,7 +21,6 @@ using namespace lldb_private::process_linux;
 using namespace llvm;
 const std::string DEVICE_INFO_HEADER{"device_id:"};
 const std::string KERNEL_INFO_HEADER{"kernel_name:"};
-const std::string STREAM_ID_HEADER{"stream_id:"};
 constexpr uint32_t VEC_SIZE = 4;
 
 static std::condition_variable g_pause_cv;
@@ -48,8 +48,7 @@ AscendProcessLinux::AscendProcessLinux(::pid_t pid, int terminal_fd, NativeDeleg
     m_server->SetMsgHandlerHook(func);
     m_server->Start();
   }
-  m_pos_info.core_type = CoreType::UNKNOWN_CORE_TYPE;
-  m_pos_info.core_id = 0;
+  m_pos_info.Reset();
   m_device_context.reset();
   m_stop = false;
 
@@ -157,7 +156,8 @@ HandleResult AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kerne
     LLDB_LOG(log, "device id matched. device id:{0} client:{1}", device_id, m_client_socket);
 
     m_kernel_name = kernel_info_msg.kernel_name;
-    LLDB_LOG(log, "update kernel_name to {0}", m_kernel_name);
+    m_stream_id = kernel_info_msg.stream_id;
+    LLDB_LOG(log, "update kernel_name to {0}, stream_id to {1}", m_kernel_name, m_stream_id);
     if (!kernel_info_msg.elf.empty()) {
       DeviceBinaryInfo binary_info;
       binary_info.pc_base_addr = kernel_info_msg.pc_base_addr;
@@ -204,31 +204,6 @@ HandleResult AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kerne
   return final_error;
 }
 
-HandleResult AscendProcessLinux::HandleStreamId(uint32_t stream_id) {
-  Log *log = GetLog(POSIXLog::Process);
-  if (m_device_context == nullptr) {
-    LLDB_LOG(log, "{0} device context is not initialized!", __FUNCTION__);
-    return {};
-  }
-
-  // query device id from socket handle
-  auto it = m_socket_device_pid.find(m_client_socket);
-  if (it == m_socket_device_pid.end()) {
-    LLDB_LOG(log, "cannot find on which device the kernel {0} should be launched.",
-      m_kernel_name.c_str());
-    return {};
-  }
-  auto device_id = it->second.first;
-  if (!m_device_context->IsDeviceIdMatched(device_id)) {
-    LLDB_LOG(log, "device id {0} from client {1} is not matched",
-      device_id, m_client_socket);
-    return {};
-  }
-  LLDB_LOG(log, "Process stream id");
-  m_stream_id = stream_id;
-  return {};
-}
-
 void AscendProcessLinux::RegisterParsers() {
   m_parser.Register(
     DEVICE_INFO_HEADER,
@@ -243,13 +218,6 @@ void AscendProcessLinux::RegisterParsers() {
         return HandleStubKernelInfo(msg);
     })
   );
-
-  m_parser.Register(
-    STREAM_ID_HEADER,
-    std::make_shared<StreamHandler>([this](uint32_t stream_id) {
-        return HandleStreamId(stream_id);
-    })
-  );
 }
 
 void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg) {
@@ -261,7 +229,7 @@ void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg
   }
   auto it = m_socket_device_pid.find(client_socket);
   if (it == m_socket_device_pid.end()) {
-    LLDB_LOG(log, "receive this device id for the fisrt time, message is: {0}, original length is {1}",
+    LLDB_LOG(log, "receive this device id for the first time, message is: {0}, original length is {1}",
              display_msg, msg.length());
   } else {
     LLDB_LOG(log, "receive message for device id: {0}, pid: {1}, message is: {2}",
@@ -342,6 +310,19 @@ Status AscendProcessLinux::RemoveBreakpoint(
 }
 
 Status AscendProcessLinux::RemoveDeviceHardwareBreakpoint(lldb::addr_t addr) {
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
+  AscendThreadLinux *thread = GetThreadByID(GetID());
+  ThreadStopInfo stop_info{};
+  std::string description;
+  if (thread) {
+    thread->GetStopReason(stop_info, description);
+  }
+  if (!stop_info.still_break_in_device || stop_info.internal_break) {
+    LLDB_LOG(log, "save lazy call for {0} with addr = {1:x}", __FUNCTION__, addr);
+    auto func = [this, addr]() -> Status { return RemoveDeviceHardwareBreakpoint(addr); };
+    m_lazy_calls.push_back(func);
+    return Status();
+  }
   Status error = m_device_context->RemoveHardwareBreakpoint(addr, m_stream_id, m_pos_info);
   if (error.Fail()) {
     return error;
@@ -423,6 +404,20 @@ Status AscendProcessLinux::Resume(const ResumeActionList &resume_actions) {
 }
 
 Status AscendProcessLinux::SetDeviceHardwareBreakpoint(lldb::addr_t addr) {
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
+  AscendThreadLinux *thread = GetThreadByID(GetID());
+  ThreadStopInfo stop_info{};
+  std::string description;
+  if (thread) {
+    thread->GetStopReason(stop_info, description);
+  }
+  // real stop in device
+  if (!stop_info.still_break_in_device || stop_info.internal_break) {
+    LLDB_LOG(log, "save lazy call for {0} with addr = {1:x}", __FUNCTION__, addr);
+    auto func = [this, addr]() -> Status { return SetDeviceHardwareBreakpoint(addr); };
+    m_lazy_calls.push_back(func);
+    return Status();
+  }
   constexpr size_t bp_size = 4;
   auto error = m_device_context->SetHardwareBreakpoint(addr, m_stream_id, m_pos_info);
   if (error.Success()) {
@@ -548,7 +543,7 @@ Status AscendProcessLinux::SetSwBpByMemory(lldb::addr_t addr,
 }
 
 Status AscendProcessLinux::RemoveSwBpByMemory(lldb::addr_t addr, const SoftwareBreakpoint &bp) {
-  Log *log = GetLog(LLDBLog::Breakpoints);
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
   LLDB_LOG(log, "{0}", __FUNCTION__);
   Status error;
   if (m_device_context == nullptr) {
@@ -606,18 +601,74 @@ Status AscendProcessLinux::WriteDeviceMemory(lldb::addr_t addr, const void *buf,
   return Status();
 }
 
+void AscendProcessLinux::TryUpdateThreadIndex(InterruptEvent &event) {
+  // 计算在warp里面的位置
+  uint8_t thread_in_warp = m_pos_info.thread_info.thread_id % 32;
+
+  // 计算属于哪个warp
+  uint8_t warp_id = m_pos_info.thread_info.thread_id / 32;
+
+  std::vector<WarpInfo> warps_info;
+  Status error = GetWarpsInfo(warps_info);
+  if (error.Fail() || warps_info.empty()) {
+    return;
+  }
+
+  WarpInfo warp_info{};
+  bool has_warp = false;
+  for (auto warp : warps_info) {
+    if (warp.warp_id == warp_id) {
+      warp_info = warp;
+      has_warp = true;
+      break;
+    }
+  }
+
+  if (!has_warp) {
+    return;
+  }
+
+  bool active = (warp_info.exec_mask & (1U << thread_in_warp)) != 0;
+  bool single_core_run = m_pos_info.single_core_run;
+
+  if (active && single_core_run) {
+    event.thread_info = m_pos_info.thread_info;
+  }
+
+  return;
+
+}
+
+void AscendProcessLinux::FixSimdPC(uint64_t &pc) {
+  constexpr uint64_t low18bit = (1U << 18) - 1;
+  if (m_latest_vf_start_pc) {
+    pc &= low18bit;
+    if ((pc & low18bit) < (m_latest_vf_start_pc & low18bit)) {
+      pc |= (m_latest_vf_start_pc & (~low18bit)) + (1u << 18);
+    } else {
+      pc |= m_latest_vf_start_pc & (~low18bit);
+    }
+  }
+}
+
 void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
   Status error;
   if (info.cmd_type == CmdType::INTERRUPT_EVENT) {
     const InterruptEvent *param = (const InterruptEvent*)info.recv_msg;
-    LLDB_LOGF(log, "pc=%#lx,core_id=%u,core_status=%d,core_type=%u,pos_type=%u,thread_dim=(%u,%u,%u)",
-              param->pc, param->core_id, int(param->status), param->core_type,
-              (uint8_t)param->pos_type, param->thread_dim_x, param->thread_dim_y, param->thread_dim_z);
     InterruptEvent event = *param;
-    LLDB_LOGF(log, "event pc=%#lx, core_id=%u, core_status=%d",
-              event.pc, event.core_id, int(event.status));
+    if (param->pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
+      LLDB_LOG(log, "latest vf start pc={0:x}", m_latest_vf_start_pc);
+      FixSimdPC(event.pc);
+    }
+    LLDB_LOGF(log, "pc=%#lx,core_id=%u,core_status=%d,core_type=%u,pos_type=%u,thread_dim=(%u,%u,%u),thread_id=%u,before_fix_pc=%#lx",
+              event.pc, param->core_id, int(param->status), param->core_type,
+              (uint8_t)param->pos_type, param->thread_info.thread_dim_x, param->thread_info.thread_dim_y, param->thread_info.thread_dim_z,
+              param->thread_info.thread_id, param->pc);
     std::lock_guard<std::mutex> guard(m_status_mtx);
+    if (event.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+      TryUpdateThreadIndex(event);
+    }
     if (param->status == CoreStatus::BRKPT) {
       MonitorBreakpoint(event);
     } else if (param->status == CoreStatus::SINGLE_STEP) {
@@ -658,15 +709,7 @@ void AscendProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
 
 void AscendProcessLinux::MonitorBreakpoint(const InterruptEvent &param) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
-  m_pos_info.core_id = param.core_id;
-  m_pos_info.core_type = (CoreType)param.core_type;
-  m_pos_info.pos_type = param.pos_type;
-  m_pos_info.thread_id_x = param.thread_x;
-  m_pos_info.thread_id_y = param.thread_y;
-  m_pos_info.thread_id_z = param.thread_z;
-  m_thread_dim[0] = param.thread_dim_x;
-  m_thread_dim[1] = param.thread_dim_y;
-  m_thread_dim[2] = param.thread_dim_z;
+  m_pos_info.Update(param);
   m_cores_info.clear();
   for (const auto &thread_up : m_threads) {
     AscendThreadLinux *thread = GetThreadByID(thread_up->GetID());
@@ -680,6 +723,15 @@ void AscendProcessLinux::MonitorBreakpoint(const InterruptEvent &param) {
     LLDB_LOG(log, "Handle breakpoint process state, pid = {0}", thread->GetID());
     // Mark the thread as stopped at breakpoint.
     thread->SetStoppedByDeviceBreakpoint(param);
+    // clear hardware breakpoints
+    for (const auto &func: m_lazy_calls) {
+      auto error = func();
+      if (error.Fail()) {
+        LLDB_LOG(log, "Lazy call failed: reason: {0}", error);
+      }
+    }
+    m_lazy_calls.clear();
+    //
     m_pending_notification_tid = thread->GetID();
     auto &stepping_breakpoint = GetThreadsSteppingWithBreakpoint();
     stepping_breakpoint.clear();
@@ -692,6 +744,7 @@ void AscendProcessLinux::MonitorBreakpoint(const InterruptEvent &param) {
 
 void AscendProcessLinux::MonitorTrace(const InterruptEvent &param) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
+  m_pos_info.Update(param);
   m_cores_info.clear();
   for (const auto &thread_up : m_threads) {
     AscendThreadLinux *thread = GetThreadByID(thread_up->GetID());
@@ -717,6 +770,7 @@ void AscendProcessLinux::ResumeDevice() {
     return;
   }
   m_device_context->Resume(m_pos_info);
+  m_pos_info.pc = -1;
 }
 
 Status AscendProcessLinux::SingleStep() {
@@ -740,6 +794,33 @@ void AscendProcessLinux::SetAivOnFocus(const uint32_t &core_id) {
   m_pos_info.core_type = CoreType::AIV;
 }
 
+void AscendProcessLinux::SetThreadOnFocus(const uint32_t &linear_idx) {
+  m_pos_info.thread_info.thread_id = linear_idx;
+
+  uint16_t dim_x = m_pos_info.thread_info.thread_dim_x;
+  uint16_t dim_y = m_pos_info.thread_info.thread_dim_y;
+
+  m_pos_info.thread_pos.x = linear_idx % dim_x;
+  m_pos_info.thread_pos.y = (linear_idx / dim_x) % dim_y;
+  m_pos_info.thread_pos.z = linear_idx / (dim_x * dim_y);
+
+  for (const auto &thread_up : m_threads) {
+    AscendThreadLinux *thread = GetThreadByID(thread_up->GetID());
+    if (!thread) {
+      continue;
+    }
+    if (thread_up->GetID() != GetID()) {
+      continue;
+    }
+    // 同时更新线程的id
+    thread->SetStopThreadIdx(m_pos_info.thread_pos.x,
+                             m_pos_info.thread_pos.y,
+                             m_pos_info.thread_pos.z);
+
+  }
+
+}
+
 void AscendProcessLinux::SetSingleCoreRunFlag(bool isSingleCoreRun) {
   m_pos_info.single_core_run = isSingleCoreRun;
 }
@@ -755,6 +836,10 @@ bool AscendProcessLinux::ConsumeKernelBinary(DeviceBinaryInfo &info) {
 
 void AscendProcessLinux::SetClientDeviceId(const int32_t device_id) {
   m_client_device_id = device_id;
+}
+
+void AscendProcessLinux::SetVFStartPC(uint64_t start_pc) {
+  m_latest_vf_start_pc = start_pc;
 }
 
 Status AscendProcessLinux::GetDeviceInfo(DeviceInfo &info) {
@@ -774,6 +859,13 @@ Status AscendProcessLinux::GetCoresInfo(std::vector<CoreInfo> &info) {
   if (error.Fail()) {
     return error;
   }
+
+  for (auto &core_info: info) {
+    if (core_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
+      FixSimdPC(core_info.pc);
+    }
+  }
+
   m_cores_info = info;
   return error;
 }
@@ -795,16 +887,24 @@ Status AscendProcessLinux::GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool
   return error;
 }
 
+Status AscendProcessLinux::GetWarpsInfo(std::vector<WarpInfo> &warps_info) {
+  if (m_device_context == nullptr) {
+    return Status("device context is null!");
+  }
+  return m_device_context->GetWarpsInfo(warps_info, m_pos_info);
+}
+
 Status AscendProcessLinux::GetStoppedCorePC(addr_t &pc) {
   Status error;
   if (m_cores_info.empty()) {
-      error = GetCoresInfo(m_cores_info);
-      if (error.Fail()) {
-        return error;
-      }
+    error = GetCoresInfo(m_cores_info);
+    if (error.Fail()) {
+      return error;
+    }
   }
+
   for (const auto &core_info: m_cores_info) {
-    if (core_info.core_id == m_pos_info.core_id) {
+    if (core_info.core_id == m_pos_info.core_id && core_info.core_type == m_pos_info.core_type) {
       pc = core_info.pc;
       return error;
     }
@@ -831,14 +931,34 @@ Status AscendProcessLinux::ReadDeviceRegisterValue(const RegisterInfo *reg_info,
   if (m_device_context == nullptr) {
     return Status("device context is null!");
   }
-  return m_device_context->ReadRegister(reg_info, m_pos_info.core_id, m_pos_info.core_type, value);
+  // pc is -1, not stop in device
+  if (m_pos_info.pc == UINT64_MAX) {
+    return Status("Current not stop in device");
+  }
+  Status error;
+  if (reg_info->kinds[lldb::eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
+    if (m_pos_info.pc != -1 &&
+        m_pos_info.first_stop_core_type == m_pos_info.core_type &&
+        m_pos_info.first_stop_core_id == m_pos_info.core_id) {
+      value.SetUInt64(m_pos_info.pc);
+      return error;
+    }
+    uint64_t pc = 0;
+    error = GetStoppedCorePC(pc);
+    if (error.Fail()) {
+      return error;
+    }
+    value.SetUInt64(pc);
+    return error;
+  }
+  return m_device_context->ReadRegister(reg_info, m_pos_info, value);
 }
 
 Status AscendProcessLinux::ReadDeviceRegisterList(std::vector<std::string> &reg_list) {
   if (m_device_context == nullptr) {
     return Status("device context is null!");
   }
-  return m_device_context->ReadRegisterList(reg_list, m_pos_info.core_id, m_pos_info.core_type);
+  return Status("Unsupport read device register list");
 }
 
 Status AscendProcessLinux::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
@@ -867,8 +987,7 @@ Status AscendProcessLinux::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, s
 void AscendProcessLinux::MonitorSignal(const InterruptEvent &param) {
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "AscendProcessLinux::{0}, stream_id: {1}", __FUNCTION__, m_stream_id);
-  m_pos_info.core_id = param.core_id;
-  m_pos_info.core_type = (CoreType)param.core_type;
+  m_pos_info.Update(param);
   m_cores_info.clear();
   LLDB_LOG(log, "AscendProcessLinux::{0}, core_id: {1}, core_type: {2}",
            __FUNCTION__, param.core_id, param.core_type);

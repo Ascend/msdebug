@@ -13,6 +13,15 @@
 namespace lldb_private {
 constexpr uint32_t KERNEL_NAME_SIZE = 2048;
 
+enum class CoreStatus {
+  UNKNOWN = 0,
+  RUNNING = 1,
+  BRKPT = 2,
+  SINGLE_STEP = 3,
+  EXCEPTION = 4,
+  TASK_KILLED = 5
+};
+
 enum class SocType {
   SOC_BEGIN = 0,
   ASCEND910B,
@@ -21,7 +30,7 @@ enum class SocType {
   SOC_END,
 };
 
-// Defined by ts 
+// Defined by ts
 enum class CoreType {
   AIC = 0,
   AIV,
@@ -47,9 +56,10 @@ enum class MemType : uint32_t {
 };
 
 enum class InterruptPosType : uint8_t {
-  STARS_SU_INTERRUPT = 0,
-  STARS_VEC_INTERRUPT_SIMD = 1,
-  STARS_VEC_INTERRUPT_SIMT = 2
+  SU_INTERRUPT = 0,
+  VEC_INTERRUPT_SIMD = 1,
+  VEC_INTERRUPT_SIMT = 2,
+  UNKNOWN_INTERRUPT_TYPE = 200
 };
 
 struct CoreInfo {
@@ -68,6 +78,39 @@ struct CoreInfo {
   uint16_t reserve1;
 };
 
+#pragma pack(4)
+struct WarpInfo {
+  uint8_t core_id;
+  uint8_t warp_id;
+  uint8_t warp_num;
+  uint64_t simt_pc;
+  uint32_t exec_mask;
+};
+#pragma pack()
+
+struct ThreadInfo {
+  uint16_t thread_dim_x;
+  uint16_t thread_dim_y;
+  uint16_t thread_dim_z;
+  uint16_t thread_id;
+};
+
+struct InterruptEvent {
+  uint8_t core_type;
+  InterruptPosType pos_type;
+  uint8_t reserve[2];
+  CoreStatus status;
+  uint32_t core_id;
+  uint64_t pc;
+  ThreadInfo thread_info;
+};
+
+struct ThreadPos {
+  uint16_t x;
+  uint16_t y;
+  uint16_t z;
+};
+
 static_assert(sizeof(CoreInfo) <= 64,
     "CoreInfo param size must less than params in DebugSendInfo");
 
@@ -82,6 +125,7 @@ struct KernelInfoMsg {
   std::string kernel_name;
   std::string kernel_hash;
   lldb::addr_t pc_base_addr;
+  int32_t stream_id;
   std::vector<char> elf;
 };
 
@@ -112,6 +156,8 @@ struct DeviceStopInfo {
   SocType soc_type;
   // used by coredump currently
   std::string stop_description;
+  InterruptPosType pos_type{InterruptPosType::SU_INTERRUPT};
+  ThreadPos thread_pos;
 };
 
 // Message from lldb-client to lldb-server
@@ -122,6 +168,89 @@ struct MemoryTypeInfo {
   uint8_t element_size;
 };
 
+//
+struct InterruptPosInfo {
+  CoreType core_type;
+  bool single_core_run;
+  bool single_warp_run;
+  uint32_t core_id;
+  InterruptPosType pos_type{InterruptPosType::SU_INTERRUPT};
+  ThreadPos thread_pos;
+  uint64_t pc;
+  ThreadInfo thread_info;
+  uint32_t first_stop_core_id;
+  CoreType first_stop_core_type;
+
+  void Update(const InterruptEvent &event) {
+    first_stop_core_id = core_id = event.core_id;
+    first_stop_core_type = core_type = (CoreType)event.core_type;
+    pos_type = event.pos_type;
+    pc = event.pc;
+    thread_info = event.thread_info;
+    if (thread_info.thread_dim_x && thread_info.thread_dim_y &&
+        thread_info.thread_dim_z) {
+      thread_pos.x = thread_info.thread_id % thread_info.thread_dim_x;
+      thread_pos.y = thread_info.thread_id / thread_info.thread_dim_x %
+                     thread_info.thread_dim_y;
+      thread_pos.z = thread_info.thread_id / thread_info.thread_dim_x /
+                     thread_info.thread_dim_y;
+    }
+  }
+
+  void Reset() {
+    core_id = 1;
+    core_type = CoreType::UNKNOWN_CORE_TYPE;
+    pos_type = InterruptPosType::SU_INTERRUPT;
+    thread_pos = ThreadPos{};
+    pc = -1;
+    // 默认设置所有warp同步调试
+    single_warp_run = false;
+    thread_info = ThreadInfo{};
+  }
+
+  uint16_t GetWarpNum() const {
+    return (thread_info.thread_dim_x * thread_info.thread_dim_y * thread_info.thread_dim_z + 31U) / 32U;
+  }
+
+  uint16_t GetWarpId() const {
+    return thread_info.thread_id / 32U;
+  }
+};
+
+// bitmap:0|1|2|3
+//        aic|aiv|simd_vf|simt_vf
+// don't care pos_type
+constexpr uint8_t AIC_MASK = 1U << static_cast<int>(CoreType::AIC);
+constexpr uint8_t AIV_MASK = 1U << static_cast<int>(CoreType::AIV);
+constexpr uint8_t MIX_MASK = AIC_MASK | AIV_MASK;
+
+// only show on SIMD/SIMT
+constexpr uint8_t SIMD_MASK_OFFSET = 2;
+constexpr uint8_t SIMT_MASK_OFFSET = 3;
+constexpr uint8_t SIMD_VF_MASK = 1U << SIMD_MASK_OFFSET;
+constexpr uint8_t SIMT_VF_MASK = 1U << SIMT_MASK_OFFSET;
+constexpr uint8_t VF_MASK = SIMD_VF_MASK | SIMT_VF_MASK;
+
+inline bool IsRegisterSupport(CoreType core_type, InterruptPosType pos_type,
+                              uint8_t mask) {
+  // use by coredump when we don't detect error register
+  // we maybe just show all registers
+  if (pos_type == InterruptPosType::UNKNOWN_INTERRUPT_TYPE) {
+    return true;
+  }
+  // if mask not belong to simd/simt, only consider core_type
+  if ((mask & AIC_MASK) || (mask & AIV_MASK)) {
+    return mask & (1U << static_cast<int>(core_type));
+  }
+  if (pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
+    return mask & SIMD_VF_MASK;
+  }
+  if (pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+    return mask & SIMT_VF_MASK;
+  }
+  // su but register is vf
+  return false;
+}
 }
 
 #endif

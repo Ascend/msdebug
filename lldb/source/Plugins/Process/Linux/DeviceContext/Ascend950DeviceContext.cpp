@@ -4,12 +4,11 @@
 #ifdef MS_DEBUGGER
 #include "Ascend950DeviceContext.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend950.h"
- 
+
 using namespace lldb_private;
 using namespace lldb;
- 
+
 namespace debug_ts {
 #pragma pack(4)
 struct DeviceCoreMask {
@@ -18,12 +17,12 @@ struct DeviceCoreMask {
   uint64_t aiv_bitmap0;
   uint64_t aiv_bitmap1;
 };
- 
+
 struct CoreMaskParam {
   uint32_t magic {0U};
   DeviceCoreMask cores;
 };
- 
+
 // single step 和 resume共用
 struct ControlUnitParam {
   CoreMaskParam core_info;
@@ -49,93 +48,34 @@ struct HardBreakpointParam {
   uint64_t virt_addr;
   DeviceCoreMask core_info; // 使能哪些core做断点设置
 };
- 
+
 struct WarpInfoParam {
   uint8_t core_type;
-  InterruptPosType pos_type;
-  uint8_t core_id;
-  uint8_t reserve0;
-  uint16_t thread_id_x;
-  uint16_t thread_id_y;
-  uint16_t thread_id_z;
-  uint16_t reserve1;
-};
- 
-struct WarpInfo {
+  uint8_t bkpt_type;
   uint8_t core_id;
   uint8_t warp_id;
-  uint16_t warp_num; // 总共多少个warp需要获取, 其实没用，因为=thread_dim的相乘
-  uint64_t simt_pc;
-  uint32_t exec_mask; // 表示这个warp有效, >0表示有效，可以调试
 };
+
 #pragma pack()
- 
+
 } // namespace debug_ts
- 
+
 using namespace debug_ts;
- 
+
 Ascend950DeviceContext::Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id):
   DeviceContext(pid, device_id) {
   m_soc_type = SocType::ASCEND950;
-}
- 
-Status Ascend950DeviceContext::ReadRegister(const RegisterInfo *reg_info,
-                                             uint32_t core_id, CoreType core_type, RegisterValue &value) {
-  Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
-  if (reg_info && reg_info->kinds[eRegisterKindLLDB] < register_map.size() &&
-      register_map.find(reg_info->name) != register_map.end()) {
-    const DeviceRegisterInfo &device_reg_info = register_map.at(reg_info->name);
-    uint64_t addr = device_reg_info.addr;
-    error = DeviceContext::ReadRegister(addr, reg_info, core_id, core_type, value);
-    if (error.Fail()) {
-      return error;
-    }
-  } else {
-    error.SetErrorString("reg_info is null or reg_num in reg_info is invalid");
-  }
-  return error;
+  m_reg_info_up = std::make_unique<RegisterInfoPOSIX_ascend950>(ArchSpec("hiipu64"));
 }
 
-
-Status Ascend950DeviceContext::GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) {
-  Status error;
-  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
-  auto reg_info = register_map.find(reg_name.str());
-  if (reg_info == register_map.end()) {
-      error.SetErrorStringWithFormatv(
-          "Can not get addr, register name: {0}", reg_name);
-  }
-  if ((1U << static_cast<int>(core_type)) & reg_info->second.core_type_support_mask) {
-    addr = reg_info->second.addr;
-  } else {
-    error.SetErrorStringWithFormatv(
-        "Can not get addr, register {0} is not support", reg_name);
-  }
-  return error;
-}
-
-Status Ascend950DeviceContext::GetRegisterList(std::vector<std::string> &reg_list, CoreType core_type) {
-  Status error;
-  if (core_type == CoreType::UNKNOWN_CORE_TYPE) {
-    error.SetErrorString("GetRegisterList failed due to unknown core type.");
-    return error;
-  }
-  const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
-  for(const auto &item : register_map) {
-    if ((1U << static_cast<int>(core_type)) & item.second.core_type_support_mask) {
-      reg_list.push_back(item.first);
-    }
-  }
-  return error;
-}
-
-Status Ascend950DeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) {
+// we should prevent user read custom addr in client
+// or not let DeviceContext::ReadRegister() export to public
+Status Ascend950DeviceContext::CheckRegisterAddr(CoreType core_type, uint64_t addr) const {
   Status error;
   const auto &register_map = RegisterInfoPOSIX_ascend950::GetRegExtractor().register_map;
   for (const auto &item : register_map) {
     if ((1U << static_cast<int>(core_type)) & item.second.core_type_support_mask) {
-      if (item.second.addr == addr) {
+      if ((item.second.addr & addr) == item.second.addr) {
         return error;
       }
     }
@@ -201,20 +141,20 @@ inline auto FormatCoresLog(const DeviceCoreMask &cores) {
   return llvm::formatv("aic_bitmap0={0:x}, aic_bitmap1={1:x}, aiv_bitmap0={2:x}, aiv_bitmap1={3:x}",
           cores.aic_bitmap0, cores.aic_bitmap1, cores.aiv_bitmap0, cores.aiv_bitmap1);
 }
- 
+
 Status Ascend950DeviceContext::Resume(const InterruptPosInfo &pos_info) const {
   ControlUnitParam param;
   param.core_info = GenCoreMask(pos_info);
-  param.pos_type = pos_info.pos_type;
-  if (pos_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
-      if (pos_info.single_warp_run) {
-          param.thread_id_x = pos_info.thread_id_x;
-          param.thread_id_y = pos_info.thread_id_y;
-          param.thread_id_z = pos_info.thread_id_z;
-      } else {
-          param.enable_all_warp = true;
-      }
+  if (pos_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+    if (pos_info.single_warp_run) {
+      param.thread_id_x = pos_info.thread_pos.x;
+      param.thread_id_y = pos_info.thread_pos.y;
+      param.thread_id_z = pos_info.thread_pos.z;
+    } else {
+      param.enable_all_warp = 1;
+    }
   }
+  param.pos_type = pos_info.pos_type;
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, {5}), pos_type={6}",
            param.core_info.magic,
@@ -224,19 +164,20 @@ Status Ascend950DeviceContext::Resume(const InterruptPosInfo &pos_info) const {
            static_cast<uint8_t>(param.pos_type));
   return BaseSqCqComm(CmdType::RESUME_DEVICE, (uint8_t*)&param, sizeof(param));
 }
- 
+
 Status Ascend950DeviceContext::SingleStep(const InterruptPosInfo &pos_info) const {
   ControlUnitParam param{};
   param.core_info = GenCoreMask(pos_info);
-  if (pos_info.pos_type == InterruptPosType::STARS_VEC_INTERRUPT_SIMT) {
-      if (pos_info.single_warp_run) {
-          param.thread_id_x = pos_info.thread_id_x;
-          param.thread_id_y = pos_info.thread_id_y;
-          param.thread_id_z = pos_info.thread_id_z;
-      } else {
-          param.enable_all_warp = true;
-      }
+  if (pos_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+    if (pos_info.single_warp_run) {
+      param.thread_id_x = pos_info.thread_pos.x;
+      param.thread_id_y = pos_info.thread_pos.y;
+      param.thread_id_z = pos_info.thread_pos.z;
+    } else {
+      param.enable_all_warp = 1;
+    }
   }
+  param.pos_type = pos_info.pos_type;
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, {5}), pos_type={6}",
            param.core_info.magic,
@@ -277,7 +218,7 @@ Status Ascend950DeviceContext::SetHardwareBreakpoint(
            static_cast<uint8_t>(pos_info.pos_type));
   return BaseSqCqComm(CmdType::SET_HARD_BREAKPOINT, (uint8_t*)&param, sizeof(param));
 }
- 
+
 Status Ascend950DeviceContext::RemoveHardwareBreakpoint(
     lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const {
   HardBreakpointParam param;
@@ -291,5 +232,62 @@ Status Ascend950DeviceContext::RemoveHardwareBreakpoint(
            param.stream_id,
            static_cast<uint8_t>(pos_info.pos_type));
   return BaseSqCqComm(CmdType::UNSET_HARD_BREAKPOINT, (uint8_t*)&param, sizeof(param));
+}
+
+Status
+Ascend950DeviceContext::GetWarpsInfo(std::vector<WarpInfo> &warps_info,
+                                     const InterruptPosInfo &m_pos_info) const {
+  warps_info.clear();
+  Status error;
+  Log *log = GetLog(LLDBLog::Process);
+  WarpInfo warp_info;
+  uint16_t warp_id = 0;
+  error = GetWarpInfo(warp_info, warp_id, m_pos_info);
+  if (error.Fail()) {
+    return error;
+  }
+
+  // 当接口没有返回warp num的时候，需要自己计算下
+  uint16_t warp_num = 0;
+  if (warp_info.warp_num == 0) {
+    warp_num = m_pos_info.GetWarpNum();
+    warp_info.warp_num = warp_num;
+  }
+
+  LLDB_LOGF(log, "GetWarpsInfo total_num=%u", warp_info.warp_num);
+
+  warps_info.push_back(warp_info);
+
+  for (uint16_t i = 1; i < warp_info.warp_num; i++) {
+    warp_id = i;
+    error = GetWarpInfo(warp_info, warp_id, m_pos_info);
+    if (error.Fail()) {
+      error.SetErrorStringWithFormatv("get {0} warp failed: {1}", i , error);
+      return error;
+    }
+    if (warp_info.warp_num == 0) {
+      warp_info.warp_num = warp_num;
+    }
+
+    if (warp_info.warp_id != warp_id) {
+      error.SetErrorStringWithFormatv("get {0} warp failed: not matched warp id", i);
+      return error;
+    }
+    LLDB_LOG(log, "warp_id={0}, warp_pc={1:x}", warp_info.warp_id, warp_info.simt_pc);
+    warps_info.push_back(warp_info);
+  }
+  return error;
+}
+
+Status Ascend950DeviceContext::GetWarpInfo(WarpInfo &info,  uint16_t warp_id,
+                                           const InterruptPosInfo &m_pos_info) const {
+  WarpInfoParam param{};
+  param.core_type = static_cast<uint8_t>(m_pos_info.core_type);
+  param.core_id = m_pos_info.core_id;
+  param.bkpt_type = 2;
+  param.warp_id = warp_id;
+
+  return BaseSqCqComm(CmdType::GET_WARP_INFO, (uint8_t*)&param, sizeof(WarpInfoParam),
+                        (uint8_t *)&info, sizeof(WarpInfo));
 }
 #endif // ifdef MS_DEBUGGER

@@ -495,6 +495,13 @@ protected:
             Stream &strm = result.GetOutputStream();
             process_sp->UpdateStopInfo(true);
             process_sp->ShowDeviceStopInfoCached(strm);
+            if (process_sp->IsStopInDevice() &&
+                target_sp->GetExecutableModule()) {
+              Thread *thread = GetDefaultThread();
+              if (thread) {
+                thread->GetStatus(strm, 0, 1, 1, true);
+              }
+            }
 #endif
           }
         } else {

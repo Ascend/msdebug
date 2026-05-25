@@ -9,7 +9,7 @@ msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧
 
 ### 1.1 建议
 
-本章节以您已完成<a href="https://gitcode.com/Ascend/msot/blob/26.0.0/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《算子开发工具快速入门》</a>的全流程操作为前提；若尚未体验，建议先完成该指南以获得更佳的学习效果。
+本章节以您已完成<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《算子开发工具快速入门》</a>的全流程操作为前提；若尚未体验，建议先完成该指南以获得更佳的学习效果。
 
 ### 1.2 环境准备
 
@@ -66,8 +66,8 @@ echo 1 > /proc/debug_switch
 
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
-\cp -f op_kernel/CMakeLists.txt op_kernel/CMakeLists.txt.orig.bak
-sed -i "1i\\add_ops_compile_options(ALL OPTIONS -g -O0)" op_kernel/CMakeLists.txt
+\cp -f op_kernel/CMakeLists.txt op_kernel/CMakeLists.txt.bak
+printf '%s\n' "if(COMMAND add_ops_compile_options)" "  add_ops_compile_options(ALL OPTIONS -g -O0)" "elseif(COMMAND npu_op_kernel_options)" "  npu_op_kernel_options(ascendc_kernels ALL OPTIONS -g -O0)" "endif()" | cat - op_kernel/CMakeLists.txt > tmp && mv -f tmp op_kernel/CMakeLists.txt;
 ```
 
 **2. 重新编译部署算子**
@@ -284,5 +284,5 @@ y
 
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
-\cp -f op_kernel/CMakeLists.txt.orig.bak op_kernel/CMakeLists.txt
+\cp -f op_kernel/CMakeLists.txt.bak op_kernel/CMakeLists.txt
 ```

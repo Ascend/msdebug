@@ -1,0 +1,9 @@
+# version.map
+{
+  global:
+    rt*;
+    aclrt*;
+  local:
+    _ZN4llvm*;  # 隐藏所有 llvm 开头的符号
+    *;
+};

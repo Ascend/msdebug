@@ -64,6 +64,7 @@ static std::map<CmdType, std::string> CMD_TO_STRING = {
     {CmdType::GET_CORES_INFO, "GET_CORES_INFO"},
     {CmdType::READ_REGISTER, "READ_REGISTER"},
     {CmdType::READ_LOCAL_MEMORY, "READ_LOCAL_MEMORY"},
+    {CmdType::GET_WARP_INFO, "GET_WARP_INFO"},
     {CmdType::TASK_KILL, "TASK_KILL"}
 };
 
@@ -448,13 +449,13 @@ size_t DeviceContext::ReadLocalMemory(lldb::addr_t addr, size_t size,
     event.src_addr += BLOCK_MEM_SIZE;
   }
   if (log) {
-      StreamString ss;
-      ss << "0x";
-      cur_data = static_cast<uint8_t*>(data);
-      for (size_t i = 0; i < std::min(size, 8UL); i++) {
-          ss.Printf("%02x", cur_data[i]);
-      }
-      LLDB_LOG(log, "Read local memory, first {0} byte value: {1}", std::min(size, 8UL), ss.GetString());
+    StreamString ss;
+    ss << "0x";
+    cur_data = static_cast<uint8_t*>(data);
+    for (size_t i = 0; i < std::min(size, 8UL); i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "Read local memory, first {0} byte value: {1}", std::min(size, 8UL), ss.GetString());
   }
   return size;
 }
@@ -484,12 +485,21 @@ Status DeviceContext::SingleStep(const InterruptPosInfo &pos_info) const {
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&maskInfo, sizeof(maskInfo));
 }
 
-Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info, 
-                                   uint32_t core_id, CoreType core_type, 
-                                   RegisterValue &reg_value) {
+Status DeviceContext::ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info, RegisterValue &value) const {
+  if (!m_reg_info_up) {
+    return Status("internal error: need initialize m_reginster_info");
+  }
+  return m_reg_info_up->ReadRegister(reg_info, pos_info, this, value);
+}
+
+
+Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
+                                   uint32_t core_id, CoreType core_type,
+                                   RegisterValue &reg_value) const {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
-  WritableDataBufferSP buffer_sp(new DataBufferHeap(reg_info->byte_size, 0));
+  constexpr uint8_t max_bytes = 32;
+  WritableDataBufferSP buffer_sp(new DataBufferHeap(max_bytes, 0));
   RegisterParam param;
   param.core_id = core_id;
   param.core_type = static_cast<uint8_t>(core_type);
@@ -500,21 +510,25 @@ Status DeviceContext::ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
   }
   error = BaseSqCqComm(CmdType::READ_REGISTER, (const uint8_t *)&param, sizeof(param),
                        (uint8_t *)buffer_sp->GetBytes(), buffer_sp->GetByteSize());
-  LLDB_LOGF(log, "Read Register core_id=%d addr=%" PRIu64 " core_type=%d",
-            core_id, addr, int(core_type));
+  LLDB_LOG(log, "Read {0} Register core_id={1} addr={2:x} core_type={3}",
+           reg_info->name, core_id, addr, int(core_type));
   if (error.Fail()) {
     return error;
   }
-  reg_value.SetFromMemoryData(*reg_info, buffer_sp->GetBytes(), 
-                              reg_info->byte_size, eByteOrderLittle, error);
-  return error;
-}
 
-Status DeviceContext::ReadRegisterList(std::vector<std::string> &reg_list, uint32_t core_id, CoreType core_type) {
-  Status error;
-  Log *log = GetLog(LLDBLog::Process);
-  error = GetRegisterList(reg_list, core_type);
-  LLDB_LOGF(log, "Read Register List core_id=%d core_type=%d", core_id, int(core_type));
+  reg_value.SetFromMemoryData(*reg_info, buffer_sp->GetBytes(),
+                              reg_info->byte_size, eByteOrderLittle, error);
+  if (log) {
+    StreamString ss;
+    ss << "0x";
+    uint8_t *cur_data = buffer_sp->GetBytes();
+    for (size_t i = 0; i < std::min(reg_info->byte_size, 8U); i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "Read register {0}, first {1} byte value: {2}",
+             reg_info->name,
+             std::min(reg_info->byte_size, 8U), ss.GetString());
+  }
   return error;
 }
 
@@ -541,7 +555,7 @@ Status DeviceContext::GetCoresInfo(std::vector<CoreInfo> &cores_info) {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
   cores_info.clear();
-  CoreInfoParam param;
+  CoreInfoParam param{};
   param.info_idx = 0;
   CoreInfo core_info;
   error = BaseSqCqComm(CmdType::GET_CORES_INFO, (uint8_t*)&param, sizeof(CoreInfoParam),
@@ -584,7 +598,7 @@ bool DeviceContext::UseSpecifiedCore(uint32_t aic_mask, uint64_t aiv_mask, CoreM
   return true;
 }
 
-Status DeviceContext::InvalidInstrCache(const addr_t &addr, 
+Status DeviceContext::InvalidInstrCache(const addr_t &addr,
   const InterruptPosInfo &pos_info, uint8_t redirect_ifu) const {
   Status error;
   InvalidCacheParam param;
@@ -705,7 +719,7 @@ Status DeviceContext::TaskKill(uint32_t stream_id) {
 
 MemType DeviceContext::DeviceAddressClassToMemType(DeviceAddressClass address_class) const {
   if (address_class == DeviceAddressClass::STACK) {
-    // stack is located in different memory space in different chips 
+    // stack is located in different memory space in different chips
     return GetStackMemType();
   }
   static std::map<DeviceAddressClass, MemType> address_class_mem_type_map = {

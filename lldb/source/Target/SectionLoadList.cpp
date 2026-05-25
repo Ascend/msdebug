@@ -282,6 +282,7 @@ bool SectionLoadList::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
     LLDB_LOG(GetLog(LLDBLog::DynamicLoader), "ResolveLoadAddress with Device, load_addr={0:x}", load_addr);
     return m_device_section_list->ResolveLoadAddress(load_addr, so_addr, allow_section_end);
   }
+  bool found = false;
 #endif
   // First find the top level section that this load address exists in
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -295,10 +296,15 @@ bool SectionLoadList::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
       if (load_addr >= pos_load_addr) {
         addr_t offset = load_addr - pos_load_addr;
         if (offset < pos->second->GetByteSize() + (allow_section_end ? 1 : 0)) {
+#ifdef MS_DEBUGGER
+          found = pos->second->ResolveContainedAddress(offset, so_addr,
+                                                      allow_section_end);
+#else
           // We have found the top level section, now we need to find the
           // deepest child section.
           return pos->second->ResolveContainedAddress(offset, so_addr,
                                                       allow_section_end);
+#endif
         }
       }
     } else {
@@ -310,14 +316,27 @@ bool SectionLoadList::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
         addr_t offset = load_addr - rpos->first;
         if (offset <
             rpos->second->GetByteSize() + (allow_section_end ? 1 : 0)) {
+#ifdef MS_DEBUGGER
+          found = rpos->second->ResolveContainedAddress(offset, so_addr,
+                                                       allow_section_end);
+#else
           // We have found the top level section, now we need to find the
           // deepest child section.
           return rpos->second->ResolveContainedAddress(offset, so_addr,
                                                        allow_section_end);
+#endif
         }
       }
     }
   }
+#ifdef MS_DEBUGGER
+  if (found) {
+    return true;
+  }
+  if (m_device_section_list) {
+    return m_device_section_list->ResolveLoadAddress(load_addr, so_addr, allow_section_end);
+  }
+#endif
   so_addr.Clear();
   return false;
 }

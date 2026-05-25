@@ -30,7 +30,7 @@
 #include <fcntl.h>
 
 #include "llvm/Testing/Support/Error.h"
- 
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -46,21 +46,7 @@ public:
     Status Init() override { return Status(); }
     bool StartListenThread() override { return true; }
     Status EnableDebugMode() override { return Status(); }
-
-    Status ReadRegister(const RegisterInfo *reg_info,
-                        uint32_t core_id, CoreType core_type,
-                        RegisterValue &value) override {
-        return Status("Not implemented");
-    }
-    Status GetRegisterAddr(const llvm::StringRef reg_name,
-                           CoreType core_type, uint64_t &addr) override {
-        return Status("Not implemented");
-    }
-    Status GetRegisterList(std::vector<std::string> &reg_list,
-                           CoreType core_type) override {
-        return Status("Not implemented");
-    }
-    Status CheckRegisterAddr(CoreType core_type, uint64_t addr) override {
+    Status CheckRegisterAddr(CoreType core_type, uint64_t addr) const override {
         return Status();
     }
     SocType GetSocType() override { return SocType::SOC_END; }
@@ -109,14 +95,14 @@ public:
         EXPECT_CALL(*fake_system_func, open(_, _)).WillRepeatedly(__real_open);
         EXPECT_CALL(*fake_system_func, ioctl(_, _, _)).WillRepeatedly(__real_ioctl);
     }
- 
+
     virtual void TearDown() {
         fake_system_func.reset();
     }
- 
+
     static std::unique_ptr<FakeSystemCallFunc> fake_system_func;
 };
- 
+
 std::unique_ptr<FakeSystemCallFunc> AscendProcessLinuxTest::fake_system_func;
 
 extern "C"
@@ -126,15 +112,15 @@ extern "C"
             return AscendProcessLinuxTest::fake_system_func->open(a, b);
         } else {
             return __real_open(a, b);
-        }   
+        }
     }
- 
+
     int __wrap_ioctl(int a, unsigned long int b, DebugInfo &c) {
         if (AscendProcessLinuxTest::fake_system_func) {
             return AscendProcessLinuxTest::fake_system_func->ioctl(a, b, c);
         } else {
             return __real_ioctl(a, b, c);
-        }   
+        }
     }
 }
 
@@ -201,6 +187,6 @@ TEST_F(AscendProcessLinuxTest, SetBreakpoint) {
     uint32_t size = 8;
     EXPECT_THAT_ERROR(process->SetBreakpoint(addr, size, llvm::Triple::ArchType::hiipu64, false).
                         ToError(), llvm::Succeeded());
-}   
+}
 
 #endif

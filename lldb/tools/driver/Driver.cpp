@@ -186,7 +186,40 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   m_debugger.SkipLLDBInitFiles(false);
   m_debugger.SkipAppInitFiles(false);
 #ifdef MS_DEBUGGER
-  llvm::outs() << lldb::SBDebugger::GetLogoString() << '\n';
+  const bool has_version_arg = args.hasArg(OPT_version);
+  if (!has_version_arg) {
+      const bool should_colorize =
+        !args.hasArg(OPT_no_use_colors) && llvm::outs().has_colors();
+      constexpr llvm::StringLiteral kPinkStart("\033[95m");
+      constexpr llvm::StringLiteral kColorReset("\033[0m");
+      constexpr llvm::StringLiteral kMsdebugVersionPrefix("msdebug version ");
+      llvm::StringRef version = lldb::SBDebugger::GetVersionString();
+      llvm::StringRef version_first_line = version.split('\n').first.trim();
+      llvm::StringRef concise_version = version_first_line;
+      bool is_msdebug_version = false;
+
+      if (concise_version.consume_front(kMsdebugVersionPrefix)) {
+        is_msdebug_version = true;
+        size_t revision_pos = concise_version.find('-');
+        if (revision_pos != llvm::StringRef::npos)
+          concise_version = concise_version.take_front(revision_pos);
+      }
+
+      if (should_colorize)
+        llvm::outs() << kPinkStart;
+      if (is_msdebug_version)
+        llvm::outs() << "msdebug " << concise_version;
+      else
+        llvm::outs() << version_first_line;
+      if (should_colorize)
+        llvm::outs() << kColorReset;
+      llvm::outs() << '\n';
+      llvm::outs() << lldb::SBDebugger::GetLogoString() << '\n';
+  }
+  if (has_version_arg) {
+    m_option_data.m_print_version = true;
+  }
+
 #endif
 
   if (args.hasArg(OPT_no_use_colors)) {
@@ -377,6 +410,9 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (m_option_data.m_print_version) {
+#ifdef MS_DEBUGGER
+    llvm::outs() << lldb::SBDebugger::GetLogoString() << '\n';
+#endif
     llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
     exiting = true;
     return error;

@@ -365,6 +365,7 @@ protected:
 | .ascend.host_kernel_object | 存放host上缓存的kernel object数据 |
 | .ascend.file_kernel_object | 存放kernel object文件数据 |
 | .ascend.file_kernel_json | 存放kernel json文件数据 |
+| .ascend.kernel_info | 存放kernel info文件数据 |
 
 5.".ascend.devtbl"
 

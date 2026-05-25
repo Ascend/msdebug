@@ -553,7 +553,7 @@ protected:
       else
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
             true, abort_other_plans, bool_stop_other_threads, new_plan_status);
-      
+
     } else if (m_step_type == eStepTypeTrace) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
           false, abort_other_plans, bool_stop_other_threads, new_plan_status);

@@ -96,12 +96,21 @@ public:
   DWARFDIE
   GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const;
 
+#ifndef MS_DEBUGGER
   bool GetDIENamesAndRanges(
       const char *&name, const char *&mangled, DWARFRangeList &ranges,
       std::optional<int> &decl_file, std::optional<int> &decl_line,
       std::optional<int> &decl_column, std::optional<int> &call_file,
       std::optional<int> &call_line, std::optional<int> &call_column,
       DWARFExpressionList *frame_base) const;
+#else
+  bool GetDIENamesAndRanges(
+      const char *&name, const char *&mangled, DWARFRangeList &ranges,
+      std::optional<int> &decl_file, std::optional<int> &decl_line,
+      std::optional<int> &decl_column, std::optional<int> &call_file,
+      std::optional<int> &call_line, std::optional<int> &call_column,
+      std::optional<int> &function_class, DWARFExpressionList *frame_base) const;
+#endif
 
   /// The range of all the children of this DIE.
   llvm::iterator_range<child_iterator> children() const;

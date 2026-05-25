@@ -20,7 +20,8 @@ protected:
                                const std::map<std::string, DeviceRegisterInfo>& register_map);
 
   const RegisterSet* GetRegisterSet(size_t reg_set) const override;
-  Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type, uint64_t &addr) override;
+  Status GetRegisterAddr(const llvm::StringRef reg_name, CoreType core_type,
+                         InterruptPosType pos_type, uint64_t &addr) override;
 };
 
 // Both classes are in this file since they share the register table, defined in the .cpp.

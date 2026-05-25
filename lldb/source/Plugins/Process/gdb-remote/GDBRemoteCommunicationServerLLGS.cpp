@@ -259,20 +259,26 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_qDeviceRegisterList,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceRegisterList);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_qDeviceAic,
-      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceAic);
+      StringExtractorGDBRemote::eServerPacketType_vDeviceAic,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceAic);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vDeviceSingleCoreRun,
       &GDBRemoteCommunicationServerLLGS::Handle_vDeviceSingleCoreRun);
   RegisterMemberFunctionHandler(
-      StringExtractorGDBRemote::eServerPacketType_qDeviceAiv,
-      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceAiv);
+      StringExtractorGDBRemote::eServerPacketType_vDeviceAiv,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceAiv);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vDeviceThread,
+      &GDBRemoteCommunicationServerLLGS::Handle_vDeviceThread);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qDeviceInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceInfo);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qDeviceCoresInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceCoresInfo);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qDeviceWarpsInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_qDeviceWarpsInfo);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qDeviceKernelInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qDeviceKernelInfo);
@@ -282,6 +288,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vDeviceId,
       &GDBRemoteCommunicationServerLLGS::Handle_vDeviceId);
+  RegisterMemberFunctionHandler(
+          StringExtractorGDBRemote::eServerPacketType_vVFStartPC,
+          &GDBRemoteCommunicationServerLLGS::Handle_vVFStartPC);
 #endif
 }
 
@@ -2188,6 +2197,11 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
     CollectRegNums(reg_info->invalidate_regs, response, true);
     response.PutChar(';');
   }
+#ifdef MS_DEBUGGER
+  response.PutCString("scenarios_mask:");
+  response.PutHex8(reg_info->scenarios_mask);
+  response.PutChar(';');
+#endif
 
   return SendPacketNoLock(response.GetString());
 }
@@ -4292,12 +4306,12 @@ std::string StringJoin(const T &ids) {
 }
 
 GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
-    Handle_qDeviceAic(
+    Handle_vDeviceAic(
     StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Thread);
 
   // Parse core id on focus
-  packet.SetFilePos(strlen("qDeviceAic"));
+  packet.SetFilePos(strlen("vDeviceAic"));
   uint32_t core_id = packet.GetU32(UINT32_MAX, 0);
   if (core_id == UINT32_MAX || !m_current_process) {
     return SendErrorResponse(68);
@@ -4312,12 +4326,12 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
 }
 
 GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
-    Handle_qDeviceAiv(
+    Handle_vDeviceAiv(
     StringExtractorGDBRemote &packet) {
   Log *log = GetLog(LLDBLog::Thread);
 
   // Parse core id on focus
-  packet.SetFilePos(strlen("qDeviceAiv"));
+  packet.SetFilePos(strlen("vDeviceAiv"));
   uint32_t core_id = packet.GetU32(UINT32_MAX, 0);
   if (core_id == UINT32_MAX || !m_current_process) {
     return SendErrorResponse(68);
@@ -4328,6 +4342,26 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
     __FUNCTION__, packet.GetStringRef().data(), core_id);
   StreamGDBRemote response;
   response.PutHex64(core_id);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_vDeviceThread(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+
+  // Parse core id on focus
+  packet.SetFilePos(strlen("vDeviceThread"));
+  uint32_t linear_id = packet.GetU32(UINT32_MAX, 0);
+  if (linear_id == UINT32_MAX || !m_current_process) {
+    return SendErrorResponse(68);
+  }
+  m_current_process->SetThreadOnFocus(linear_id);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s linear_id=%d parsed out",
+    __FUNCTION__, packet.GetStringRef().data(), linear_id);
+  StreamGDBRemote response;
+  response.PutHex64(linear_id);
   return SendPacketNoLock(response.GetString());
 }
 
@@ -4354,7 +4388,7 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   response.PutCString(StringJoin(info.aic_bitmaps));
   response.PutCString("aiv_bitmaps:");
   response.PutCString(StringJoin(info.aiv_bitmaps));
- 
+
   response.PutCString("device_id:");
   response.PutHex32(info.device_id);
   response.PutChar(';');
@@ -4424,6 +4458,42 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
 
   StreamGDBRemote response;
   AddCoresInfoToResponse(info, response);
+
+  PacketResult result;
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s response=%s size=%lu",
+    __FUNCTION__, response.GetString().data(), response.GetSize());
+  result = SendPacketNoLock(response.GetString());
+  return result;
+}
+
+GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
+    Handle_qDeviceWarpsInfo(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Thread);
+  LLDB_LOGF(log,
+    "GDBRemoteCommunicationServerLLGS::%s packet=%s",
+    __FUNCTION__, packet.GetStringRef().data());
+
+  std::vector<WarpInfo> warps_info;
+  if (!m_current_process) {
+    return SendErrorResponse(68);
+  }
+  Status status = m_current_process->GetWarpsInfo(warps_info);
+  if (status.Fail()) {
+    LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s GetWarpsInfo failed", __FUNCTION__);
+    return SendErrorResponse(status);
+  }
+
+  StreamGDBRemote response;
+
+  for (const auto &warp_info : warps_info) {
+    response.Printf("warp_id:%x;", warp_info.warp_id);
+    response.Printf("core_id:%x;", warp_info.core_id);
+    response.Printf("warp_num:%x;", warp_info.warp_num);
+    response.Printf("simt_pc:%lx;", warp_info.simt_pc);
+    response.Printf("exec_mask:%x;", warp_info.exec_mask);
+  }
 
   PacketResult result;
   LLDB_LOGF(log,
@@ -4752,34 +4822,8 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
       if (value.getAsInteger(10, reg_num)) {
         return SendIllFormedResponse(packet, "qDeviceRegisterValue failed, register value is invalid.");
       }
-      ThreadStopInfo stop_info;
-      std::string description;
-      auto *main_thread = m_current_process->GetThreadByID(m_current_process->GetID());
       const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_num);
-      // make special judgement to obtain the PC when ctrl-c in the device
-      if (main_thread && main_thread->GetStopReason(stop_info, description)) {
-        if (stop_info.still_break_in_device && stop_info.reason == StopReason::eStopReasonSignal &&
-            reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
-          uint64_t reg_value = 0;
-          status = m_current_process->GetStoppedCorePC(reg_value);
-          if (status.Fail()) {
-            LLDB_LOG(GetLog(LLDBLog::Thread), "qDeviceRegisterValue error: {0}", status.AsCString());
-            return SendErrorResponse(status);
-          }
-
-          for (size_t i = 0; i < 8; ++i) {
-            uint8_t byte = static_cast<uint8_t>(reg_value >> (i * 8));
-            response.PutHex8(byte);
-          }
-          return SendPacketNoLock(response.GetString());
-
-        } else {
-          status = m_current_process->ReadDeviceRegisterValue(reg_info, reg_value);
-        }
-      } else {
-        return SendIllFormedResponse(packet,
-                                   "qDeviceRegisterValue failed, thread is not exist or get stop reason failed");
-      }
+      status = m_current_process->ReadDeviceRegisterValue(reg_info, reg_value);
     } else {
       return SendIllFormedResponse(packet, "qDeviceRegisterValue failed to parse the register type.");
     }
@@ -4816,11 +4860,11 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
 
   // Ensure we have a thread.
   NativeThreadProtocol *thread = m_current_process->GetThreadAtIndex(0);
-  if (!thread) 
+  if (!thread)
     return SendErrorResponse(69);
   std::vector<std::string> reg_list;
   Status status = m_current_process->ReadDeviceRegisterList(reg_list);
-  
+
   if (status.Fail()) {
     return SendErrorResponse(status);
   }
@@ -4883,4 +4927,21 @@ GDBRemoteCommunicationServerLLGS::Handle_vDeviceId(StringExtractorGDBRemote &pac
             __FUNCTION__, packet.GetStringRef().data(), device_id);
   return SendOKResponse();
 }
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vVFStartPC(
+        StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Process);
+  packet.SetFilePos(strlen("vVFStartPC:"));
+  uint64_t start_pc = packet.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
+  if (start_pc == LLDB_INVALID_ADDRESS) {
+    return SendErrorResponse(68);
+  }
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerLLGS::%s packet=%s vpc=%#lx parsed out",
+            __FUNCTION__, packet.GetStringRef().data(), start_pc);
+  m_current_process->SetVFStartPC(start_pc);
+  return SendOKResponse();
+}
+
 #endif
