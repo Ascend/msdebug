@@ -64,10 +64,10 @@ public:
   uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
 #ifdef MS_DEBUGGER
-  uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
-                     uint64_t &flag) const;
-  bool CanBranch(uint64_t flags) const;
-  bool IsCall(uint64_t flags) const;
+  static uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
+                            uint64_t &flag);
+  static bool CanBranch(uint64_t flags);
+  static bool IsCall(uint64_t flags);
 #endif
   void PrintMCInst(llvm::MCInst &mc_inst, lldb::addr_t pc,
                    std::string &inst_string, std::string &comments_string);
@@ -541,7 +541,8 @@ public:
           auto disasm_wp = m_disasm_wp.lock();
           if (disasm_wp && !disasm_wp->IsValid()) {
             uint64_t flags;
-            inst_size = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, flags);
+            inst_size = DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
+                opcode_data, opcode_data_len, flags);
           } else {
             inst_size = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
           }
@@ -1240,25 +1241,26 @@ protected:
     const uint8_t *opcode_data = data.GetDataStart();
     const size_t opcode_data_len = data.GetByteSize();
 #ifdef MS_DEBUGGER
-    if (!mc_disasm_ptr) {
-      return;
-    }
     auto disasm_wp = m_disasm_wp.lock();
     if (disasm_wp != nullptr) {
       std::string archs = disasm_wp->GetArchitecture().GetArchitectureName();
       if (archs == "hiipu64") {
         uint64_t flags {0};
-        if (mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, flags) == 0) {
+        if (DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
+                opcode_data, opcode_data_len, flags) == 0) {
           return;
         }
         m_has_visited_instruction = true;
-        m_does_branch = mc_disasm_ptr->CanBranch(flags);
-        m_is_call = mc_disasm_ptr->IsCall(flags);
+        m_does_branch = DisassemblerLLVMC::MCDisasmInstance::CanBranch(flags);
+        m_is_call = DisassemblerLLVMC::MCDisasmInstance::IsCall(flags);
         return;
       }
     }
     if (!disasm_wp || !disasm_wp->IsValid()) {
       LLDB_LOGF(GetLog(LLDBLog::Process), "arch is not ascend, but can not use disassembly raw logical");
+      return;
+    }
+    if (!mc_disasm_ptr) {
       return;
     }
 #endif
@@ -1411,7 +1413,7 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 
 #ifdef MS_DEBUGGER
 uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
-    const uint8_t *opcode_data, size_t opcode_data_len, uint64_t &flags) const {
+    const uint8_t *opcode_data, size_t opcode_data_len, uint64_t &flags) {
   uint64_t inst_size;
   AscendDisassemblerHelper::GetInstruction(opcode_data, opcode_data_len, flags, inst_size);
   return inst_size;
@@ -1472,7 +1474,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::CanBranch(
       .mayAffectControlFlow(mc_inst, *m_reg_info_up);
 }
 #ifdef MS_DEBUGGER
-bool DisassemblerLLVMC::MCDisasmInstance::CanBranch(uint64_t flags) const {
+bool DisassemblerLLVMC::MCDisasmInstance::CanBranch(uint64_t flags) {
   return ((flags & (1ULL << llvm::MCID::Call)) || (flags & (1ULL << llvm::MCID::IndirectBranch)) ||
             (flags & (1ULL << llvm::MCID::Branch)) || (flags & (1ULL << llvm::MCID::Return)));
 }
@@ -1484,7 +1486,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::HasDelaySlot(
 }
 
 #ifdef MS_DEBUGGER
-bool DisassemblerLLVMC::MCDisasmInstance::IsCall(uint64_t flags) const {
+bool DisassemblerLLVMC::MCDisasmInstance::IsCall(uint64_t flags) {
   return (flags & (1ULL << llvm::MCID::Call));
 }
 #endif

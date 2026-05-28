@@ -6240,8 +6240,23 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+#ifdef MS_DEBUGGER
+  DeviceStopInfo stop_info;
+  ArchSpec arch = GetTarget().GetArchitecture();
+  if (IsStopInDevice()) {
+    GetDeviceStopInfoCached(stop_info);
+    arch = ArchSpec("hiipu64");
+    arch.SetAicoreType(stop_info.core_type);
+  }
+  Log *log = GetLog(LLDBLog::Step);
+  LLDB_LOG(log, "{0} get arch success, arch: {1}", __FUNCTION__,
+           arch.GetArchitectureName());
+  disassembler_sp = Disassembler::DisassembleRange(arch, plugin_name, flavor,
+                                                   GetTarget(), range_bounds);
+#else
   disassembler_sp = Disassembler::DisassembleRange(
       target.GetArchitecture(), plugin_name, flavor, GetTarget(), range_bounds);
+#endif
   if (disassembler_sp)
     insn_list = &disassembler_sp->GetInstructionList();
 
