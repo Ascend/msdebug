@@ -3,6 +3,8 @@ set(LLDB_DISASSEMBLER_SRC
   )
 if(MS_DEBUGGER)
     list(APPEND LLDB_DISASSEMBLER_SRC AscendDisassemblerHelper.cpp)
+    list(APPEND LLDB_DISASSEMBLER_SRC AscendDisassembler910B.cpp)
+    list(APPEND LLDB_DISASSEMBLER_SRC AscendDisassembler310P.cpp)
 endif()
 add_lldb_library(lldbPluginDisassemblerLLVMC PLUGIN
   ${LLDB_DISASSEMBLER_SRC}

@@ -65,7 +65,7 @@ public:
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
 #ifdef MS_DEBUGGER
   static uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
-                            uint64_t &flag);
+                            const ArchSpec &arch, uint64_t &flag);
   static bool CanBranch(uint64_t flags);
   static bool IsCall(uint64_t flags);
 #endif
@@ -532,18 +532,19 @@ public:
           const addr_t pc = m_address.GetFileAddress();
           llvm::MCInst inst;
 #ifdef MS_DEBUGGER
-          if (!mc_disasm_ptr) {
-            Log *log = GetLog(LLDBLog::Process);
-            LLDB_LOGF(log, "GetDisasmToUse failed. mc_disasm_ptr is nullptr");
-            return 0;
-          }
           size_t inst_size {0U};
           auto disasm_wp = m_disasm_wp.lock();
           if (disasm_wp && !disasm_wp->IsValid()) {
             uint64_t flags;
+            const ArchSpec &arch = disasm->GetArchitecture();
             inst_size = DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
-                opcode_data, opcode_data_len, flags);
+                opcode_data, opcode_data_len, arch, flags);
           } else {
+            if (!mc_disasm_ptr) {
+              Log *log = GetLog(LLDBLog::Process);
+              LLDB_LOGF(log, "GetDisasmToUse failed. mc_disasm_ptr is nullptr");
+              return 0;
+            }
             inst_size = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
           }
 #else
@@ -1246,8 +1247,9 @@ protected:
       std::string archs = disasm_wp->GetArchitecture().GetArchitectureName();
       if (archs == "hiipu64") {
         uint64_t flags {0};
+        const ArchSpec &arch = disasm->GetArchitecture();
         if (DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
-                opcode_data, opcode_data_len, flags) == 0) {
+                opcode_data, opcode_data_len, arch, flags) == 0) {
           return;
         }
         m_has_visited_instruction = true;
@@ -1261,10 +1263,15 @@ protected:
       return;
     }
     if (!mc_disasm_ptr) {
+      LLDB_LOG(GetLog(LLDBLog::Process),
+               "mc_disasm_ptr get failed for arch {0}",
+               disasm_wp ? disasm_wp->GetArchitecture().GetArchitectureName()
+                         : "unknown");
       return;
     }
 #endif
     llvm::MCInst inst;
+    const ArchSpec &arch = disasm->GetArchitecture();
     const size_t inst_size =
       mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
     if (inst_size == 0)
@@ -1413,9 +1420,11 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 
 #ifdef MS_DEBUGGER
 uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
-    const uint8_t *opcode_data, size_t opcode_data_len, uint64_t &flags) {
+    const uint8_t *opcode_data, size_t opcode_data_len, const ArchSpec &arch,
+    uint64_t &flags) {
   uint64_t inst_size;
-  AscendDisassemblerHelper::GetInstruction(opcode_data, opcode_data_len, flags, inst_size);
+  AscendDisassemblerHelper::GetInstruction(opcode_data, opcode_data_len, arch,
+                                           flags, inst_size);
   return inst_size;
 }
 #endif
@@ -1640,10 +1649,17 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
 #ifdef MS_DEBUGGER
   m_arch = arch;
   if (triple.getArchName() == "hiipu64") {
-    if (arch.GetAicoreType() == CoreType::AIC) {
-        features_str += "+dav-c220-cube";
-    } else if (arch.GetAicoreType() == CoreType::AIV) {
-        features_str += "+dav-c220-vec";
+    // useless, for future design
+    if (arch.GetSocType() == SocType::ASCEND910B) {
+      features_str += "+910b,";
+    } else if (arch.GetSocType() == SocType::ASCEND310P) {
+      features_str += "+310p,";
+    } else if (arch.GetSocType() == SocType::ASCEND950) {
+      features_str += "+950,";
+    } else {
+      Log *log = GetLog(LLDBLog::Process);
+      LLDB_LOG(log, "Got unknown soc type {0}",
+               static_cast<int>(arch.GetSocType()));
     }
   }
 #endif
@@ -1672,6 +1688,11 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // we won't get used.
   m_disasm_up = MCDisasmInstance::Create(triple_str, cpu, features_str.c_str(),
                                          flavor, *this);
+
+#ifdef MS_DEBUGGER
+  LLDB_LOG(GetLog(LLDBLog::Process), "Got MCDisasmInstance {0}",
+           m_disasm_up ? "success" : "failed");
+#endif
 
   llvm::Triple::ArchType llvm_arch = triple.getArch();
 
@@ -1707,6 +1728,8 @@ lldb::DisassemblerSP DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
   if (arch.GetTriple().getArch() != llvm::Triple::UnknownArch) {
     auto disasm_sp = std::make_shared<DisassemblerLLVMC>(arch, flavor);
 #ifdef MS_DEBUGGER
+    LLDB_LOG(GetLog(LLDBLog::Process), "{0} CreateInstance with arch {1}",
+             __FUNCTION__, arch.GetArchitectureName());
     // determines whether the compiler object which in DisassemblerLLVMC is valid.
     if (strcmp(arch.GetArchitectureName(), "hiipu64") == 0 && disasm_sp) {
       return disasm_sp;

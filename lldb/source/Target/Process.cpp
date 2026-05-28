@@ -6246,11 +6246,10 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
   if (IsStopInDevice()) {
     GetDeviceStopInfoCached(stop_info);
     arch = ArchSpec("hiipu64");
-    arch.SetAicoreType(stop_info.core_type);
+    arch.SetSocType(stop_info.soc_type);
   }
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOG(log, "{0} get arch success, arch: {1}", __FUNCTION__,
-           arch.GetArchitectureName());
+  LLDB_LOG(log, "get arch success, arch: {0}", arch.GetArchitectureName());
   disassembler_sp = Disassembler::DisassembleRange(arch, plugin_name, flavor,
                                                    GetTarget(), range_bounds);
 #else

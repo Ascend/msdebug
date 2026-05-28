@@ -315,8 +315,8 @@ public:
   const char *GetArchitectureName() const;
 
 #ifdef MS_DEBUGGER
-  CoreType GetAicoreType() const;
-  void SetAicoreType(CoreType core_type);
+  SocType GetSocType() const { return m_soc_type; };
+  void SetSocType(SocType soc_type) { m_soc_type = soc_type; };
 #endif
 
   /// if MIPS architecture return true.
@@ -541,7 +541,7 @@ protected:
   Core m_core = kCore_invalid;
   lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
 #ifdef MS_DEBUGGER
-  CoreType m_aicore_type {CoreType::UNKNOWN_CORE_TYPE};
+  SocType m_soc_type{SocType::SOC_BEGIN};
 #endif
 
   // Additional arch flags which we cannot get from triple and core For MIPS

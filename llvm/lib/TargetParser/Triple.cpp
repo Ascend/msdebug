@@ -2018,6 +2018,9 @@ bool Triple::isLittleEndian() const {
   case Triple::x86_64:
   case Triple::xcore:
   case Triple::xtensa:
+#ifdef MS_DEBUGGER
+  case Triple::hiipu64:
+#endif
     return true;
   default:
     return false;
