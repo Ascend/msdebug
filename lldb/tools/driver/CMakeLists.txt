@@ -11,9 +11,17 @@ if(APPLE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-Info.plist")
 endif()
 
-add_lldb_tool(lldb
+set(LLDB_DRIVER_SOURCES
   Driver.cpp
   Platform.cpp
+)
+
+if(MS_DEBUGGER)
+  list(APPEND LLDB_DRIVER_SOURCES cli_logo.cpp)
+endif()
+
+add_lldb_tool(lldb
+  ${LLDB_DRIVER_SOURCES}
 
   LINK_LIBS
     liblldb

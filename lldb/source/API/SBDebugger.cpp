@@ -736,19 +736,6 @@ SBDebugger::GetScriptInterpreterInfo(lldb::ScriptLanguage language) {
   return data;
 }
 
-#ifdef MS_DEBUGGER
-const char *SBDebugger::GetLogoString() {
-  LLDB_INSTRUMENT();
-  static std::string g_logo_str = "msdebug(MindStudio Debugger) is part of "
-      "MindStudio Operator-dev Tools.\n"
-      "The tool provides developers with a mechanism for debugging "
-      "Ascend kernels running on actual hardware.\n"
-      "This enables developers to debug Ascend kernels without "
-      "being affected by potential changes brought by simulation and emulation environments.";
-  return g_logo_str.c_str();
-}
-#endif
-
 const char *SBDebugger::GetVersionString() {
   LLDB_INSTRUMENT();
 
@@ -1737,20 +1724,20 @@ SBDebugger::LoadTraceFromFile(SBError &error,
 
 void SBDebugger::RequestInterrupt() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
-    m_opaque_sp->RequestInterrupt();  
+    m_opaque_sp->RequestInterrupt();
 }
 void SBDebugger::CancelInterruptRequest()  {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
-    m_opaque_sp->CancelInterruptRequest();  
+    m_opaque_sp->CancelInterruptRequest();
 }
 
 bool SBDebugger::InterruptRequested()   {
   LLDB_INSTRUMENT_VA(this);
-  
+
   if (m_opaque_sp)
     return m_opaque_sp->InterruptRequested();
   return false;

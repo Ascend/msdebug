@@ -44,6 +44,10 @@
 #include <cstring>
 #include <fcntl.h>
 
+#ifdef MS_DEBUGGER
+#include "cli_logo.h"
+#endif
+
 #if !defined(__APPLE__)
 #include "llvm/Support/DataTypes.h"
 #endif
@@ -205,6 +209,7 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
           concise_version = concise_version.take_front(revision_pos);
       }
 
+      PrintLogo();
       if (should_colorize)
         llvm::outs() << kPinkStart;
       if (is_msdebug_version)
@@ -214,7 +219,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
       if (should_colorize)
         llvm::outs() << kColorReset;
       llvm::outs() << '\n';
-      llvm::outs() << lldb::SBDebugger::GetLogoString() << '\n';
   }
   if (has_version_arg) {
     m_option_data.m_print_version = true;
@@ -411,7 +415,7 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 
   if (m_option_data.m_print_version) {
 #ifdef MS_DEBUGGER
-    llvm::outs() << lldb::SBDebugger::GetLogoString() << '\n';
+    PrintLogo();
 #endif
     llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
     exiting = true;
@@ -721,7 +725,7 @@ static void sigtstp_handler(int signo) {
 #ifdef MS_DEBUGGER
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
-  table.printHelp(llvm::outs(), usage_str.c_str(), lldb::SBDebugger::GetLogoString(), false);
+  table.printHelp(llvm::outs(), usage_str.c_str(), "", false);
 
   std::string examples = R"___(
 EXAMPLES:

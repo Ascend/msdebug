@@ -203,7 +203,7 @@ public:
   lldb::SBCommandInterpreter GetCommandInterpreter();
 
   void HandleCommand(const char *command);
-  
+
   void RequestInterrupt();
   void CancelInterruptRequest();
   bool InterruptRequested();
@@ -317,10 +317,6 @@ public:
   SBStructuredData GetScriptInterpreterInfo(ScriptLanguage);
 
   static const char *GetVersionString();
-
-#ifdef MS_DEBUGGER
-  static const char *GetLogoString();
-#endif
 
   static const char *StateAsCString(lldb::StateType state);
 
