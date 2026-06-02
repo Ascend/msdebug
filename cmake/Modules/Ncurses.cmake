@@ -42,12 +42,20 @@ add_custom_target(
     COMMENT "Custom target for extracting ncurses tar file"
 )
 
+# 检测 GCC 11，没有则 fallback 到系统默认 gcc
+find_program(NCURSES_CC gcc PATHS /opt/gcc11-glibc2.17/bin NO_DEFAULT_PATH)
+if(NOT NCURSES_CC)
+    find_program(NCURSES_CC gcc)
+endif()
+message(STATUS "Ncurses CC: ${NCURSES_CC}")
+
 ExternalProject_Add(ncurses_project
     DOWNLOAD_COMMAND ${CMAKE_COMMAND} -E copy_directory ${NCURSES_SOURCE_DIR} ${NCURSES_OUTPUT_DIR}
     SOURCE_DIR "${NCURSES_SOURCE_DIR}"
     BINARY_DIR "${NCURSES_BUILD_DIR}"
     DEPENDS ncurses_extract_target
     CONFIGURE_COMMAND cd ${NCURSES_OUTPUT_DIR} && ./configure
+        CC=${NCURSES_CC}
         --prefix=${NCURSES_INSTALL_DIR}
         CFLAGS=${NCURSES_CFLAGS}
         LDFLAGS=${NCURSES_LINKFLAGS}
