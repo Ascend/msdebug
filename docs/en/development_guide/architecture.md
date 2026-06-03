@@ -1,285 +1,285 @@
-# MindStudio Debugger Architecture design manual
+# MindStudio Debugger Architecture Design Specifications
 
-## 1 Project overview
+## 1 Project Overview
 
-The operator debugging function itself includes three components: anomaly detection, functional debugging, and performance tuning.Previously, functional debugging tools only had simulation debugging capabilities, and there were problems that the simulation was inconsistent with the real results and the performance was poor.In view of this problem, the operator debugging tool msDebug is designed.This article will introduce the module design of msDebug in detail, clarify the main data structure and main processing process, and serve as a guide for future coders and testers.
+The operator debugging function consists of three components: exception detection, function debugging, and performance tuning. Previously, the function debugging tool had only the simulation debugging capability, which resulted in inconsistent simulation and real results and poor performance. To address this issue, the operator debugging tool msDebug is designed. This document describes the module design of msDebug in detail, and specifies the main data structures and key processing procedures, serving as a guide for coding and testing personnel.
 
-## 2. Feature list
+## 2. Function List
 
-| Function list | Function description | 
+| Function          | Description     | 
 |----------------|-------------------------------------------------|
-| Support coredump file analysis | Mainly used to load coredump files, and provide functions to print memory, registers, coredump summary information, cut cores, and view the call stack |
-| Support debugging and enable | Enable basic debugging functions in different operator access scenarios |
+| Analyzing coredump files| Loads coredump files, prints memory, register, and coredump summary information, switches cores, and displays call stacks.|
+| Enabling debugging| Enables basic debugging functions in different operator integration scenarios.|
 
-## 3.Software design
+## 3. Software Design
 
-### 3.1 Analysis of overall design goals
+### 3.1 Overall Objectives
 
-1. Easy code expansion: Due to differences in register tables, memory types and other information of different chips, it is easy to expand the development of register operation and maintenance codes for new chip types and codes related to reading memory data.It is easy to extend the debugging enable function in different operator access scenarios.
+1. Easy code extension: The register tables and memory types vary with chips. Therefore, the register operation and maintenance code and memory read code for new chip types shall be easy to extend. The debugging function can be easily extended in different operator integration scenarios.
 
-2. Data consistency: Operator debugging depends on the data provided by the driver, rts, and compiler. It is necessary to ensure the accuracy and consistency of the data display, and there is an exception handling mechanism when the data is wrong.
+2. Data consistency: Operator debugging depends on the data provided by the driver, RTS, and compiler. The accuracy and consistency of data must be ensured, and an exception handling mechanism must be in place for data errors.
 
-3. Support multiple operator invocation methods: multi-operator invocation, multi-process invocation, and multithreaded invocation.
+3. Support for multiple operator calling modes: multi-operator, multi-process, and multi-thread calling.
 
-4. Support for operator access methods: Different operator access methods are different, and the hijacking of the runtime interface needs to be adapted to a variety of operator call methods.
+4. Support for operator integration methods: Different operator integration methods are available, and runtime interfaces need to be hooked to adapt to multiple operator calling modes.
 
-5. Follow the open source code: modify it based on the original code of lldb, and supplement it with reference to the original process to increase the implementation of Shengteng equipment.
+5. Compliance with open-source code: Modifications shall be based on the existing LLDB codebase. In accordance with the original workflow, implementation for Ascend devices shall be supplemented and added accordingly.
 
-### 3.2 Key element design
+### 3.2 Key Element Design
 
-| Key elements | Design objectives |
+| Key Element| Design Objective |
 | -------- |---------------------------------------------------------------------------------------------------|
-| Implementation model | Modify based on the original code of lldb, and refer to the original process to supplement and increase the implementation for Shengteng equipment.Due to the differences in the register tables, memory types and other information of different chips, it is easy to develop and expand the register operation and maintenance code of the new chip type and the code related to reading memory data. |
-| Interaction model / It is necessary to correctly handle the command line instructions and parameters entered by the user, realize the corresponding debugging functions, and echo normal information or prompt error messages.   |
+| Implementation model| Modifications shall be based on the existing LLDB codebase. In accordance with the original workflow, implementation for Ascend devices shall be supplemented and added accordingly. The register tables and memory types vary with chips. Therefore, the register operation and maintenance code and memory read code for new chip types shall be easy to extend.|
+| Interaction model| The command-line instructions and options entered by users shall be correctly processed to implement the corresponding debugging functions, and normal information or error messages shall be displayed.  |
 
-## 4.Development view
+## 4. Development View
 
-### 4.1 Implementation model
+### 4.1 Implementation Model
 
-#### 4.1.1 Support coredump file analysis module
+#### 4.1.1 Coredump File Analysis Module
 
-##### 4.1.1.1 overview
+##### 4.1.1.1 Overview
 
-The main function of this module is based on the coredump file generated when the AIC ERR crashes, and uses the msDebug tool to load the file and analyze the data, thereby reducing the user's on-site AIC ERR pressure measurement requirements and improving the efficiency of locating hardware anomalies.
+This module uses the msDebug tool to load and analyze the coredump files generated when the AIC ERR crashes. This reduces the need for on‑site AIC ERR stress testing, improving the efficiency of hardware exception debugging.
 
-##### 4.1.1.2 Context view
+##### 4.1.1.2 Context View
 
-![Context view 1](../figures/ContextView1.png)
+![Context view 1](../figures/context_view_1.png)
 
-Support coredump file analysis function, involving multiple peripheral components such as debugger, driver, RTS, etc.This debugging module msDebug belongs to the debugger and is deployed in the CANN architecture element.
-Among them, the driver and rts are based on the AIC ERR crash information reported by the sqcp debugging channel, and the adump component generates a coredump file.Users can use msDebug to load
-coredump files for data analysis.
+The coredump file analysis function involves multiple peripheral components, such as the debugger, driver, and RTS. The msDebug module is a debugger and is deployed in the CANN architecture.
+The driver and RTS report the AIC ERR crash information based on the sqcp debugging channel, and the adump component generates the coredump file. You can use msDebug to load
+coredump file for data analysis.
 
-1. The acquisition of the original data of the coredump file also depends on the original sqcp debugging channel, so there is a conflict between using the msDebug debugging operator program and generating the coredump file, and it cannot be opened at the same time.
+1. The original data of the coredump file is also obtained through the original sqcp debugging channel. Therefore, using msDebug to debug the operator program conflicts with generating the coredump file. They cannot be enabled at the same time.
 
-2. adump to enable the coredump file generation function, a switch is required to be turned on.
+2. The function of generating coredump files must be enabled for adump.
 
-##### 4.1.1.3 Logical view
+##### 4.1.1.3 Logical View
 
-![Logical view 1](../figures/LogicalView1.png)
+![Logical view 1](../figures/logical_view_1.png)
 
-Output a list of software units in tabular form：
+The software unit list is presented in the table format.
 
-| Software unit | Description | External interface | Internal interface | Relationship description |
+| Software Unit | Description | External Interface | Internal Interface | Relationship Description  |
 |-----------------------|----------------|-----------------------|--------------------|---------------------------------|
-| CommandObjectTarget /core file loading command parsing module | --core | / / Parse the--core command, get the coredump file path, and call the DoLoadCore interface to execute the coredump file loading command |
-| CommandObjectMemory | Memory read command parsing module | memory read | / / Parse the memory read command, call the DoReadMemory interface to execute various memory information printing commands |
-| CommandObjectAscend | Information display, kernel-cutting command parsing module /ascend info summary, ascend aiv/aic | / / Parse the ascend command, call the GetSummaryInfo interface to execute the command to obtain summary information, and call the SetAicOnFocus /SetAivOnFocus interface to execute the kernel-cutting command |
-| CommandObjectRegister | Register read command parsing module | register read | / / Parse the register read command, call the ReadRegister interface provided by RegisterContextCorePOSIX_ascend to execute the register information reading command |
-| ProcessElfCoreDevice | elf core process module | / / LoadCore, readMemory, GetSummaryInfo, GetCoresInfo / inherits the ProcessElfCore class and provides the interface for loading coredump files, memory reading interface, coredump file information acquisition interface, kernel cutting interface, and kernel information acquisition |
-| RegisterContextCorePOSIX_ascend / Register management module | / / ReadRegister | is created by ProcessElfCoreDevice when coredump is loaded, and provides a register reading interface for CommandObjectRegister to call. The member variables are RegisterInfoPOSIX_ascend |
-| RegisterInfoPOSIX_ascend | Register information module | / / GetRegisterInfo / As a member variable of RegisterContextCorePOSIX_ascend, it is used to store register information of various chip types |
+| CommandObjectTarget   | Module for parsing core file loading command| --core   | /   | Parses the `--core` command, obtains the coredump file path, and calls the `DoLoadCore` API to execute the coredump file loading command. |
+| CommandObjectMemory   | Module for parsing memory read command    | memory read    | /   | Parses the memory read command and calls the `DoReadMemory` API to execute various memory information printing commands.   |
+| CommandObjectAscend   | Module for displaying information and parsing core switching command | ascend info summary, ascend aiv/aic| /     | Parses the Ascend command, calls the `GetSummaryInfo` API to execute the command for obtaining summary information, and calls the `SetAicOnFocus` or `SetAivOnFocus` API to execute the core switching command.  |
+| CommandObjectRegister | Module for parsing register read command   | register read  | /   | Parses the register read command and calls the `ReadRegister` API provided by `RegisterContextCorePOSIX_ascend` to execute the register information read command.        |
+| ProcessElfCoreDevice  | ELF core process module  | /     | LoadCore, ReadMemory, GetSummaryInfo, GetCoresInfo| Inherits the `ProcessElfCore` class and provides the APIs for loading coredump files, reading memory, obtaining coredump file information, switching cores, and obtaining core information. |
+| RegisterContextCorePOSIX_ascend  | Register management module | /    | ReadRegister   | It is created by `ProcessElfCoreDevice` when a coredump is loaded and provides the register read API for `CommandObjectRegister` to call. The member variable is `RegisterInfoPOSIX_ascend`.|
+| RegisterInfoPOSIX_ascend  | Register information module | /      | GetRegisterInfo  | As a member variable of `RegisterContextCorePOSIX_ascend`, it is used to store register information of various chip types.  |
 
-##### 4.1.1.4 Software implementation unit design
+##### 4.1.1.4 Software Implementation Unit Design
 
 **Static structure diagram**
 
-![Static structure diagram](../figures/static-structure-diagram.png)
+![Static structure diagram](../figures/static_structure_diagram.png)
 
-The register information class RegisterInfoPOSIX_ascend is implemented through polymorphism to facilitate the expansion of subsequent chip types.
+The register information class `RegisterInfoPOSIX_ascend` is implemented through polymorphism to facilitate the extension for subsequent chip types.
 
-#### 4.1.2 Support debugging and enable
+#### 4.1.2 Enabling Debugging
 
 ##### 4.1.2.1 Overview
 
-msDebug supports starting applications for debugging. It now supports application debugging and enabling in a variety of different scenarios, such as single operator, PyTorch multi-operator, and MC2 operator.In order to enable debugging, msDebug supports obtaining the debugging information of the binary segment of the operator kernel object, and dynamically sending information to the runtime operator.
-The success sign of enabling the debugging function is: a breakpoint is issued at the right time and the operator hits the breakpoint.
+msDebug allows you to start an application for debugging. Currently, application debugging can be enabled in various scenarios, such as single-operator, PyTorch multi-operator, and MC2 operator scenarios. To enable debugging, msDebug can obtain the debugging information of the operator kernel object binary segment and the dynamic delivery information of the operator at runtime.
+If the debugging function is successfully enabled, a breakpoint is delivered at the correct time and the operator is suspended.
 
-##### 4.1.2.2 Context view
+##### 4.1.2.2 Context View
 
-![Context view 2](../figures/ContextView2.png)
+![Context view 2](../figures/context_view_2.png)
 
-The debugging function of AscendC on-board involves multiple peripheral components such as the debugger, compiler, driver, and RTS. This debugging module msDebug belongs to the debugger and is deployed in the CANN architecture element. It cooperates with the debugging information provided by the compiler, relies on the runtime dynamic library, and uses ts_debug.The driver interface provided by ko issues debugging commands to the TSFW on the device side, or uses the PCIe interface to issue breakpoint commands to the device side memory. After TSFW receives the debugging notification, it triggers the corresponding DEBUGGER_API to enable the debugging function, and after completing the debugging, it sends a breakpoint command to ts_debug.ko returns the processing result and returns a message to msDebug to complete a standard one-step debugging command flow on the board.Through the extension of DEBUGGER_API, business functions such as breakpoint setting, recovery operation, single-step operation, memory reading, and register reading can be realized separately, and the expansion of new functions can be supported.
+The AscendC board debugging function involves multiple peripheral components such as the debugger, compiler, driver, and RTS. The debugging module msDebug is a debugger and is deployed in the CANN architecture. It works with the debugging information provided by the compiler, depends on the runtime dynamic library, and uses the driver interface provided by ts_debug.ko to deliver debugging commands to the TSFW on the device. Alternatively, it uses the PCIe interface to deliver breakpoint instructions to the device memory. After receiving the debugging notification, the TSFW triggers the corresponding DEBUGGER_API to enable the debugging function. After the debugging is complete, the TSFW returns the processing result to ts_debug.ko and returns a message to msDebug, completing a standard single-step debugging command stream on the board. By extending DEBUGGER_API, you can implement service functions such as breakpoint setting, resuming running, single-step running, memory reading, and register reading, and support the extension of new functions.
 
-##### 4.1.2.3 Logical view
+##### 4.1.2.3 Logical View
 
-msDebug is internally composed of the following three components, and communication between components is implemented using socket.
+msDebug consists of the following three components, which communicate with each other using sockets.
 
-![Logical view 2](../figures/LogicalView2.jpg)
+![Logical view 2](../figures/logical_view_2.jpg)
 
-##### 4.1.2.4 Software implementation unit design
+##### 4.1.2.4 Software Implementation Unit Design
 
-The lldb module adds a debugging information analysis interface for the ascend operator, and the communication interface is added and extended to transmit ascend device information; the lldb-server module adds an abstract class for the ascend operator process to realize the debugging enable function, and the communication server-side interface is added to receive the information sent by the lldb and runtime_stub modules; the runtime_stub module implements the operator program runtime interface hijacking function to provide runtime information for enabling debugging.
+The LLDB module introduces an interface for parsing Ascend operator debug information and an interface for transmitting device-specific Ascend hardware state. The LLDB-server module implements a new abstract process class for Ascend operators, enabling debug features, and introduces a server-side interface to receive data from both the LLDB module and the runtime_stub module. The runtime_stub module implements runtime interface hooking for operator programs, providing runtime information for debugging enabling.
 
-![Software implementation unit design](../figures/software-implementation-unit-design.jpg)
+![Software implementation unit design](../figures/software_implementation_unit_design.jpg)
 
-### 4.2 interface
+### 4.2 Interfaces
 
-#### 4.2.1 Support coredump file analysis module
+#### 4.2.1 Coredump File Analysis Module
 
-##### 4.2.1.1 Overall design
+##### 4.2.1.1 Overall Design
 
-Provides a human-computer interaction interface for a debugger to support coredump file analysis.The external interface can provide help information, and return failure information and correction suggestions when entering abnormal data.
+Provide a human-machine interface for the debugger to support coredump file analysis. The external interface can provide help information, and return failure information and correction suggestions when abnormal data is entered.
 
-##### 4.2.1.2 External interface list
+##### 4.2.1.2 List of External Interfaces
 
-1、Provide the path address of the msDebug coredump file to load the coredump file
+1. Provide the path of the msDebug coredump file to load the coredump file.
 
-```bash
-msdebug --core coredump_file [ kernel.o | <fatbin Executable file in format> ]
-```
+    ```bash
+    msdebug --core coredump_file [ kernel.o | Executable file in fatbin format]
+    ```
 
-或
+    Or
 
-```bash
-msdebug
-(msdebug) target create --core coredump_file [ kernel.o | <fatbin Executable file in format> ]
-```
+    ```bash
+    msdebug
+    (msdebug) target create --core coredump_file [ kernel.o | Executable file in fatbin format]
+    ```
 
-2、Used to print memory address information
+2. Print memory address information.
 
-```bash
-(msdebug) memory read
-```
+    ```bash
+    (msdebug) memory read
+    ```
 
-3、Used to print register information
+3. Print register information.
 
-```bash
-(msdebug) register read
-```
+    ```bash
+    (msdebug) register read
+    ```
 
-4、Used to check and see the crash information of different core ids, such as stack data
+4. Switch cores to view crash information of different core IDs, such as stack data.
 
-```bash
-(msdebug) ascend aiv/aic id
-```
+    ```bash
+    (msdebug) ascend aiv/aic id
+    ```
 
-5、For printing coredump file information，Contains device id、Device type、core id、tensor information
+5. Print coredump file information, including the device ID, device type, core ID, and tensor information.
 
-```bash
-(msdebug) ascend info summary
-```
+    ```bash
+    (msdebug) ascend info summary
+    ```
 
-6、For display coredump code call stack
+6. Display the coredump code call stack.
 
-```bash
-(msdebug) bt
-```
+    ```bash
+    (msdebug) bt
+    ```
 
-示例：
+    Example:
 
-```bash
-(msdebug) target create --core "AddCustom.core"
-Core file 'AddCustom.core' (hiipu64) was loaded.
-[Switching to focus on CoreId 36, Type aiv]
-(msdebug) ascend info summary
-  CoreId  CoreType           PC         DeviceId  ChipType
- *   0       AIV       0x12c04120062c       0        A2/A3
-     1       AIV       0x12c04120062c       0        A2/A3
-     2       AIV       0x12c04120062c       0        A2/A3
+    ```bash
+    (msdebug) target create --core "AddCustom.core"
+    Core file 'AddCustom.core' (hiipu64) was loaded.
+    [Switching to focus on CoreId 36, Type aiv]
+    (msdebug) ascend info summary
+    CoreId  CoreType           PC         DeviceId  ChipType
+    *   0       AIV       0x12c04120062c       0        A2/A3
+        1       AIV       0x12c04120062c       0        A2/A3
+        2       AIV       0x12c04120062c       0        A2/A3
 
-  Id           DataType                   MemType                     Addr                       Size             CoreId    CoreType          dim
-   0    DEVICE_KERNEL_OBJECT                GM                   0x12c0c002e000                 182944             NA          NA              NA
-   1            STACK                    GM/DCACHE               0x12c100230000                  32768             0          AIV              NA
-   2      WORKSPACE_TENSOR                  GM                         0x0                         0               NA          NA              NA
-   3         TILING_DATA                 GM/DCACHE               0x12c100240038                   16               NA          NA              NA
-   4        OUTPUT_TENSOR                   GM                   0x12c0c0024000                  32768             NA          NA              [8, 2048]
-   5        INPUT_TENSOR                    GM                   0x12c0c0012000                  32768             NA          NA              [8, 2048]
-   6            ARGS                     GM/DCACHE               0x12c100240000                   96               NA          NA              NA
-```
+    Id           DataType                   MemType                     Addr                       Size             CoreId    CoreType          dim
+    0    DEVICE_KERNEL_OBJECT                GM                   0x12c0c002e000                 182944             NA          NA              NA
+    1            STACK                    GM/DCACHE               0x12c100230000                  32768             0          AIV              NA
+    2      WORKSPACE_TENSOR                  GM                         0x0                         0               NA          NA              NA
+    3         TILING_DATA                 GM/DCACHE               0x12c100240038                   16               NA          NA              NA
+    4        OUTPUT_TENSOR                   GM                   0x12c0c0024000                  32768             NA          NA              [8, 2048]
+    5        INPUT_TENSOR                    GM                   0x12c0c0012000                  32768             NA          NA              [8, 2048]
+    6            ARGS                     GM/DCACHE               0x12c100240000                   96               NA          NA              NA
+    ```
 
-##### 4.2.1.3 Internal interface list
-
-```cpp
-Interface name: ProcessElfCoreDevice::CreateInstance
-Interface function: Create a ProcessElfCoreDevice instance
-Input parameter name: lldb:: TargetSP target_sp, lldb:: ListenerSP listener_sp, const FileSpec * crash_file, bool can_connect
-Output parameter name: none
-Return value: ProcessSP (ProcessElfCoreDevice instance)
-Note: You need to make a special judgment on the e_machine field in the elf header, which is EM_ASCEND (0x1029)
-```
+##### 4.2.1.3 List of Internal Interfaces
 
 ```cpp
-Interface name: ProcessElfCoreDevice::DoLoadCore
-Interface function: load the Coredump file, the internal interface in ProcessElfCoreDevice, called by CommandObjectTarget
-Input parameter name: None
-Output parameter name: none
-Return value: Status (including whether the operation was successful and error information)
-Precautions: The function of parsing and saving section data needs to be implemented, and the input file needs to be safely verified before parsing.
+Interface: ProcessElfCoreDevice::CreateInstance
+Function: Creates a ProcessElfCoreDevice instance.
+Input: lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec *crash_file, bool can_connect
+Output: none
+Return: ProcessSP (ProcessElfCoreDevice instance)
+Note: The `e_machine` field in the ELF header must be checked. The value must be `EM_ASCEND (0x1029)`.
 ```
 
 ```cpp
-Interface name: ProcessElfCoreDevice::DoReadMemory
-Interface function: The internal interface in ProcessElfCoreDevice is called by CommandObjectMemory to read memory address information
-Input parameter name: lldb:: addr_t addr, size_t size, Status & error, DeviceAddressClass address_class, ArchSpec arch_spec
-Output parameter name: void *buf
-Return value: size_t (returns data length information, if 0 is a read failure)
-Note: DeviceAddressClass needs to add support for DCACHE and ICACHE types. DCACHE also includes STACK, TILING DATA, and ARGS in GM.
+Interface: ProcessElfCoreDevice::DoLoadCore
+Function: Loads the coredump file. This is an internal interface of ProcessElfCoreDevice and is called by CommandObjectTarget.
+Input: none
+Output: none
+Return: Status (including the running result and error information)
+Note: The function of parsing and saving section data needs to be implemented. Before parsing, security verification must be performed on the input file.
 ```
 
 ```cpp
-Interface name: ProcessElfCoreDevice::GetSummaryInfo
-Interface function: read the summary information related to the coredump file and be called by CommandObjectAscend
-Input parameter name: None
-Output parameter name: none
-Return value: SummaryInfo structure
-Note: The definition of the SummaryInfo structure needs to be added to save auxiliary information and memory data information in the coredumpfile, and to display core id, device id, tensor information, etc.
+Interface: ProcessElfCoreDevice::DoReadMemory
+Function: This is an internal interface in ProcessElfCoreDevice and is called by CommandObjectMemory to read memory address information.
+Input: lldb::addr_t addr, size_t size, Status &error, DeviceAddressClass address_class, ArchSpec arch_spec
+Output: void *buf
+Return: size_t (data length. If the value is 0, the read operation fails.)
+Note: DeviceAddressClass needs to support the DCACHE and ICACHE types. DCACHE includes STACK, TILING DATA, and ARGS in GM.
 ```
 
 ```cpp
-Interface name: ProcessElfCoreDevice::ReadRegister
-Interface function: read register information, the interface of RegisterContextCorePOSIX_ascend, called by CommandObjectRegister
-Input parameter name: RegisterInfo reg_info (register information)
-Output parameter name: RegisterValue value (register data)
-Return value: bool (whether it was read successfully)
-Precautions: It is necessary to cooperate with RegisterInfoPOSIX_ascend, which stores the register information table, and SummaryInfo, which stores the register data.
+Interface: ProcessElfCoreDevice::GetSummaryInfo
+Function: Reads the summary information related to the coredump file. This interface is called by CommandObjectAscend.
+Input: none
+Output: none
+Return: SummaryInfo struct
+Note: The SummaryInfo struct needs to be added to store the auxiliary information and memory data in the coredump file, and display the core ID, device ID, and tensor information.
 ```
 
 ```cpp
-Interface name: ProcessElfCoreDevice::UpdateStopInfo
-Interface function: Update the cause information of the coredump location.The main purpose here is to display the stop reason information. By reading the Error register, it shows which pipe (cube/ccu/mte/vec/fixp) is abnormal.When ProcessElfCore and the corresponding thread are created to be called, only ObjectCommand can be called here; SetAixOnFocus (when the core is cut) must be called every time, because the register values of different cores are different.
-Enter the parameter name: bool focus_known_error_core, you need to cut the core to a core_id that can know the pipe exception at the beginning; subsequent users do not need to set it manually, the default is false
-Output parameter name: none
-Return value: void
+Interface: ProcessElfCoreDevice::ReadRegister
+Function: Reads register information. This API is called by RegisterContextCorePOSIX_ascend and is called by CommandObjectRegister.
+Input: RegisterInfo reg_info (register information)
+Output: RegisterValue value (register data)
+Return: bool (whether the read is successful)
+Note: This interface must be used together with RegisterInfoPOSIX_ascend (for storing the register information table) and SummaryInfo (for storing the register data).
 ```
 
-#### 4.2.2 Support debugging and enable
+```cpp
+Interface: ProcessElfCoreDevice::UpdateStopInfo
+Function: Updates the stop information. It is used to display the stop reason information. By reading the error register, it displays which pipe (cube/ccu/mte/vec/fixp) is abnormal. This interface needs to be called after the ProcessElfCore and the corresponding thread are created. Only ObjectCommand can call this interface. This interface needs to be called each time SetAixOnFocus is called (during core switching) because the register values vary with cores.
+Input: bool focus_known_error_core. Initial core switch must target a core_id capable of detecting pipe exceptions. If the user manually switches the core later, this parameter does not need to be set. The default value is false.
+Output: none
+Return: void
+```
 
-##### 4.2.2.1 Overall design
+#### 4.2.2 Enabling Debugging
 
-The interface design should meet the functional requirements of debugging and enabling in different scenarios, and at the same time, the interface is easy to use and reduces the difficulty for users to get started.
+##### 4.2.2.1 Overall Design
 
-##### 4.2.2.2 Design goals
+The interface design must meet the requirements for enabling debugging in different scenarios. In addition, the interface must be easy to use for users to get started.
 
-The command-line interface is divided according to its functions, and the scope of functions provided by the interface should be clearly defined. At the same time, in order to cope with possible future expansion scenarios,
-Reserve flexible and scalable parameters.
+##### 4.2.2.2 Design Objectives
 
-##### 4.2.2.3 Design constraints
+Command line interfaces (CLIs) are classified by function. The function scope provided by each interface must be clearly defined to cope with possible future expansion scenarios.
+Flexible and scalable parameters should be reserved.
 
-The interface design should meet the functional requirements of the following scenarios：
+##### 4.2.2.3 Design Constraints
 
-1. Multi-operator scene specifies the operator
-2. The MC2 operator needs to specify an additional device
+The interface design must meet the function requirements in the following scenarios:
 
-##### 4.2.2.4 Technical selection
+1. Specifying an operator in a multi-operator scenario
+2. Specifying a device for the MC2 operator
 
-The external interface design is as follows：
+##### 4.2.2.4 Technology Selection
 
-Specify operator debugging to enable：
+The external interface design is as follows:
+
+Enabling debugging for a specified operator:
 
 ```bash
 export LAUNCH_KERNEL_PATH=/path/my_kernel.o
 ```
 
-Specify device debugging to enable：
+Enabling debugging for a specified device:
 
-Option 1：
+Solution 1
 
 ```bash
 (msdebug) ascend device $dev_id
 ```
 
-Option 2：
+Solution 2
 
 ```bash
 export LAUNCH_DEVICE_ID=$dev_id
 ```
 
-Because the kernel cut after debugging is enabled is designed as an internal command of msDebug：ascend aiv/aic $core_id ，In order to maintain the unity of the command design, scheme 1 is adopted.
+The core switching interfact after debugging is enabled is an msDebug internal command: `ascend aiv/aic $core_id`. To ensure the consistency of command design, solution 1 is used.
 
-##### 4.2.2.5 Software unit-LLDB submodule
+##### 4.2.2.5 Software Unit - LLDB Submodule
 
-Follow the LLDB command registration framework and add `CommandObjectAscendDevice` Class implementation `ascend device $dev_id` Command function.
+The LLDB command registration framework is used, and the `CommandObjectAscendDevice` class is added to implement the `ascend device $dev_id` command function.
 
 ```cpp
 class CommandObjectAscendDevice : public CommandObjectParsed {
@@ -298,84 +298,84 @@ protected:
 };
 ```
 
-### 4.3 Data model
+### 4.3 Data Model
 
-#### 4.3.1 Support coredump file analysis module
+#### 4.3.1 Coredump File Analysis Module
 
-##### 4.3.1.1 Design goals
+##### 4.3.1.1 Design Objectives
 
-1、The integrity of the data record can fully express the data of the program operation site when the AIC ERR occurs, and help users comprehensively locate the problem.
+1. The data records are complete and can fully express the data of the program running when an AIC error occurs, helping users identify the fault.
 
-2、follow Linux coredump file structure definition rules, refer to coredump file, designed to be suitable for Shengteng chipcoredump File structure.
+2. The coredump file structure for the Ascend chip is designed based on the Linux coredump file structure definition rules and the coredump file.
 
-![coredump file structure](../figures/coredump-file-structure.png)
+![Coredump file structure](../figures/coredump_file_structure.png)
 
-##### 4.3.1.2 Key field description
+##### 4.3.1.2 Key Fields
 
-1.Data type
+1. Data Type
 
-| Field | Description |
+| Field            | Description  |
 |----------------|------|
-| Elf64_Addr     | Number of bytes 8 |
-| Elf64_Half     | Number of bytes 2 |
-| Elf64_Off      | Number of bytes 8 |
-| Elf64_Word     | Number of bytes 4 |
-| unsigned char  | Number of bytes 1 |
+| Elf64_Addr     | Bytes: 8|
+| Elf64_Half     | Bytes: 2|
+| Elf64_Off      | Bytes: 8|
+| Elf64_Word     | Bytes: 4|
+| unsigned char  | Bytes: 1|
 
 2.ELF Header
 
-| Field | Description |
+| Field            | Description                                                                   |
 |----------------|-----------------------------------------------------------------------|
-|e_ident[EI_NIDENT] | These 16 bytes at the beginning contain the identification mark of the ELF file, and provide some data for decoding and parsing the contents of the file, which does not depend on the specific operating system. `7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00` The first 4 digits of 00 indicate ELF, fixed.The specific uses of the latter few are not yet clear, and they should be consistent with the cpu.Added 33 07 after 01 |
-|e_type | This field indicates which type this target file belongs to.ET_CORE, 0x04 |
-| e_machine | This field is used to specify the architecture applicable to the file, EM_ASCEND=0x1029 |
-| e_version | This field indicates the version of the target file.The core file version number is convenient for subsequent compatibility. The first version is 0x01 |
-| e_entry | This field indicates the virtual address of the program entry. |
-| e_flags | This field contains specific flags.The name of the logo conforms to the format of ”EF_machine_flag”.For Intel architecture, it does not define any flags, so e_flags should be 0. |
-| e_ehsize | This field indicates the size of the ELF file header, in bytes. |
-| e_phoff | This field indicates the offset of the program header table in the file at the beginning of the program header table. The Coredump file does not have a program header table. This value should be set to 0 |
-| e_shoff | This field indicates the offset of the section header table in the file at the beginning of the section header table |
-| e_shentsize | This field indicates the size of each entry in the header table, in bytes |
-| e_shnum | This field indicates how many entries are in the header table in total |
-| e_shstrndx | Index of entries corresponding to the section name table in the section header table |
-| e_shnum | This field indicates how many entries are in the header table in total |
+| e_ident[EI_NIDENT]     | The first 16 bytes contain the identification flag of the ELF file and provide data to decode and parse the file, which is independent of the specific operating system. 7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00: The first four bytes indicate ELF, which is fixed. The functions of the following bytes are not specified and the same as those of the CPU. 33 07 is added after 01.|
+| e_type     | Type of the target file.ET_CORE, 0x04 |
+| e_machine     | Architecture to which the file applies. EM_ASCEND=0x1029.|
+| e_version     | Version of the target file. Core file version number, which facilitates subsequent compatibility. The first version is 0x01.|
+| e_entry     | Virtual address of the program entry.|
+| e_flags     | Specific flags. The flag name complies with the "EF_machine_flag" format. For the Intel architecture, no flag is defined, so `e_flags` should be `0`.|
+| e_ehsize     | Size of the ELF header, in bytes.|
+| e_phoff    | Offset of the start of the program header table in the file. The coredump file does not have a program header table, so this value should be `0`.|
+| e_shoff      | Offset of the start of the section header table in the file.|
+| e_shentsize     | Size of each entry in the section header table, in bytes.  |
+| e_shnum  | Total number of entries in the section header table.   |
+| e_shstrndx  | Index of the entry in the section header table that corresponds to the section name table.   |
+| e_shnum  | Total number of entries in the section header table.   |
 
 3.Section Header
 
-| Field | Description |
+| Field          | Description                                              |
 |--------------|--------------------------------------------------|
-| sh_name      |The name of this section is an index number that points to a certain location in the ”String Table" section, where a string ending in ’\0’ is stored |
-| sh_offset    | Indicates the location of this section. This value is the location of the first byte of the section in the file, that is, the offset relative to the beginning of the file, in bytes |
-| sh_size      | Specify the size of the section in bytes |
-| sh_addralign | This member indicates how the content of this section is aligned with bytes, that is, how many bytes the address of this section should be aligned to, 16-byte alignment |
-| sh_entsize   | .ascend.regs Valuable sizeof(RegInfo)=16，Other segments are 0           |
-| sh_link      | .auxinfo.global section in section header table index in |
-| sh_info      | GlobalMemInfo index in the structure array                         |
+| sh_name      | Name of this section, which is an index number pointing to a location in the string table section. The location stores a string ending with '\0'. |
+| sh_offset    | Location of this section. The value is the position of the first byte of the section in the file, that is, the offset relative to the beginning of the file, in bytes. |
+| sh_size      | Size of the section, in bytes.                                    |
+| sh_addralign | This member specifies how the contents of this section are aligned in bytes, that is, the address of this section should be aligned to how many bytes. 16-byte alignment.    |
+| sh_entsize   | `.ascend.regs`: `sizeof(RegInfo)=16`; else, `0`.          |
+| sh_link      | Index of the `.auxinfo.global section` in the section header table.|
+| sh_info      | Index in the GlobalMemInfo structure array.                          |
 
 4.sh_name
 
-| Field | Description |
+| Field            | Description                           |
 |----------------|-------------------------------|
-| .ascend.global   | Store various continuous gm single-segment memory |
-| .ascend.local.{core_id}   | Store continuous memory of different memory types in each core |
-| .ascend.regs.{core_id}    | Store all register data of each core |
-| .ascend.devtbl  | Store global device information data |
-| .ascend.auxinfo.global | Storage pair global memory section description information |
-| .ascend.auxinfo.local | Store each local memory section description information |
-| .ascend.host_kernel_object | store host on the cache kernel object data |
-| .ascend.file_kernel_object | store kernel object file data |
-| .ascend.file_kernel_json | store kernel json file data |
+| .ascend.global   | Stores various continuous GM single-segment memories.                |
+| .ascend.local.{core_id}   | Stores continuous memory of different types in each core.         |
+| .ascend.regs.{core_id}    | Stores all register data of each core.             |
+| .ascend.devtbl  | Stores global device information.                   |
+| .ascend.auxinfo.global | Stores the description of the global memory section.|
+| .ascend.auxinfo.local | Stores the description of each local memory section.|
+| .ascend.host_kernel_object | Stores the kernel object data cached on the host.|
+| .ascend.file_kernel_object | Stores the kernel object file data.|
+| .ascend.file_kernel_json | Stores the kernel JSON file data.|
 
 5.".ascend.devtbl"
 
-| Field | Description |
+| Field            | Description                                             |
 |----------------|-------------------------------------------------|
-| DevdrvChipType chip_type | Device type, currently supported CHIP_CLOUD_V2和CHIP_CLOUD_V4 |
-| uint64_t aic_bitmap0  | 当前kernel用了哪些ai core，bit位置1表示用了 |
+| DevdrvChipType chip_type | Device type. Currently, `CHIP_CLOUD_V2` and `CHIP_CLOUD_V4` are supported.|
+| uint64_t aic_bitmap0  | AI Cores used by the current kernel. If the bit is set to `1`, the AI Core is used.|
 | uint64_t aic_bitmap1   |  |
 | uint64_t aiv_bitmap0 |  |
 | uint64_t aiv_bitmap1 |  |
-| uint32_t dev_id | 使用的设备|
+| uint32_t dev_id | Device in use|
 
 ```cpp
 enum DevdrvChipType : uint32_t {
@@ -401,33 +401,33 @@ enum DevdrvChipType : uint32_t {
 
 6.".ascend.reg.{core_id}"
 
-| Field | Description |
+| Field        | Description            |
 |------------|----------------|
-| addr | register address |
-| reserve[7] / reserved field |
-| reg_size | Register size in bytes |
-|value[16] / Register value, considering the case of 128 bits, A5 is 32 bytes |
+| addr       | Register address.         |
+| reserve[7] | Reserved.          |
+| reg_size   | Register size, in bytes.    |
+| value[16]  | Register value. 32 bytes for A5. 128 bytes needs to be considered.|
 
 7.".ascend.auxinfo.global"
 
 ```cpp
-此section为GlobalMemInfo 结构体数组
+This section is an array of the GlobalMemInfo structure.
 
 struct GlobalMemInfo {
-    uint64_t addr; // 虚拟地址
-    uint64_t size;  // 内存大小
-    uint32_t section_index; // 对应哪个.ascend.global section
-    GlobalDataType type; // 内存是input/output/workspace/stack等类型
+    uint64_t addr; // Virtual address.
+    uint64_t size; // Memory size.
+    uint32_t section_index; // Corresponding .ascend.global section.
+    GlobalDataType type; // The memory is of the input/output/workspace/stack type.
     uint16_t reserve;
     union {
         struct {
             uint16_t coreId;
-        } coreInfo;                // stack 类型的内存区分不同core
+        } coreInfo;                // The stack memory is distinguished by core.
         struct {
             uint32_t dim; // tensor shape
             uint32_t reserve;
             uint64_t dim_size[25];
-        } shape;                    // input、output
+        } shape;                    // Input or output.
     };
 };
 
@@ -435,177 +435,177 @@ struct GlobalMemInfo {
 
 8.GlobalDataType
 
-| Field | Description |
+| Field       | Description              |
 |-----------|------------------|
-| INVALID_TENSOR | Invalid vector |
-| GENERAL_TENSOR | UNIVERSAL vector |
-| INPUT_TENSOR / Input vector |
-| OUTPUT_TENSOR / Output vector |
-| WORKSPACE_TENSOR | workspace vector |
-| TILING_DATA | tiling data |
-| ARGS | Parameters |
-| DEVICE_KERNEL_OBJECT / device side GM middle operator.o data |
+|  INVALID_TENSOR | Invalid vector.            |
+| GENERAL_TENSOR | General vector.            |
+| INPUT_TENSOR | Input vector.            |
+| OUTPUT_TENSOR | Output vector.            |
+| WORKSPACE_TENSOR | Workspace vector.     |
+| TILING_DATA | Tiling data.        |
+| ARGS | Parameters.              |
+| DEVICE_KERNEL_OBJECT | Operator .o data in the GM on the device.|
 
 9.".ascend.auxinfo.local"
 
-| Field | Description |
+| Field       | Description                                                                 |
 |-----------|---------------------------------------------------------------------|
-| section_index | Which one corresponds to .ascend.local section                                           |
-| global_section_index | Which one corresponds to .ascend.global section，Only dcache is valid，dcache points args、tiling data、stack |
-| size | Memory size                                                                |
-| rtDebugMemoryType | local memory Memory type               |
+| section_index | Corresponding .ascend.local section                                          |
+| global_section_index | Corresponding .ascend.global section. Only dcache is valid. dcache is classified into args, tiling data, and stack.|
+| size | Memory size.                                                               |
+| rtDebugMemoryType | Local memory type.              |
 
-#### 4.3.2 Support debugging and enable
+#### 4.3.2 Enabling Debugging
 
-Does not involve data model design.
+Data model design is not involved.
 
-### 4.4 Safety implementation design
+### 4.4 Security Implementation
 
-#### 4.4.1 Safety design objectives
+#### 4.4.1 Security Design Objectives
 
-> To add external input files, the following security protections are required: readability and executable, file size, file existence, file path length, non-soft links, roup and other user groups are not writable, and the owner is root or the current user
+> For new external input files, the following security protection measures must be taken: readability and executability, file size, file existence, file path length, non-soft link, and read-only permission for the `group` and `other` user groups. The owner must be the root user or the current user.
 
-#### 4.4.2 Identification of high-risk modules
+#### 4.4.2 Identification of High-Risk Modules
 
-##### 4.4.2.1 High-risk API identification
+##### 4.4.2.1 Identification of High-Risk APIs
 
-| High-risk API | Interface description | High-risk interface function analysis | corresponding code directory | Language type | Remarks |
+| High-risk API| Description               | Function Analysis         | Code Directory             | Language| Remarks|
 |--------|---------------------|--------------------| ------------------------- |------| ---- |
-| --core | Enter the coredump file and read the data in it | consider external input file verification operations, soft link attacks | CommandObjectTarget.cpp | C++  |      |
+| --core | Reads data from the input coredump file.| External input file verification and soft link attacks| CommandObjectTarget.cpp | C++  |      |
 
-#### 4.4.3 Code implementation security prevention processing
+#### 4.4.3 Implementation of Security Defenses
 
-**1. High-risk API security reinforcement**
+**1. Security hardening for high-risk APIs**
 
-For external file input, perform sufficient ownership verification：
-File existence verification, file read and write and other usage rights verification, file quantity and size verification
-Soft link verification: It is forbidden to use soft links or there is a risk of soft links and abnormal scenarios for protection
-Ownership verification: (For reading commands or starting script scenarios) Generally, it is necessary to ensure that the current input file can only be owned by the current process user (ruid) or root, and other user permissions do not include write permissions. At this time, the target file is trusted.
-For specific business scenarios, additional verification can be performed according to the actual business logic to further ensure that the input files are credible.
+For external file input, perform comprehensive ownership verification:
+file existence verification, file read/write permission verification, and file quantity and size verification.
+Soft link verification: Do not use symbolic links or protect against risks and exceptions caused by symbolic links.
+Ownership verification: (for read commands or startup scripts) Ensure that the current input file can be owned only by the current process user (ruid) or the `root` user, and other users do not have the write permission. In this case, the target file is trusted.
+For specific service scenarios, additional verification can be performed based on the actual service logic to further ensure that the input file is trusted.
 
-**2. Error and exception handling**
-Reasonable error and exception handling mechanisms can ensure that the API can be terminated in a controlled manner under abnormal circumstances, and appropriate error messages are returned to the user.
-After the verification is completed, an error is found, an error message is prompted, and reasonable suggestions for modification are given.
-If the coredump file is found to be written by other users or groups, an error will be given：
+**2. Error and exception handling**  
+A robust error and exception handling mechanism ensures that the API terminates in a controlled manner under exceptional conditions and returns appropriate error information to the user.
+Upon completion of the verification, if an error is detected, an error message is displayed, and a reasonable modification suggestion is provided.
+For example, if the coredump file can be written by other users or groups, an error message is displayed:
 
 > error: Risky action, "coredump file" is writable by any other users or groups.
 
-#### 4.4.4 Code implementation security prevention processing
+#### 4.4.4 Code Security Protection
 
-1.Entry verification: Every command and entry parameter entered by the tool will be verified, and any subsequent new input items need to supplement the verification logic.
+1. Input verification: Each command and augment input by the tool are verified. The verification logic must be added for any new input item.
 
-2.Error handling: If it will verify the path, permissions, whether the input file is a soft link, whether it contains illegal characters, whether it is writable, whether it belongs to the group, and whether the owner is correct.If the verification fails, the process exits without subsequent operations.
+2. Error handling: The system validates input file paths, permissions, symbolic links, illegal characters, write permission, and ownership. If the validation fails, the process terminates immediately.
 
-3.Log audit: It is forbidden to print the file path in the current log, and ERROR level INFORMATION cannot be printed under normal functions. In some circular logic, attention needs to be paid to log printing, which cannot cause the screen to be swiped.
+3. Log audit: File paths must not be printed in logs. Error-level information must not be printed when the function is normal. In some loop logic, pay attention to log printing to avoid screen flooding.
 
-### 4.5 Developer test model
+### 4.5 Testing Model
 
-#### 4.5.1 Support coredump file analysis module
+#### 4.5.1 Core Dump File Analysis Module
 
-This document is used to define the developer test key element model of msDebug (which supports coredump file analysis requirements), as a layer 0 DT common design, including software testability design and test layering strategy, which includes DT environment, test engineering design, and basic general design for different layering.
-Framework and domain-specific framework design, DFX special testing, etc.
+Define the key element model for msDebug (supporting coredump file analysis) developer testing (DT) as a Layer 0 public design. This includes software testability design and layered testing strategies. It covers DT environments, test project design, general and domain-specific frameworks, and DFX testing for various layers.
+  
+##### 4.5.1.1 Design Constraints
 
-##### 4.5.1.1 Design constraints
+Architectural design principles and constraints.
 
-Principles and constraints of architectural design.
+##### 4.5.1.2 Testability Design
 
-##### 4.5.1.2 Testability design
+UT: Covers all interfaces with 80% code line coverage and 60% branch coverage.
 
-UT: Covers all interfaces, with a row coverage rate of 80% and a branch coverage rate of 60%.
+IT: Assembles and tests software units (functional modules) based on the high-level design (HLD) for modules, subsystems, and systems.
 
-IT: Each unit (functional module) of the software is designed and tested for the assembly of modules, subsystems, and systems in accordance with the summary design instructions.
+ST: Tests whether each complete function works correctly.
 
-ST: Test whether each complete function is correct.
+##### 4.5.1.3 Layered Testing
 
-##### 4.5.1.3 Hierarchical testing
-
-| Layering | Test type | test object | test value |
+| Layer| Test Type     | Test Object                                   | Test Value|
 |---|-----|-----------------------------------------| ---|
-| UT | Unit test | All interface internal functions and classes / Verify that the minimum implementation unit work meets expectations
-| IT | Integration testing | Support coredump file analysis module | Verify that the function of loading and analyzing coredump files using msDebug is normal
-| ST | System test | Operator crashes, generates coredump file, uses msDebug to analyze coredump file | End-to-end Check whether the whole process function of this module is normal
+| UT    |    Unit test   | All internal functions and classes of the interfaces       | Verifies that the minimal implementation units work as expected.
+| IT    | Integration test| Coredump file analysis module      | Verifies that the function of loading and analyzing coredump files using msDebug is normal.
+| ST     |   System test| Operator crash, coredump file generation, and coredump file analysis using msDebug| Verifies that all features of this module operate normally across the complete end-to-end workflow.
 
-##### 4.5.1.4 Key test technical solutions
+##### 4.5.1.4 Key Testing Solutions
 
-1. Test engineering design
+1. Test Project Design
 
-UT: Use gtest, use gmock for piling
+    UT: gTest, and gMock for instrumentation.
 
-2. Physical design
+2. Physical Design
 
-ST directory structure：
+    ST directory structure:
 
-```bash
-lldb
-├── test
-│    ├── API
-│    └── Shell
-│        └── Commands
-│            └── AscendCommandScriptImmediateOutput
-│                └── Coredump
-└────── Unit
-```
+    ```bash
+    lldb
+    ├── test
+    │    ├── API
+    │    └── Shell
+    │        └── Commands
+    │            └── AscendCommandScriptImmediateOutput
+    │                └── Coredump
+    └────── Unit
+    ```
 
-UT Directory structure：
+    UT directory structure:
 
-```bash
-lldb
-└── unittests
-     └── Process
-         ├── elf-core
-         │    ├── ProcessElfCoreDeviceTest.cpp
-         │    └──RegisterContextPOSIXCore_ascendTest.cpp
-         └──Utility
-              └── RegisterInfoPOSIX_ascendTest.cpp
-```
+    ```bash
+    lldb
+    └── unittests
+        └── Process
+            ├── elf-core
+            │    ├── ProcessElfCoreDeviceTest.cpp
+            │    └──RegisterContextPOSIXCore_ascendTest.cpp
+            └──Utility
+                └── RegisterInfoPOSIX_ascendTest.cpp
+    ```
 
-3. Operating environment
+3. Operating Environment
 
-Since the currently supported machine types are A2 and A3, all ST needs to run on these two types of machines.
+    ST must run on supported devices: Atlas A2 and A3 products
 
-#### 4.5.2 Debugging enable
+#### 4.5.2 Debugging Enablement
 
-##### 4.5.2.1 Design objectives
+##### 4.5.2.1 Design Objectives
 
-To add external input files, the following security protections are required: readability/executable, file size, file existence, file path length, non-soft links, group and other user groups are not writable, and the owner is root or the current user
+For new external input files, the following security protection measures must be taken: readability/executability, file size, file existence, file path length, non-symbolic link, `group` and `other` user groups not writable, and owner being `root` or the current user.
 
-##### 4.5.2.2 Design constraints
+##### 4.5.2.2 Design Constraints
 
-Comply with architectural design constraints.
+Comply with architecture design constraints.
 
-##### 4.5.2.3 Designability design
+##### 4.5.2.3 Designability Design
 
-The LLVM framework provides the llvm-lit tool to support convenient verification of command-line interactive commands, and uses this tool to complete the ST test of the msDebug tool.
-The test case design is as follows：
-| Test scenario | Test plan | Expected result |
+The LLVM framework provides the llvm-lit tool to facilitate the verification of command-line interaction commands. This tool is used to perform the ST of the msDebug tool.
+The test case design is as follows.
+
+|  Test Scenario                                                                      |  Test Scheme                                                                                         |  Expected Result               |
 | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------- |
-| c++ directly <<<>>> Start the operator, the operator is packaged in fatbin | Use the c++ project to compile a binary file, debug breakpoints and variable printing / Breakpoints, variable function printing is normal |
-| The python PyTorch framework starts the aclnn encapsulated operator, and the operator file is stored independently | Use python PyTorch to start the aclnn operator, manually import the operator debugging information, and perform breakpoints and variable printing debugging | breakpoints, variable function printing is normal |
-| The python PyTorch framework starts the <<<>>>encapsulated operator, and the operator is packaged in the dynamic library | Use python PyTorch to start the <<<>>>operator, debug breakpoints and variable printing /Breakpoints, variable function printing is normal |
-| The python PyTorch framework starts the aclnn encapsulated operator, and the operator is packaged in a dynamic library | Use python PyTorch to start the aclnn operator, debug breakpoints and variable printing / Breakpoints, variable function printing is normal |
-| The debugger failed to open the driver / After removing the driver device node| use the c++ project to compile the binary file, perform breakpoints and variable printing debugging | Throw an exception to terminate debugging after running |
-| runtime library interface function pointer acquisition failed | After moving the location of the runtime library file, use the c++ project to compile the binary file, debug breakpoints and variable printing | Throw an exception to terminate debugging after running |
-| Driver initialization debugging failed in enable mode | After using an older driver package, use the c++ project to compile a binary file, debug breakpoints and variable printing | Throw an exception to terminate debugging after running |
-| Operator runtime information acquisition failed | Use the c++ project to compile a binary file, print and debug breakpoints and variables, pile pcStartAddr to obtain the function, construct failed | Throw an exception to terminate debugging after running |
-| Use the occupied device for debugging | Use the c++ project to compile a binary file, debug breakpoints and variable printing, do not exit, start again, debug breakpoints and variable printing | Throw an exception to terminate debugging after running |
-| The dependent CANN environment variable was not found | Manually empty the value of the environment variable \ASCASCEND\_TOOLKIT\_HOME, use THE c++ project to compile the binary file, perform breakpoints, variable printing debugging | Throw an exception to terminate debugging after running |
-| The python PyTorch framework starts multiple aclnn encapsulated operators, the operator files are stored independently, and specific operators are specified for debugging | Use python PyTorch to start the aclnn operator, manually import the operator debugging information, and perform breakpoints and variable printing debugging | breakpoints, variable function printing is normal |
-| python PyTorch framework starts the aclnn encapsulated operator, the operator is packaged in a dynamic library, specify a specific operator to debug | Use python PyTorch to start the aclnn operator, manually import the operator debugging information, perform breakpoints, variable printing debugging | breakpoints, variable function printing is normal |
+|  Launching kernels directly from C++ using <<<>>> and packaging the operators in fatbin                                     |  Use a C++ project to compile a binary file and print and debug breakpoints and variables.                                              |  Breakpoint and variable printing are normal. |
+|  Starting the operator encapsulated by aclnn using the Python PyTorch framework, with the operator file stored separately                       |  Starting the aclnn operator using Python PyTorch, manually importing operator debugging information, and performing breakpoint and variable printing debugging                    |  Breakpoint and variable printing are normal. |
+|  Starting the operator encapsulated by <<<>>> using the Python PyTorch framework, with the operator packaged in a dynamic library                    |  Use Python PyTorch to start the <<<>>> operator and print and debug breakpoints and variables.                                         |  Breakpoint and variable printing are normal. |
+|  Starting the operator encapsulated by aclnn using the Python PyTorch framework, with the operator packaged in a dynamic library                     |  Use Python PyTorch to start the aclnn operator and print and debug breakpoints and variables.                                          |  Breakpoint and variable printing are normal. |
+|  Debugger failed to open driver                                                            |  After removing the driver device node, use a C++ project to compile a binary file and print and debug breakpoints and variables.                          |  An exception is thrown after running, and debugging is terminated. |
+|  Runtime library interface function pointer acquisition failure                                                 |  After moving the runtime library file, use a C++ project to compile a binary file and print and debug breakpoints and variables.                     |  An exception is thrown after running, and debugging is terminated. |
+|  Driver initialization debug enablement failure                                                    |  After using an older driver package, use a C++ project to compile a binary file and print and debug breakpoints and variables.                          |  An exception is thrown after running, and debugging is terminated. |
+|  Operator runtime information retrieval failure                                                        |  Use a C++ project to compile a binary file and print and debug breakpoints and variables. Use `pcStartAddr` to obtain the function. Construction fails.           |  An exception is thrown after running, and debugging is terminated. |
+|  Debugging using an occupied device                                                  |  Use a C++ project to compile a binary file and print and debug breakpoints and variables. Do not exit. Restart the process and print and debug breakpoints and variables again.    |  An exception is thrown after running, and debugging is terminated. |
+|  Dependent CANN environment variables not found                                                      |  Manually clear the value of the environment variable `\$ASCEND\_TOOLKIT\_HOME`, use a C++ project to compile a binary file, and print and debug breakpoints and variables. |  An exception is thrown after running, and debugging is terminated. |
+|  Starting multiple operators encapsulated by aclnn using the Python PyTorch framework, with the operator files stored separately, and specifying a specific operator for debugging |  Starting the aclnn operator using Python PyTorch, manually importing operator debugging information, and performing breakpoint and variable printing debugging                    |  Breakpoint and variable printing are normal. |
+|  Starting the operator encapsulated by aclnn using the Python PyTorch framework, with the operator packaged in a dynamic library, and specifying a specific operator for debugging   |  Starting the aclnn operator using Python PyTorch, manually importing operator debugging information, and performing breakpoint and variable printing debugging                    |  Breakpoint and variable printing are normal. |
 
-##### 4.5.2.4 Hierarchical testing
+##### 4.5.2.4 Layered Testing
 
-| Layering | Test type | test object | test value |
-| ST | Smoke test | msDebug | Verification tool end-to-end function |
-| UT | Unit test | AscendProcessLinux / Verify that the Ascend process abstract class functions correctly |
+| Layer | Test Type | Test Object | Test Value |
+| ST | Smoke test | msDebug | Verify the end-to-end functions of the tool. |
+| UT | Unit test | AscendProcessLinux | Verify that the functions of the Ascend process abstract class are correct. |
 
-##### 4.5.2.5 Key test technical solutions
+##### 4.5.2.5 Key Testing Solutions
 
 1. Test engineering technology
-   The llvm-lit test framework is used in the LLVM project for smoke testing, end-to-end verification and testing of the LLDB function, and the msDebug function of this framework can continue to be used.
+   In the LLVM project, the llvm-lit test framework is used to perform smoke tests and end-to-end verification of LLDB functions. This framework can also be used to maintain the msDebug functions.
 2. Physical design
-   Independent of the business code directory, test cases are stored in the test directory and stored separately according to different operator call scenarios.
+   Test cases are stored in the `test` directory, which is independent of the service code directory. They are stored separately based on different operator calling scenarios.
 
-```bash
+   ```bash
    $ tree ./test/Shell/Commands/AscendCommandScriptImmediateOutput
    ./test/Shell/Commands/AscendCommandScriptImmediateOutput
    ├── AddAclnn
@@ -659,40 +659,40 @@ The test case design is as follows：
        ├── test_case_matmul_kernel_invocation.sh
        ├── test_case_matmul_leakyrelu_framework_aclnn.sh
        └── test_case_matmul_leakyrelu_kernel_invocation.sh
-```
+   ```
 
 3. Operating environment
-   The operating environment depends on Shengteng hardware.
-4. Data structure design
-   Use real data to implement component or end-to-end acceptance testing.
+   The operating environment depends on the Ascend hardware.
+4. Data construction design
+   Use real data to implement component or end-to-end acceptance tests.
 
-## 5. Run view
+## 5. Runtime View
 
-### 5.1 Interaction model
+### 5.1 Interaction Model
 
-#### 5.1.1 Support coredump file analysis
+#### 5.1.1 Analyzing Coredump Files
 
-![coredump file analysis](../figures/coredump-file-analysis.png)
+![Analyzing coredump files](../figures/analyzing_coredump_files.png)
 
-Based on the instructions entered by the user, it is passed into different Command parsing classes, and the commands are executed through the process management class and the register management class to obtain the coredump file data.
+The commands entered by users are passed to different command parsing classes, and the commands are executed through the process management class and register management class to obtain the coredump file data.
 
-#### 5.1.2 Support debugging and enable
+#### 5.1.2 Enabling Debugging
 
-Specify the operator debugging to enable the interaction process as shown below, obtain the binary segment and runtime information of the operator kernel object, and enable the debugging function before the operator kernel is executed.
-Support specifying specific operators for debugging, you need to define the following concepts：
+The following figure shows the interaction process of enabling debugging for a specified operator. The binary segment and runtime information of the operator kernel object are obtained, and the debugging function is enabled before the operator kernel is executed.
+Debugging can be performed on a specified operator. The following concepts need to be defined:
 
-1) The unique logo of the operator kernel；
-2) Determine the enabled operator kernel；
-3) The timing of enabling kernel debugging of specific operators；
+(1) Unique ID of the operator kernel;
+(2) Determining the operator kernel to be enabled;
+(3) Timing for enabling debugging of a specific operator kernel;
 
-First, use an encryption algorithm (such as SHA256) to hash the operator kernel object file, and obtain a unique hash value to identify the operator kernel.The reason why the file system path of the operator kernel file is not used as the identification is that there is no guarantee that it will not have the same name as other operator kernel objects.
+First, use an encryption algorithm (such as SHA256) to perform hash calculation on the operator kernel object file to obtain a unique hash value to identify the operator kernel. The reason for not using the file system path of the operator kernel file as the identifier is that it cannot be ensured that the name is different from that of other operator kernel objects.
 
-Secondly, the way to determine which operator kernel is enabled is that when the breakpoint position set by the user matches the debugging information in the operator kernel object, we think the user expects the kernel to be enabled.When a total of multiple breakpoints match to different operator kernels, take the kernel corresponding to the last set breakpoint as the operator kernel that is expected to be enabled. In this way, in theory, after the user completes the debugging of one operator kernel, set the breakpoint of the next operator kernel again, and you can continue to complete the debugging.
+Second, the method for determining which operator kernel to enable is as follows: When the breakpoint location set by the user matches the debugging information in the operator kernel object, we consider that the user expects to enable the kernel. When multiple breakpoints match different operator kernels, the kernel corresponding to the last breakpoint is used as the operator kernel to be enabled. In this way, theoretically, after debugging an operator kernel, the user can set a breakpoint for the next operator kernel to continue the debugging.
 
-Finally, the key to the timing of enabling kernel debugging of a specific operator lies in the timing of completing the device breakpoint setting.The debugger needs to hijack a series of interfaces such as rtKernelLaunch(), and before each operator kernel calls the function, inform the debugger of the identity of the operator kernel called this time. If the identity matches the operator kernel specified by the user, then the debugger configures the device breakpoint according to the runtime information of the operator kernel. After the configuration is completed, notify the operator kernel to continue running until the breakpoint is hit.
+Finally, the timing for enabling debugging of a specific operator kernel depends on the timing for setting the device breakpoint. The debugger needs to intercept a series of interfaces such as `rtKernelLaunch()`. Before each operator kernel calls this function, the debugger is notified of the ID of the operator kernel to be called. If the ID matches the operator kernel specified by the user, the debugger configures the device breakpoint based on the runtime information of the operator kernel. After the configuration is complete, the debugger instructs the operator kernel to continue running until the breakpoint is hit.
 
-![Debugging enables the interaction process](../figures/debugging-enables-the-interaction-progress.jpg)
+![Debugging enablement interaction process](../figures/debugging_enablement_interaction_process.jpg)
 
-Specify the device debugging to enable the interaction process as follows：
+The following figure shows the interaction process of enabling debugging for a specified device.
 
-![Specify device debugging to enable interactive flow](../figures/device-interaction-flow.jpg)
+![Interaction process of enabling debugging for a specified device](../figures/interaction_process_of_enabling_debugging_for_a_specified_device.jpg)
