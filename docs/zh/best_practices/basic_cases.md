@@ -600,3 +600,858 @@
     ```bash
     (msdebug) q
     ```
+
+## 显示调试信息
+
+本节演示如何使用 `msdebug` 命令在调试算子时获取设备、核、任务、流、块以及 Coredump 的相关信息。以下 Triton 脚本同时涉及 Cube 核和 Vector 核。
+
+```python
+import torch
+import triton
+import triton.language as tl
+
+@triton.jit
+def mm_kernel(
+    a_ptr, b_ptr, c_ptr, d_ptr,
+    stride_am: tl.constexpr,
+    stride_ak: tl.constexpr,
+    stride_bk: tl.constexpr,
+    stride_bn: tl.constexpr,
+    stride_cm: tl.constexpr,
+    stride_cn: tl.constexpr,
+    stride_dm: tl.constexpr,
+    stride_dn: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+    BLOCK_N: tl.constexpr
+):
+    a_ptrs = a_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_am + tl.arange(0, BLOCK_K)[None, :] * stride_ak)
+    b_ptrs = b_ptr + (tl.arange(0, BLOCK_K)[:, None] * stride_bk + tl.arange(0, BLOCK_N)[None, :] * stride_bn)
+    c_ptrs = c_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_cm + tl.arange(0, BLOCK_N)[None, :] * stride_cn)
+    d_ptrs = d_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_dm + tl.arange(0, BLOCK_N)[None, :] * stride_dn)
+    
+    a = tl.load(a_ptrs)
+    b = tl.load(b_ptrs)
+
+    c = tl.dot(a, b)
+    
+    tl.store(c_ptrs, c)
+
+    d = c + c
+
+    tl.store(d_ptrs, d)
+
+
+def test_mm(datatype: str, BLOCK_M: int, BLOCK_K: int, BLOCK_N: int) -> torch.Tensor:
+
+    total_elements_a = BLOCK_M * BLOCK_K
+    a_flat = torch.arange(total_elements_a, dtype=torch.float16).npu()
+    a = a_flat.reshape(BLOCK_M, BLOCK_K)
+    b_flat = a_flat * 2
+    b = b_flat.reshape(BLOCK_K, BLOCK_N)
+    
+    c = torch.empty((BLOCK_M, BLOCK_N), dtype=eval(f'torch.{datatype}')).npu()
+    d = torch.empty((BLOCK_M, BLOCK_N), dtype=eval(f'torch.{datatype}')).npu()
+
+    mm_kernel[(1,)](
+        a,b,c,d,
+        a.stride(0), a.stride(1),
+        b.stride(0), b.stride(1),
+        c.stride(0), c.stride(1),
+        d.stride(0), d.stride(1),
+        BLOCK_M, BLOCK_K, BLOCK_N
+    )
+
+    return d
+
+if __name__ == "__main__":
+    output_triton = test_mm('float16', 4,4,4)
+    print("output: ", output_triton)
+```
+
+在 JIT 函数的第一行设置断点：
+
+```bash
+Process 86637 stopped
+[Switching to focus on Kernel mm_kernel, CoreId 1, Type aic]
+* thread #1, name = 'python', stop reason = breakpoint 1.1
+    frame #0: 0x0000124000000384 device_debugdata_1`mm_kernel at matmul.py:18:22
+   15       BLOCK_K: tl.constexpr,
+   16       BLOCK_N: tl.constexpr
+   17   ):
+-> 18       a_ptrs = a_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_am + tl.arange(0, BLOCK_K)[None, :] * stride_ak)
+   19       b_ptrs = b_ptr + (tl.arange(0, BLOCK_K)[:, None] * stride_bk + tl.arange(0, BLOCK_N)[None, :] * stride_bn)
+   20       c_ptrs = c_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_cm + tl.arange(0, BLOCK_N)[None, :] * stride_cn)
+```
+
+> [!NOTE]
+> 如需获取更详细的信息，可以使用以下命令。请记住，**进程必须已启动**。
+
+### ascend info devices
+
+显示设备总体信息。执行以下命令查询算子运行的设备信息，其中 `*` 所在行表示目标设备。
+
+```bash
+(msdebug) ascend info devices
+  Device Aic_Num Aiv_Num Aic_Mask Aiv_Mask
+*    0      1       2      0x4     0xc000000000
+```
+
+<table>
+<thead align="left">
+<tr>
+<th width="30%">字段</th>
+<th width="70%">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device</td>
+<td>设备逻辑 ID。</td>
+</tr>
+<tr>
+<td>Aic_Num</td>
+<td>使用的 Cube 核数量。</td>
+</tr>
+<tr>
+<td>Aiv_Num</td>
+<td>使用的 Vector 核数量。</td>
+</tr>
+<tr>
+<td>Aic_Mask</td>
+<td>使用的 Cube 掩码，用 64 位表示。如果第 n 位为 1，则表示使用了 Cube n。</td>
+</tr>
+<tr>
+<td>Aiv_Mask</td>
+<td>使用的 Vector 掩码，用 64 位表示。如果第 n 位为 1，则表示使用了 Vector n。</td>
+</tr>
+</tbody>
+</table>
+
+### ascend info cores
+
+显示 AI Core 总体信息。执行以下命令查询算子运行的核信息，其中 `*` 所在行表示目标核。
+
+```bash
+(msdebug) ascend info cores
+  CoreId  Type  Device Stream Task Block         PC               stop reason
+*   2     aic      0     46     1     0     0x12400000038c         breakpoint 1.1
+   38     aiv      0     46     1     0     0x1240000018c4         breakpoint 1.1
+   39     aiv      0     46     1     0     0x1240000018c4         breakpoint 1.1
+```
+
+<table>
+<thead align="left">
+<tr>
+<th width="30%">字段</th>
+<th width="70%">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CoreId</td>
+<td>AIV 或 AIC 的核 ID，从 0 开始。</td>
+</tr>
+<tr>
+<td>Type</td>
+<td>核类型，可以是 <code>aic</code> 或 <code>aiv</code>。</td>
+</tr>
+<tr>
+<td>Device</td>
+<td>设备逻辑 ID。</td>
+</tr>
+<tr>
+<td>Stream</td>
+<td>当前核函数下发的 Stream ID。Stream 由一系列 Task 组成。</td>
+</tr>
+<tr>
+<td>Task</td>
+<td>当前 Stream 中的 Task ID，表示下发给 Task 调度器处理的任务。</td>
+</tr>
+<tr>
+<td>Block</td>
+<td>核函数将在哪些核上执行。每个执行核函数的核会被分配一个逻辑 ID，即 Block ID。</td>
+</tr>
+<tr>
+<td>PC</td>
+<td>当前核上的 PC 逻辑绝对地址。</td>
+</tr>
+<tr>
+<td>Stop Reason</td>
+<td>程序停止的原因，包括 <code>breakpoint</code>、<code>step in</code>、<code>step over</code> 或 <code>Ctrl+C</code>。</td>
+</tr>
+</tbody>
+</table>
+
+### ascend info tasks
+
+显示任务总体信息。执行以下命令查询算子的任务信息，其中 `*` 所在行表示目标任务，包括设备 ID、Stream ID、Task ID 和核函数名称（Invocation）。
+
+```bash
+(msdebug) ascend info tasks
+  Device Stream Task Invocation
+*   0      46     1  mm_kernel
+```
+
+### ascend info stream
+
+显示 Stream 总体信息。执行以下命令查询算子的 Stream 信息，其中 `*` 所在行表示目标 Stream，包括设备 ID、Stream ID 和核类型（`aic` 或 `aiv`）。
+
+```bash
+(msdebug) ascend info stream
+  Device Stream Type
+*   0      46    aic
+```
+
+### ascend info blocks
+
+显示 Block 总体信息。执行以下命令查询算子的 Block 信息，其中 `*` 所在行表示目标 Block，包括设备 ID、Stream ID、Task ID 和 Block ID。
+
+```bash
+(msdebug) ascend info blocks
+  Device Stream Task Block
+*   0      46     1     0
+    0      46     1     0
+    0      46     1     0
+```
+
+执行以下命令可显示当前断点处所运行 Block 的代码：
+
+```bash
+(msdebug) ascend info blocks -d
+Current stop state of all blocks:
+
+[* CoreId 3, Block 0]
+* thread #1, name = 'python', stop reason = breakpoint 1.1
+    frame #0: 0x000012400000038c device_debugdata_1`mm_kernel_mix_aic at matmul_plus.py:20:22
+   17       BLOCK_K: tl.constexpr,
+   18       BLOCK_N: tl.constexpr
+   19   ):
+-> 20       a_ptrs = a_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_am + tl.arange(0, BLOCK_K)[None, :] * stride_ak)
+   21       b_ptrs = b_ptr + (tl.arange(0, BLOCK_K)[:, None] * stride_bk + tl.arange(0, BLOCK_N)[None, :] * stride_bn)
+   22       c_ptrs = c_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_cm + tl.arange(0, BLOCK_N)[None, :] * stride_cn)
+   23       d_ptrs = d_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_dm + tl.arange(0, BLOCK_N)[None, :] * stride_dn)
+
+[CoreId 41, Block 0]
+* thread #1, name = 'python', stop reason = breakpoint 1.1
+    frame #0: 0x00001240000018c4 device_debugdata_1`mm_kernel_mix_aiv at matmul_plus.py:30:21
+   27  
+   28       c = tl.dot(a, b)
+   29       
+-> 30       tl.store(c_ptrs, c)
+   31  
+   32       d = c + c
+   33  
+
+[CoreId 42, Block 0]
+* thread #1, name = 'python', stop reason = breakpoint 1.1
+    frame #0: 0x00001240000018c4 device_debugdata_1`mm_kernel_mix_aiv at matmul_plus.py:30:21
+   27  
+   28       c = tl.dot(a, b)
+   29       
+-> 30       tl.store(c_ptrs, c)
+   31  
+   32       d = c + c
+   33  
+```
+
+### ascend aiv coreId / ascend aic coreId
+
+切换核：
+
+```bash
+(msdebug) ascend info cores
+  CoreId  Type  Device Stream Task Block         PC               stop reason
+*   2     aic      0     46     1     0     0x12400000038c         breakpoint 1.1
+   38     aiv      0     46     1     0     0x1240000018c4         breakpoint 1.1
+   39     aiv      0     46     1     0     0x1240000018c4         breakpoint 1.1
+
+(msdebug) ascend aiv 38
+[Switching to focus on Kernel mm_kernel, CoreId 38, Type aiv]
+* thread #1, name = 'python', stop reason = breakpoint 1.1
+    frame #0: 0x00001240000018c4 device_debugdata_1`mm_kernel_mix_aiv at matmul_plus.py:30:21
+   27  
+   28       c = tl.dot(a, b)
+   29       
+-> 30       tl.store(c_ptrs, c)
+   31  
+   32       d = c + c
+   33  
+
+(msdebug) ascend aic 2
+[Switching to focus on Kernel mm_kernel, CoreId 2, Type aic]
+* thread #1, name = 'python', stop reason = breakpoint 1.1
+    frame #0: 0x000012400000038c device_debugdata_1`mm_kernel_mix_aic at matmul_plus.py:20:22
+   17       BLOCK_K: tl.constexpr,
+   18       BLOCK_N: tl.constexpr
+   19   ):
+-> 20       a_ptrs = a_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_am + tl.arange(0, BLOCK_K)[None, :] * stride_ak)
+   21       b_ptrs = b_ptr + (tl.arange(0, BLOCK_K)[:, None] * stride_bk + tl.arange(0, BLOCK_N)[None, :] * stride_bn)
+   22       c_ptrs = c_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_cm + tl.arange(0, BLOCK_N)[None, :] * stride_cn)
+   23       d_ptrs = d_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_dm + tl.arange(0, BLOCK_N)[None, :] * stride_dn)
+```
+
+### ascend info summary
+
+显示 Coredump 总体信息。
+
+1. 创建 `acl.json`：
+
+   ```json
+   {
+     "dump": {
+       "dump_path": "./dump_output",
+       "dump_scene": "aic_err_detail_dump"
+     }
+   }
+   ```
+
+2. 在脚本中添加初始化代码。脚本应当运行出错（例如，使用错误地址）：
+
+   ```python
+   bad_ptr = output_ptr + 0x100000000
+   tl.store(bad_ptr + offsets, output)
+   ```
+
+   完整示例（带人为错误的向量加法）：
+
+   ```python
+   import torch
+   import triton
+   import triton.language as tl
+   import acl  # required for coredump
+
+   @triton.jit
+   def add_kernel(
+       x_ptr, y_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr
+   ):
+       pid = tl.program_id(axis=0)
+       block_start = pid * BLOCK_SIZE
+       offsets = block_start + tl.arange(0, BLOCK_SIZE)
+       x = tl.load(x_ptr + offsets)
+       y = tl.load(y_ptr + offsets)
+       output = x + y
+       bad_ptr = output_ptr + 0x100000000   # invalid address
+       tl.store(bad_ptr + offsets, output)
+
+   def vector_add(x, y):
+       output = torch.empty_like(x)
+       BLOCK_SIZE = 128
+       grid = lambda meta: (triton.cdiv(x.numel(), meta['BLOCK_SIZE']),)
+       add_kernel[grid](x, y, output, x.numel(), BLOCK_SIZE=BLOCK_SIZE)
+       return output
+
+   if __name__ == "__main__":
+       acl.init("./acl.json")
+       x = torch.tensor([1.0,2.0,3.0,4.0], device='npu')
+       y = torch.tensor([2.0,4.0,6.0,8.0], device='npu')
+       output_triton = vector_add(x, y)
+       acl.finalize()
+   ```
+
+3. 使用环境变量运行脚本：
+
+   ```bash
+   export TRITON_ALWAYS_COMPILE=1
+   export TRITON_DEBUG=1
+   export TRITON_KERNEL_DUMP=1
+   export TRITON_DUMP_DIR=<your_dir>
+
+   python <your_script>.py
+   ```
+
+4. 在 `dump_output` 中找到 `*.core` 文件，在 `<your_dir>` 中找到 `*.npubin` 文件，然后运行 `msdebug`：
+
+   ```bash
+   msdebug --core /workspace/tests/dump_output/extra-info/data-dump/0/add_kernel.46.0.20260423112039797.core /workspace/triton_dumps/TACWC2WE3NIWUBOZTDKFWXGHPKLYKF2QBF2BPP77U3ZYEPQQMKEQ/add_kernel.npubin
+   ```
+
+5. 查看 `ascend info summary` 的结果：
+
+   ```bash
+   (msdebug) ascend info summary  
+     CoreId  CoreType        PC         DeviceId    ChipType
+    *  43       AIV    0x124000004fd8       0        A2/A3
+
+     Id           DataType                   MemType                     Addr                       Size             CoreId    CoreType    Dim
+      0    DEVICE_KERNEL_OBJECT                GM               0x124000000000(invalid)             28064             NA          NA        NA
+      1            STACK                    GM/DCACHE                0xff000220000                  32768             43         AIV        NA
+      2            ARGS                     GM/DCACHE               0x12c100600000                   64               NA          NA        NA
+   ```
+
+## 打印内存和寄存器
+
+使用 `msdebug` 调用算子后，可以读取当前断点所在设备的寄存器值。
+
+### register read --all (re r -a)
+
+转储当前栈帧中一个或多个寄存器的值。如果未指定寄存器，则转储所有寄存器。
+
+> [!NOTE]
+> `re` 是 `register` 的缩写，`r` 是 `read` 的缩写，`-a`（或 `--all`）表示显示所有寄存器集合。
+
+```bash
+(msdebug) register read -a  
+Registers:
+                              PC = 0x0000124000000090  device_debugdata_1`add_kernel + 144 at test.py:6
+                            COND = 0x0000000000000000
+                            CTRL = 0x0101000000000008
+                            GPR0 = 0x000012c100600000
+                            GPR1 = 0x000012c041200000
+                            GPR2 = 0x0000000000000001
+                            GPR3 = 0x0000000000000001
+                            GPR4 = 0x0000000000000001
+                            GPR5 = 0xb5d0dcd55c793355
+                            GPR6 = 0x6422dd54ea94e740
+                            GPR7 = 0x0000000000000000
+                            GPR8 = 0x000000000019660d
+                            GPR9 = 0x0000000017d78400
+                            MASK = 0xffffffffffffffff
+                           GPR10 = 0x000000003c6ef35f
+                           GPR11 = 0x0000000041c64e6d
+                           GPR12 = 0x0000000000000000
+                           GPR13 = 0x0000000000000000
+                           GPR14 = 0x000000007f4a7c15
+                           GPR15 = 0x0000000000001010
+                           GPR16 = 0x0000000000007fff
+                           GPR17 = 0x0000000000008000
+                           GPR18 = 0x000012c0c0045000
+                           GPR19 = 0x00003fffffffff50
+                           GPR20 = 0x000012c0c0013000
+                           GPR21 = 0x0000000000000040
+                           GPR22 = 0x0000000017d78400
+                           GPR23 = 0x0000000017d78400
+                           GPR24 = 0xf73cc001b18b8ab3
+                           GPR25 = 0x000000000e78ce0a
+                           GPR26 = 0x0000000000000000
+                           GPR27 = 0x0000000000000000
+                           GPR28 = 0x0000000000000000
+                           GPR29 = 0x000000000023ff80
+                           GPR30 = 0x000000000023ef70
+                           GPR31 = 0x00001240000003e4  device_debugdata_1`add_kernel + 996 [inlined] load_gm_to_ubuf_1d_float + 800 at internal
+  device_debugdata_1`add_kernel + 196 at test.py:18:16
+                           LPCNT = 0x0000000000000000
+                           VARF0 = 0x0000000000000000
+                           VARF1 = 0x0000000000000000
+                           VARF2 = 0x0000000000000000
+                           VARF3 = 0x0000000000000000
+                           VARF4 = 0x0000000000000000
+                           VARF5 = 0x0000000000000000
+                           VARF6 = 0x0000000000000000
+                           VARF7 = 0x0000000000000000
+                          STATUS = 0x0000000000000000
+                         ACC_VAL = 0x0000000000000000
+                         CMPMASK = 0xffffffffffffffff
+                         PNT_COE = 0x0000000000000000
+                         SYS_CNT = 0x0000006b7f218b4c
+                         VMS4_SR = 0x0000000000000000
+                        DEQSCALE = 0x0000000000000000
+                        RSVD_CNT = 0x0000000000000000
+                       DATA_EXP0 = 0x0000000000000000
+                       DATA_EXP1 = 0x0000000000000000
+                       DATA_EXP2 = 0x0000000000000000
+                       DATA_EXP3 = 0x0000000000000000
+                      MAXMIN_CNT = 0x0000000000000000
+                      RPN_COR_IR = 0x0000000000000000
+                      RPN_OFFSET = 0x00003f8000003c00
+                     LRELU_ALPHA = 0x0000000000000000
+                   ICACHE_PRL_ST = 0x0000000000000000
+                   SAFETY_CRC_EN = 0x0000000000000000
+                   ST_ATOMIC_CFG = 0x0000000000000005
+                  CALL_DEPTH_CNT = 0x0000000000000000
+                  CONDITION_FLAG = 0x0000000000000000
+                  FFTS_BASE_ADDR = 0x0000000000000000
+                 VEC_EVENT_TABLE = 0x0000000000000000
+                MTE2_EVENT_TABLE = 0x0000000000000000
+                MTE3_EVENT_TABLE = 0x0000000000000000
+              SCALAR_EVENT_TABLE = 0x0000000000000000
+```
+
+### register read [register-name]
+
+按名称读取特定的寄存器。
+
+```bash
+(msdebug) re r PC 
+                            PC = 0x0000124000000090  device_debugdata_1`add_kernel + 144 at test.py:6
+```
+
+### 通过寄存器打印内存
+
+以下命令用于读取当前目标进程的内存。
+
+**表 1** 内存读取命令说明
+
+<table>
+<thead align="left">
+<tr>
+<th width="20%">命令</th>
+<th width="15%">缩写</th>
+<th width="30%">说明</th>
+<th width="35%">示例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>memory read</code></td>
+<td><code>x</code></td>
+<td>读取内存。</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 ">
+<pre class="code_wrap">x -m GM -f float16[] 0x00001240c0037000 -c 2 -s 128</pre>
+
+<ul>
+<li><code>-m</code> 指定内存位置。支持的值：<code>GM</code>、<code>UB</code>、<code>L0A</code>、<code>L0B</code>、<code>L0C</code>、<code>L1</code>、<code>FB</code>。</li>
+<li><code>-s</code> 指定每行打印的字节数。</li>
+<li><code>-c</code> 指定打印的行数。</li>
+<li><code>-f</code> 指定打印的数据类型。</li>
+<li><code>0x00001240c0037000</code> 表示要读取的内存地址。请根据实际情况替换。</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+
+#### 向量流水线
+
+在本示例中，我们将查看一个用于向量相加的简单程序。
+
+```python
+import torch
+import triton
+import triton.language as tl
+
+@triton.jit
+def add_kernel(
+    x_ptr,
+    y_ptr,
+    output_ptr,
+    n_elements,
+    BLOCK_SIZE: tl.constexpr
+):
+    pid = tl.program_id(axis = 0)
+
+    block_start = pid * BLOCK_SIZE
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
+
+    x = tl.load(x_ptr + offsets)
+    y = tl.load(y_ptr + offsets)
+
+    output = x + y
+
+    tl.store(output_ptr + offsets, output)
+
+
+def vector_add(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+
+    n_elements = x.numel()
+
+    output = torch.empty_like(x)
+
+    BLOCK_SIZE = 128
+
+    grid = lambda meta: (triton.cdiv(n_elements, meta['BLOCK_SIZE']), )
+
+    add_kernel[grid](
+        x, y, output,
+        n_elements,
+        BLOCK_SIZE=BLOCK_SIZE
+    )
+
+    return output
+
+if __name__ == "__main__":
+    a = [1.0, 2.0, 3.0, 4.0]
+    b = [2.0, 4.0, 6.0, 8.0]
+
+    x = torch.tensor(a, device = 'npu')
+    y = torch.tensor(b, device = 'npu')
+    
+    output_triton = vector_add(x, y)
+```
+
+向量相加时，它们最初位于全局内存（GM）中，然后通过 `tl.load` 方法加载到向量核的统一缓冲区（UB）中执行加法运算。之后，运算结果放回 UB，并通过 `tl.store` 方法返回全局内存，以便后续输出给用户。
+
+![alt text](../figures/vector_pipeline_memory.png)
+
+初始向量为：
+
+- `x = [1.0, 2.0, 3.0, 4.0]`
+- `y = [2.0, 4.0, 6.0, 8.0]`
+
+首次运行程序并在断点处停止后，可以打印寄存器中的地址，然后使用 `memory read` 命令访问该地址。
+
+```bash
+Process 1889702 stopped
+[Switching to focus on Kernel add_kernel, CoreId 10, Type aiv]
+* thread #1, name = 'python', stop reason = breakpoint 1.2
+    frame #0: 0x00001240000000a0 device_debugdata_0`add_kernel at test.py:15:24
+   12   ):
+   13       pid = tl.program_id(axis = 0)
+   14  
+-> 15       block_start = pid * BLOCK_SIZE
+   16       offsets = block_start + tl.arange(0, BLOCK_SIZE)
+   17  
+   18       x = tl.load(x_ptr + offsets)
+(msdebug) re r GPR1
+                          GPR1 = 0x000012c041200000
+(msdebug) x -m GM -f float32[] 0x000012c041200000 -s 64 -c 16
+0x12c041200000: {1 2 3 4 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200040: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200080: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412000c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200100: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200140: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200180: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412001c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200200: {2 4 6 8 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200240: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200280: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412002c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200300: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200340: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200380: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412003c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+```
+
+可以看到全局内存中已加载的数据。然后，转到加载到 UB 的时刻，即可从缓冲区中读取它们。
+
+```bash
+(msdebug) n
+Process 1889702 stopped
+[Switching to focus on Kernel add_kernel, CoreId 10, Type aiv]
+* thread #1, name = 'python', stop reason = step over
+    frame #0: 0x0000124000002158 device_debugdata_0`add_kernel at test.py:21:17
+   18       x = tl.load(x_ptr + offsets)
+   19       y = tl.load(y_ptr + offsets)
+   20  
+-> 21       output = x + y
+   22  
+   23       tl.store(output_ptr + offsets, output)
+   24  
+(msdebug) x -m UB -f float32[] 0x0000000000000000 -s 64 -c 16
+0x00000000: {1 2 3 4 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000040: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000080: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000000c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000100: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000140: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000180: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000001c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000200: {2 4 6 8 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000240: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000280: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000002c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000300: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000340: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000380: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000003c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+```
+
+向前执行一步到加法运算的位置，可以看到结果已写入 UB。
+
+```bash
+(msdebug) n
+Process 1889702 stopped
+[Switching to focus on Kernel add_kernel, CoreId 10, Type aiv]
+* thread #1, name = 'python', stop reason = step over
+    frame #0: 0x00001240000046e4 device_debugdata_0`add_kernel at test.py:23:35
+   20  
+   21       output = x + y
+   22  
+-> 23       tl.store(output_ptr + offsets, output)
+   24  
+   25  
+   26   def vector_add(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+
+(msdebug) x -m UB -f float32[] 0x0000000000000000 -s 64 -c 1 
+0x00000000: {3 6 9 12 0 0 0 0 0 0 0 0 0 0 0 0}
+```
+
+执行最后一步，将 UB 中的值保存到 GM，可以在全局内存中找到得到的数据。
+
+```bash
+(msdebug) x -m GM -f float32[] 0x000012c041200400 -s 64 -c 1 
+0x12c041200400: {3 6 9 12 0 0 0 0 0 0 0 0 0 0 0 0}
+```
+
+#### 矩阵流水线
+
+在本示例中，我们将查看一个用于矩阵相乘的简单程序。
+
+```python
+import torch
+import triton
+import triton.language as tl
+
+@triton.jit
+def mm_kernel(
+    a_ptr, b_ptr, c_ptr,
+    stride_am: tl.constexpr,
+    stride_ak: tl.constexpr,
+    stride_bk: tl.constexpr,
+    stride_bn: tl.constexpr,
+    stride_cm: tl.constexpr,
+    stride_cn: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+    BLOCK_N: tl.constexpr
+):
+    a_ptrs = a_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_am + tl.arange(0, BLOCK_K)[None, :] * stride_ak)
+    b_ptrs = b_ptr + (tl.arange(0, BLOCK_K)[:, None] * stride_bk + tl.arange(0, BLOCK_N)[None, :] * stride_bn)
+    c_ptrs = c_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_cm + tl.arange(0, BLOCK_N)[None, :] * stride_cn)
+   
+    a = tl.load(a_ptrs)
+    b = tl.load(b_ptrs)
+
+    c = tl.dot(a, b)
+    
+    tl.store(c_ptrs, c)
+
+def test_mm(datatype: str, BLOCK_M: int, BLOCK_K: int, BLOCK_N: int) -> torch.Tensor:
+
+    total_elements_a = BLOCK_M * BLOCK_K
+    a_flat = torch.arange(total_elements_a, dtype=torch.float16).npu()
+    a = a_flat.reshape(BLOCK_M, BLOCK_K)
+    b_flat = a_flat * 2
+    b = b_flat.reshape(BLOCK_K, BLOCK_N)
+    
+    c = torch.empty((BLOCK_M, BLOCK_N), dtype=eval(f'torch.{datatype}')).npu()
+    d = torch.empty((BLOCK_M, BLOCK_N), dtype=eval(f'torch.{datatype}')).npu()
+
+    mm_kernel[(1,)](
+        a,b,c,
+        a.stride(0), a.stride(1),
+        b.stride(0), b.stride(1),
+        c.stride(0), c.stride(1),
+        BLOCK_M, BLOCK_K, BLOCK_N
+    )
+
+    return d
+
+if __name__ == "__main__":
+    output_triton = test_mm('float16', 4,4,4)
+    print("output: ", output_triton)
+```
+
+理论表明，最初矩阵位于全局内存中。通过 `tl.load` 加载后，它们将连同相应的分块一起被放置到 L1 内存中。调用矩阵乘法方法 `tl.dot` 后，矩阵将分别分配到 L0A 和 L0B 内存中。随后执行乘法运算，结果将出现在 L0C 内存中。使用 `tl.store` 方法卸载数据后，结果将被复制回全局内存。
+
+![alt text](../figures/cube_pipeline_memory.png)
+
+我们来验证这一点。
+
+在方法入口处设置第一个断点，转储寄存器，然后转储其内容。
+
+```bash
+Process 1910257 stopped
+[Switching to focus on Kernel mm_kernel, CoreId 1, Type aic]
+* thread #1, name = 'python', stop reason = breakpoint 1.1
+    frame #0: 0x0000124000000384 device_debugdata_1`mm_kernel at matmul.py:18:22
+   15       BLOCK_K: tl.constexpr,
+   16       BLOCK_N: tl.constexpr
+   17   ):
+-> 18       a_ptrs = a_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_am + tl.arange(0, BLOCK_K)[None, :] * stride_ak)
+   19       b_ptrs = b_ptr + (tl.arange(0, BLOCK_K)[:, None] * stride_bk + tl.arange(0, BLOCK_N)[None, :] * stride_bn)
+   20       c_ptrs = c_ptr + (tl.arange(0, BLOCK_M)[:, None] * stride_cm + tl.arange(0, BLOCK_N)[None, :] * stride_cn)
+   21      
+(msdebug) re r GPR1
+                          GPR1 = 0x000012c041200000
+(msdebug) x -m GM -f float16[] 0x000012c041200000 -s 64 -c 16
+0x12c041200000: {0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200040: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200080: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412000c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200100: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200140: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200180: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412001c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200200: {0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200240: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200280: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412002c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200300: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200340: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c041200380: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x12c0412003c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+```
+
+可以看到原始矩阵位于 GM 中。我们转到加载数据后的停止点，并打印 L1 中的值。
+
+```bash
+(msdebug) n
+Process 1910257 stopped
+[Switching to focus on Kernel mm_kernel, CoreId 1, Type aic]
+* thread #1, name = 'python', stop reason = step over
+    frame #0: 0x000012400000069c device_debugdata_1`mm_kernel at matmul.py:25:18
+   22       a = tl.load(a_ptrs)
+   23       b = tl.load(b_ptrs)
+   24  
+-> 25       c = tl.dot(a, b)
+   26       
+   27       tl.store(c_ptrs, c)
+   28  
+(msdebug) x -m L1 -f float16[] 0x0000000000000000 -s 32 -c 32
+0x00000000: {0 1 2 3 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000020: {4 5 6 7 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000040: {8 9 10 11 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000060: {12 13 14 15 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000080: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000000a0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000000c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000000e0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000100: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000120: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000140: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000160: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000180: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000001a0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000001c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000001e0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000200: {0 2 4 6 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000220: {8 10 12 14 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000240: {16 18 20 22 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000260: {24 26 28 30 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000280: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000002a0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000002c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000002e0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000300: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000320: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000340: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000360: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000380: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000003a0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000003c0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000003e0: {0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0}
+```
+
+可以看出，矩阵位于 L1 中，并采用特殊的分块（16×16）标记。
+
+接下来，我们将执行矩阵乘法，并输出到 L0A、L0B 和 L0C 缓冲区中。
+
+```bash
+(msdebug) x -m L0A -f float16[] 0x0000000000000000 -s 32 -c 4 
+0x00000000: {0 1 2 3 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000020: {4 5 6 7 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000040: {8 9 10 11 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000060: {12 13 14 15 0 0 0 0 0 0 0 0 0 0 0 0}
+(msdebug) x -m L0B -f float16[] 0x0000000000000000 -s 32 -c 4
+0x00000000: {0 8 16 24 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000020: {2 10 18 26 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000040: {4 12 20 28 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000060: {6 14 22 30 0 0 0 0 0 0 0 0 0 0 0 0}
+(msdebug) x -m L0C -f float32[] 0x0000000000000000 -s 64 -c 4
+0x00000000: {112 124 136 148 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000040: {304 348 392 436 0 0 0 0 0 0 0 0 0 0 0 0}
+0x00000080: {496 572 648 724 0 0 0 0 0 0 0 0 0 0 0 0}
+0x000000c0: {688 796 904 1012 0 0 0 0 0 0 0 0 0 0 0 0}
+```
+
+> [!NOTE]
+> L0C 缓冲区包含 `float32` 精度的数据，这是由于编译器的特性所致。不过，最终结果将转换回 `float16` 类型。
+
+提取保存操作后 GM 中的值。
+
+```bash
+(msdebug) x -m GM -f float16[] 0x000012c041200400 -s 32 -c 1 
+0x12c041200400: {112 124 136 148 304 348 392 436 496 572 648 724 688 796 904 1012}
+```
