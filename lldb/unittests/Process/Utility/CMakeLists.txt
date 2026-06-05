@@ -14,12 +14,26 @@ set(LLVM_OPTIONAL_SOURCES
   ${FREEBSD_SOURCES}
   ${NETBSD_SOURCES})
 
-add_lldb_unittest(ProcessUtilityTests
-  LinuxProcMapsTest.cpp
-  MemoryTagManagerAArch64MTETest.cpp
-  RegisterContextTest.cpp
-  ${PLATFORM_SOURCES}
+if(MS_DEBUGGER)
+  add_lldb_unittest(ProcessUtilityTests
+    LinuxProcMapsTest.cpp
+    MemoryTagManagerAArch64MTETest.cpp
+    RegisterContextTest.cpp
+    RegisterInfoPOSIX_ascend950Test.cpp
+    ${PLATFORM_SOURCES}
 
-  LINK_LIBS
-    lldbPluginProcessUtility
-    LLVMTestingSupport)
+    LINK_LIBS
+      lldbPluginProcessUtility
+      lldbPluginProcessLinux
+      LLVMTestingSupport)
+else()
+  add_lldb_unittest(ProcessUtilityTests
+    LinuxProcMapsTest.cpp
+    MemoryTagManagerAArch64MTETest.cpp
+    RegisterContextTest.cpp
+    ${PLATFORM_SOURCES}
+
+    LINK_LIBS
+      lldbPluginProcessUtility
+      LLVMTestingSupport)
+endif()
