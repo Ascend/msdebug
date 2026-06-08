@@ -1293,7 +1293,10 @@ protected:
                               static_cast<uint16_t>(y),
                               static_cast<uint16_t>(z)};
       if (!CheckThreadIdxValid(thread_idx, thread_dim)) {
-        result.AppendErrorWithFormat("input thread is invalid and exceeds the value range indicated by thread_dim.");
+        result.AppendErrorWithFormatv(
+            "input thread is invalid and exceeds the value range indicated by "
+            "thread_dim({0},{1},{2}).",
+            thread_dim.x, thread_dim.y, thread_dim.z);
         return false;
       }
 
@@ -1314,7 +1317,10 @@ protected:
         return false;
       }
       if (!CheckThreadIdxValid(thread_idx, thread_dim)) {
-        result.AppendErrorWithFormat("input thread is invalid and exceeds the value range indicated by thread_dim.");
+        result.AppendErrorWithFormatv(
+            "input thread is invalid and exceeds the value range indicated by "
+            "thread_dim({0},{1},{2}).",
+            thread_dim.x, thread_dim.y, thread_dim.z);
         return false;
       }
 
@@ -1325,7 +1331,10 @@ protected:
         return false;
       }
       if (!CheckThreadIdxValid(linear_idx, thread_dim)) {
-        result.AppendErrorWithFormat("input thread is invalid and exceeds the value range indicated by thread_dim.");
+        result.AppendErrorWithFormatv(
+            "input thread is invalid and exceeds the value range indicated by "
+            "thread_dim({0},{1},{2}).",
+            thread_dim.x, thread_dim.y, thread_dim.z);
         return false;
       }
     }

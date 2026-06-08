@@ -99,6 +99,7 @@ bool RegisterContextPOSIXCore_ascend::CheckAicErrorRegisterIsValid(
         if (reg_num == 0) {
           reg_num = err_map.err_info_regs[0].reg_num;
           err_reg_mask = err_map;
+          return true;
         } else {
           return false;
         }

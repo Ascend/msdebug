@@ -5,6 +5,9 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
 endif()
 add_subdirectory(Utility)
 add_subdirectory(minidump)
+if(MS_DEBUGGER)
+  add_subdirectory(elf-core)
+endif()
 
 add_lldb_unittest(ProcessEventDataTests
   ProcessEventDataTest.cpp

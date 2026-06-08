@@ -1075,6 +1075,13 @@ Status ProcessElfCoreDevice::GetWarpsInfo(std::vector<WarpInfo> &info) {
     if (reg_info && reg_ctx_sp->ReadRegister(reg_info, value)) {
       warp_info.exec_mask = value.GetAsUInt32();
     }
+    // 去掉末尾多出来的thread
+    if ((warp_id + 1) * 32 > thread_dim.x * thread_dim.y * thread_dim.z) {
+      uint32_t disable_last_num_bit =
+          (warp_id + 1) * 32 - thread_dim.x * thread_dim.y * thread_dim.z;
+      uint32_t first_enable_num_bit = 32 - disable_last_num_bit;
+      warp_info.exec_mask &= (1U << first_enable_num_bit) - 1;
+    }
 
     if (warp_id == m_summary_info.focus_pos_info.err_warp_id) {
       warp_info.simt_pc = reg_ctx_sp->GetPC(UINT64_MAX);
