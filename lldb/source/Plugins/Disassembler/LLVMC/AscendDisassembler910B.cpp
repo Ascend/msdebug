@@ -7,6 +7,8 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include <map>
 
+using namespace lldb_private;
+
 namespace {
 enum class InstValue : uint32_t {
     JUMP = 0x40000000,
@@ -68,7 +70,7 @@ const std::map<InstValue, InstMode> G_RETURN_MAP {
 
 uint32_t GetBit(const uint8_t *opcode_data, const size_t opcode_data_len)
 {
-  if (opcode_data_len != 4) { // in 910B, instructions are 4 bytes
+  if (opcode_data_len < 4) {
     return 0;
   }
   uint32_t data_s = (static_cast<uint32_t>(opcode_data[3]) << 24 |
@@ -94,11 +96,12 @@ bool IsTargetInst(const uint8_t *opcode_data, const size_t opcode_data_len,
 void AscendDisassembler910B::GetInstruction(const uint8_t *opcode_data,
                                             const size_t opcode_data_len,
                                             uint64_t &flags,
+                                            const InterruptPosType pos_type,
                                             uint64_t &inst_size) {
   flags |= IsTargetInst(opcode_data, opcode_data_len, G_BRANCH_MAP) ? (1 << (uint32_t)llvm::MCID::Branch) : 0;
   flags |= IsTargetInst(opcode_data, opcode_data_len, G_CALL_MAP) ? (1 << (uint32_t)llvm::MCID::Call) : 0;
   flags |= IsTargetInst(opcode_data, opcode_data_len, G_RETURN_MAP) ? (1 << (uint32_t)llvm::MCID::Return) : 0;
-  inst_size = 4; // inst size is 4 in ascend
+  inst_size = 4;
 }
 
 #endif

@@ -535,7 +535,7 @@ public:
           size_t inst_size {0U};
           auto disasm_wp = m_disasm_wp.lock();
           if (disasm_wp && !disasm_wp->IsValid()) {
-            uint64_t flags;
+            uint64_t flags{};
             const ArchSpec &arch = disasm->GetArchitecture();
             inst_size = DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
                 opcode_data, opcode_data_len, arch, flags);
@@ -634,7 +634,7 @@ public:
         llvm::MCInst inst;
 #ifdef MS_DEBUGGER
         auto disasm_wp = m_disasm_wp.lock();
-        if (disasm_wp && !disasm_wp->IsValid()) {
+        if (disasm_wp && !disasm_wp->IsValid() || !mc_disasm_ptr) {
           Log *log = GetLog(LLDBLog::Process);
           LLDB_LOGF(log, "can not use disassembly raw logical in function CalculateMnemonicOperandsAndComment");
           return;
@@ -1242,9 +1242,14 @@ protected:
     const uint8_t *opcode_data = data.GetDataStart();
     const size_t opcode_data_len = data.GetByteSize();
 #ifdef MS_DEBUGGER
+    Log *log = GetLog(LLDBLog::Process);
     auto disasm_wp = m_disasm_wp.lock();
     if (disasm_wp != nullptr) {
       std::string archs = disasm_wp->GetArchitecture().GetArchitectureName();
+      LLDB_LOG(log, "{0} Get arch name={1}, soc_type={2}, stop_type={3}", __FUNCTION__, archs.c_str(),
+             GetSocName(disasm->GetArchitecture().GetSocType()),
+             GetPosName(disasm->GetArchitecture().GetPosType())
+             );
       if (archs == "hiipu64") {
         uint64_t flags {0};
         const ArchSpec &arch = disasm->GetArchitecture();
@@ -1259,12 +1264,11 @@ protected:
       }
     }
     if (!disasm_wp || !disasm_wp->IsValid()) {
-      LLDB_LOGF(GetLog(LLDBLog::Process), "arch is not ascend, but can not use disassembly raw logical");
+      LLDB_LOG(log, "arch is not ascend, but can not use disassembly raw logical");
       return;
     }
     if (!mc_disasm_ptr) {
-      LLDB_LOG(GetLog(LLDBLog::Process),
-               "mc_disasm_ptr get failed for arch {0}",
+      LLDB_LOG(log, "mc_disasm_ptr get failed for arch {0}",
                disasm_wp ? disasm_wp->GetArchitecture().GetArchitectureName()
                          : "unknown");
       return;

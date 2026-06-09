@@ -317,6 +317,8 @@ public:
 #ifdef MS_DEBUGGER
   SocType GetSocType() const { return m_soc_type; };
   void SetSocType(SocType soc_type) { m_soc_type = soc_type; };
+  InterruptPosType GetPosType() const { return m_pos_type; };
+  void SetPosType(InterruptPosType pos_type) { m_pos_type = pos_type; };
 #endif
 
   /// if MIPS architecture return true.
@@ -542,6 +544,7 @@ protected:
   lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
 #ifdef MS_DEBUGGER
   SocType m_soc_type{SocType::SOC_BEGIN};
+  InterruptPosType m_pos_type{InterruptPosType::SU_INTERRUPT};
 #endif
 
   // Additional arch flags which we cannot get from triple and core For MIPS

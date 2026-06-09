@@ -5,8 +5,9 @@
 
 #include "AscendDisassemblerHelper.h"
 
-#include "AscendDisassembler910B.h"
 #include "AscendDisassembler310P.h"
+#include "AscendDisassembler910B.h"
+#include "AscendDisassembler950.h"
 
 #include <memory>
 
@@ -26,9 +27,14 @@ void AscendDisassemblerHelper::GetInstruction(const uint8_t *opcode_data,
     case SocType::ASCEND910B:
       disa = make_shared<AscendDisassembler910B>();
       break;
+    case SocType::ASCEND950:
+      disa = make_shared<AscendDisassembler950>();
+      break;
     default:
+      flags = 0;
+      inst_size = 4;
       return;
   }
-  disa->GetInstruction(opcode_data, opcode_data_len, flags, inst_size);
+  disa->GetInstruction(opcode_data, opcode_data_len, flags, arch.GetPosType(), inst_size);
 }
 #endif

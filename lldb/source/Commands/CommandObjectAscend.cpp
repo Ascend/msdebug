@@ -107,9 +107,6 @@ inline void DumpBitmap(const vector<uint64_t> &bitmaps, std::ostream &os) {
   // 高位在前
   for (int i = bitmaps.size() - 1; i >= 0; i --) {
     os << std::hex << bitmaps[i];
-    if (i > 0) {
-      os << " ";
-    }
   }
 }
 
@@ -199,19 +196,6 @@ public:
   ~CommandObjectAscendInfoDevices() override = default;
 
 protected:
-  void WriteLine(std::ostream& os, uint32_t id, bool is_current, uint32_t aic_num,
-                  uint32_t aiv_num, const vector<uint64_t> &aic_bitmaps,
-                  const vector<uint64_t> &aiv_bitmaps) {
-    os << (is_current ? "*    " : "     ")
-      << std::dec << id << "      "
-      << aic_num << "       "
-      << aiv_num << "      ";
-    DumpBitmap(aic_bitmaps, os);
-    os << "     ";
-    DumpBitmap(aiv_bitmaps, os);
-    os << '\n';
-  }
-
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -225,15 +209,29 @@ protected:
     DeviceInfo device_info;
     Status error = process->GetDeviceInfo(device_info);
     if (error.Success()) {
+      const static vector<string> headers{"Device", "Aic_Num", "Aiv_Num",
+                                          "Aic_Mask", "Aiv_Mask"};
       uint32_t aic_num = CalcBitNum(device_info.aic_bitmaps);
       uint32_t aiv_num = CalcBitNum(device_info.aiv_bitmaps);
-      strm << "  Device Aic_Num Aiv_Num Aic_Mask Aiv_Mask\n";
-      std::stringstream ss;
+      vector<vector<string>> rows;
+      int focus_row = 0;
       for (const auto& id : device_info.device_ids) {
-        WriteLine(ss, id, id == device_info.device_id, aic_num, aiv_num,
-                  device_info.aic_bitmaps, device_info.aiv_bitmaps);
+        vector<string> row;
+        if (id == device_info.device_id) {
+          focus_row = rows.size();
+        }
+        row.push_back(to_string(id));
+        row.push_back(to_string(aic_num));
+        row.push_back(to_string(aiv_num));
+        std::stringstream ss;
+        DumpBitmap(device_info.aic_bitmaps, ss);
+        row.push_back(ss.str());
+        std::stringstream().swap(ss);
+        DumpBitmap(device_info.aiv_bitmaps, ss);
+        row.push_back(ss.str());
+        rows.push_back(row);
       }
-      strm << ss.str();
+      PrettyPrintTable(headers, rows, focus_row, strm);
     } else {
       strm << "[Failed to get ascend info, reason:" << error.AsCString() << "]";
     }

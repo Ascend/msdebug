@@ -102,8 +102,8 @@ Status Ascend950DeviceContext::GetDeviceInfo(DeviceInfo &device_info) {
   device_info.aiv_bitmaps.clear();
   device_info.aiv_bitmaps.push_back(info.aiv_bitmap0);
   device_info.aiv_bitmaps.push_back(info.aiv_bitmap1);
+  // ignore aic_bitmap1 in this version
   device_info.aic_bitmaps.push_back(info.aic_bitmap0);
-  device_info.aic_bitmaps.push_back(info.aic_bitmap1);
   device_info.device_id = m_device_id;
   LLDB_LOGF(log, "GetDeviceInfo device_id=%d aic_bitmap0=%#lx, aic_bitmap1=%#lx,"
             "aiv_bitmap0=%#lx, aiv_bitmap1=%#lx",

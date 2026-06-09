@@ -407,6 +407,7 @@ enum DWARF_ASCEND_REGNUM {
   dwarf_tpesll7_ascend,
 
   dwarf_sx_max_id = dwarf_tpesll7_ascend,
+  dwarf_simt_lr_ascend = 2000,
   // used as a placeholder
   dwarf_pc_ascend,
   dwarf_sqzn_ascend,

@@ -6247,6 +6247,7 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
     GetDeviceStopInfoCached(stop_info);
     arch = ArchSpec("hiipu64");
     arch.SetSocType(stop_info.soc_type);
+    arch.SetPosType(stop_info.pos_type);
   }
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOG(log, "get arch success, arch: {0}", arch.GetArchitectureName());

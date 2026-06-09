@@ -236,8 +236,50 @@ lldb::FrameComparison ThreadPlanStepRange::CompareCurrentFrameToStartFrame() {
     if (m_parent_stack_id.IsValid() && cur_parent_id.IsValid() &&
         m_parent_stack_id == cur_parent_id)
       frame_order = eFrameCompareSameParent;
-    else
+    else {
       frame_order = eFrameCompareOlder;
+    }
+#ifdef MS_DEBUGGER
+    Log *log = GetLog(LLDBLog::Step);
+    StreamString ss;
+    if (log) {
+      cur_frame_id.Dump(&ss);
+      m_stack_id.Dump(&ss);
+      cur_parent_id.Dump(&ss);
+      m_parent_stack_id.Dump(&ss);
+      LLDB_LOG(log, "{0} stack info: {1}", __FUNCTION__, ss.GetString());
+    }
+    // In SIMT (Single Instruction, Multiple Thread) kernel execution, multiple
+    // frames share the same call frame address. This can cause the standard
+    // frame comparison to incorrectly classify a frame as "older" when the
+    // call frame addresses differ from the saved parent stack ID. The logic
+    // below checks if we are in a SIMT kernel stop and the current frame's
+    // CFA matches the original stepping frame's CFA. If so, it compares the
+    // symbol context scopes of the two frames: if they belong to the same
+    // scope or the same function, the frame is classified as "younger" (i.e.,
+    // still within the stepping range), preventing premature step-out.
+    if (cur_frame_id.GetCallFrameAddress() ==
+            m_stack_id.GetCallFrameAddress() &&
+        thread.GetProcess()->IsStopInSimtKernel() && cur_parent_frame &&
+        cur_parent_id.IsValid()) {
+      SymbolContextScope *lhs_scope = m_stack_id.GetSymbolContextScope();
+      SymbolContextScope *rhs_scope = cur_parent_id.GetSymbolContextScope();
+      if (lhs_scope != nullptr && rhs_scope != nullptr) {
+        if (lhs_scope == rhs_scope) {
+          frame_order = eFrameCompareYounger;
+        } else {
+          SymbolContext lhs_sc;
+          SymbolContext rhs_sc;
+          lhs_scope->CalculateSymbolContext(&lhs_sc);
+          rhs_scope->CalculateSymbolContext(&rhs_sc);
+          if (lhs_sc.function == rhs_sc.function &&
+              lhs_sc.function != nullptr && rhs_sc.function != nullptr) {
+            frame_order = eFrameCompareYounger;
+          }
+        }
+      }
+    }
+#endif
   }
   return frame_order;
 }
@@ -272,12 +314,20 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
         const char *plugin_name = nullptr;
         const char *flavor = nullptr;
 #ifdef MS_DEBUGGER
+        // When debugging device-side code (e.g., on Ascend NPU), the host-side
+        // target architecture may differ from the device-side architecture. If
+        // the process is stopped on the device, retrieve the device stop info
+        // and override the disassembly architecture to "hiipu64" (the Ascend
+        // device ISA), setting the SOC type and POS type from the cached device
+        // stop info. This ensures the disassembler uses the correct instruction
+        // set for device-side code ranges.
         DeviceStopInfo stop_info;
         ArchSpec arch = GetTarget().GetArchitecture();
         if (GetThread().GetProcess()->IsStopInDevice()) {
           GetThread().GetProcess()->GetDeviceStopInfoCached(stop_info);
           arch = ArchSpec("hiipu64");
           arch.SetSocType(stop_info.soc_type);
+          arch.SetPosType(stop_info.pos_type);
         }
         Log *log = GetLog(LLDBLog::Step);
         LLDB_LOG(log, "get arch success, arch: {0}, addr={1:x}",

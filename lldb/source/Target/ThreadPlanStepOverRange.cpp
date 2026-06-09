@@ -196,12 +196,15 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     }
 
     if (!InSymbol()) {
+#ifdef MS_DEBUGGER
+      LLDB_LOG(log, "Enter in non-symbol branch.");
+#endif
       // This one is a little tricky.  Sometimes we may be in a stub or
       // something similar, in which case we need to get out of there.  But if
       // we are in a stub then it's likely going to be hard to get out from
       // here.  It is probably easiest to step into the stub, and then it will
       // be straight-forward to step out.
-      new_plan_sp = thread.QueueThreadPlanForStepThrough(m_stack_id, false, 
+      new_plan_sp = thread.QueueThreadPlanForStepThrough(m_stack_id, false,
                                                          stop_others, m_status);
     } else {
       // The current clang (at least through 424) doesn't always get the

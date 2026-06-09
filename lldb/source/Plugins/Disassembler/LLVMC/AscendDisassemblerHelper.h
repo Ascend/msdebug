@@ -6,8 +6,10 @@
 #ifndef liblldb_AscendDisassemblerHelper_H_
 #define liblldb_AscendDisassemblerHelper_H_
 
+#include "lldb/Utility/MessageDefines.h"
 #include "lldb/Utility/ArchSpec.h"
 
+namespace lldb_private {
 class AscendDisassemblerHelper {
 public:
   static void GetInstruction(const uint8_t *opcode_data,
@@ -20,8 +22,10 @@ class AscendDisassembler {
 public:
   virtual void GetInstruction(const uint8_t *opcode_data,
                               const size_t opcode_data_len, uint64_t &flags,
+                              const InterruptPosType pos_type,
                               uint64_t &inst_size) = 0;
 };
+} // namespace lldb_private
 
 #endif // #ifndef liblldb_AscendDisassemblerHelper_H_
 #endif

@@ -241,7 +241,7 @@ static const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
 #ifdef MS_DEBUGGER
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::hiipu64,
+    {eByteOrderLittle, 8, 4, 16, llvm::Triple::hiipu64,
      ArchSpec::eCore_Ascend, "hiipu64"},
 #endif
 };

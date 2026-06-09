@@ -251,7 +251,36 @@ inline bool IsRegisterSupport(CoreType core_type, InterruptPosType pos_type,
   // su but register is vf
   return false;
 }
+
+inline std::string GetSocName(SocType type) {
+  switch (type) {
+  case SocType::SOC_BEGIN:
+    return "SOC_BEGIN";
+  case SocType::ASCEND910B:
+    return "ASCEND910B";
+  case SocType::ASCEND310P:
+    return "ASCEND310P";
+  case SocType::ASCEND950:
+    return "ASCEND950";
+  default:
+    return "UNKNOWN";
+  }
 }
+
+inline std::string GetPosName(InterruptPosType type) {
+  switch (type) {
+  case InterruptPosType::SU_INTERRUPT:
+    return "SU_INTERRUPT";
+  case InterruptPosType::VEC_INTERRUPT_SIMD:
+    return "SIMD_INTERRUPT";
+  case InterruptPosType::VEC_INTERRUPT_SIMT:
+    return "SIMT_INTERRUPT";
+  default:
+    return "UNKNOWN";
+  }
+}
+
+} // namespace lldb_private
 
 #endif
 #endif

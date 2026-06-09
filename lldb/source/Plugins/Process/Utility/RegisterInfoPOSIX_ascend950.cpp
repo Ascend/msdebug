@@ -546,7 +546,8 @@ enum LLDB_ASCEND_RENUM {
   lldb_r124_ascend,
   lldb_r125_ascend,
   lldb_r126_ascend,
-  k_last_vecrb_reg_ascend = lldb_r126_ascend,
+  lldb_simt_lr_ascend,
+  k_last_vecrb_reg_ascend = lldb_simt_lr_ascend,
   lldb_fmatrix_ascend,
   lldb_padding_l1_ascend,
   lldb_l0_set_value_l1_ascend,
@@ -810,7 +811,8 @@ static const uint32_t g_vecrb_regnums_ascend950[] = {
     lldb_r112_ascend, lldb_r113_ascend, lldb_r114_ascend, lldb_r115_ascend,
     lldb_r116_ascend, lldb_r117_ascend, lldb_r118_ascend, lldb_r119_ascend,
     lldb_r120_ascend, lldb_r121_ascend, lldb_r122_ascend, lldb_r123_ascend,
-    lldb_r124_ascend, lldb_r125_ascend, lldb_r126_ascend, LLDB_INVALID_REGNUM};
+    lldb_r124_ascend, lldb_r125_ascend, lldb_r126_ascend, lldb_simt_lr_ascend,
+    LLDB_INVALID_REGNUM};
 
 // clang-format on
 
@@ -1830,6 +1832,8 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
      SIMT_VF_MASK},
     {ASCEND_GPR_NBYTES(R126, r126, 4), VEC_ID << ID_OFFSET | 9UL << 48 | 81920,
      SIMT_VF_MASK},
+    // simt fake register : r0+r1
+    {ASCEND_GPR(SIMT_LR, simt_lr, lldb_simt_lr_ascend), 0x0, SIMT_VF_MASK},
 
     {ASCEND_REG(FMATRIX, lldb_fmatrix_ascend), L1_ID << ID_OFFSET | 0,
      AIC_MASK},
@@ -2276,6 +2280,42 @@ Status RegisterInfoPOSIX_ascend950::ReadExecMask(
   return error;
 }
 
+Status RegisterInfoPOSIX_ascend950::ReadSimtLr(
+    const RegisterInfo *reg_info, uint64_t base_addr,
+    const InterruptPosInfo &pos, const RegisterDataInterface *reg_data_reader,
+    RegisterValue &value) const {
+  Log *log = GetLog(LLDBLog::Process);
+  Status error;
+  vector<uint32_t> reg_num_list{lldb_r0_ascend, lldb_r1_ascend};
+  DataBufferHeap buffer;
+  for (const auto reg_num : reg_num_list) {
+    const RegisterInfo *rx_reg_info = GetRegisterInfoAt(reg_num);
+    if (rx_reg_info &&
+        rx_reg_info->kinds[eRegisterKindLLDB] < m_register_map.size() &&
+        m_register_map.find(rx_reg_info->name) != m_register_map.end()) {
+      const DeviceRegisterInfo &device_reg_info =
+          m_register_map.at(rx_reg_info->name);
+      RegisterValue tmp_value;
+      error = ReadRXReg(rx_reg_info, device_reg_info.addr, pos, reg_data_reader,
+                        tmp_value);
+      if (error.Fail()) {
+        return error;
+      }
+      const uint8_t *value_data =
+          static_cast<const uint8_t *>(tmp_value.GetBytes());
+      // little order
+      buffer.AppendData(value_data, rx_reg_info->byte_size);
+    } else {
+      error.SetErrorStringWithFormatv("Find reg_num={0} failed", reg_num);
+      return error;
+    }
+  }
+  value.SetBytes(buffer.GetBytes(), reg_info->byte_size,
+                 lldb::eByteOrderLittle);
+  LLDB_LOG(log, "got {}={0:x}", reg_info->name, value.GetAsUInt64());
+  return error;
+}
+
 Status RegisterInfoPOSIX_ascend950::ReadSimtPReg(
     const RegisterInfo *reg_info, uint64_t base_addr,
     const InterruptPosInfo &pos, const RegisterDataInterface *reg_data_reader,
@@ -2321,6 +2361,9 @@ Status RegisterInfoPOSIX_ascend950::ReadRegister(
 
     if (IsVReg(reg_info)) {
       return ReadVXReg(reg_info, pos_info, reg_data_reader, value);
+    }
+    if (reg_info->kinds[eRegisterKindLLDB] == lldb_simt_lr_ascend) {
+      return ReadSimtLr(reg_info, addr, pos_info, reg_data_reader, value);
     }
 
     error = reg_data_reader->ReadRegister(addr, reg_info, pos_info.core_id, pos_info.core_type, value);

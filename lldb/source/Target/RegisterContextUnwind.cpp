@@ -38,6 +38,10 @@
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
 
+#ifdef MS_DEBUGGER
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend.h"
+#endif
+
 #include <cassert>
 #include <memory>
 
@@ -1361,9 +1365,18 @@ RegisterContextUnwind::SavedLocationForRegister(
                        "RA reg because this is a trap handler and there is "
                        "a location for the saved pc register value.");
         } else {
-          return_address_reg.init(
-              m_thread, m_full_unwind_plan_sp->GetRegisterKind(),
-              m_full_unwind_plan_sp->GetReturnAddressRegister());
+#ifdef MS_DEBUGGER
+          // when simt/simd, the ra register is not correct in .debug_frame
+          // best practice: use multiple cie in debug_frame by compiler
+          if (m_thread.GetProcess()->IsStopInSimtKernel()) {
+            // dwarf_simt_lr_ascend
+            return_address_reg.init(m_thread, lldb::eRegisterKindDWARF,
+                                    dwarf_simt_lr_ascend);
+          } else
+#endif
+            return_address_reg.init(
+                m_thread, m_full_unwind_plan_sp->GetRegisterKind(),
+                m_full_unwind_plan_sp->GetReturnAddressRegister());
           regnum = return_address_reg;
           UnwindLogMsg("requested caller's saved PC but this UnwindPlan uses a "
                        "RA reg; getting %s (%d) instead",
