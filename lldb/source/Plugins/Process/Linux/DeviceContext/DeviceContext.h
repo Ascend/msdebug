@@ -156,6 +156,7 @@ public:
   virtual bool UseSpecifiedCore(uint32_t aic_mask, uint64_t aiv_mask, CoreMaskInfo &maskInfo);
   virtual Status TaskKill(uint32_t stream_id);
   virtual MemType DeviceAddressClassToMemType(const DeviceAddressClass address_class) const;
+  virtual bool IsValidStack(lldb::addr_t addr, size_t size);
   virtual MemType GetStackMemType() const = 0;
   Status BaseSqCqComm(CmdType type, const uint8_t *data = nullptr, const uint8_t len = 0,
                       uint8_t *out = nullptr, uint8_t out_len = 0) const;

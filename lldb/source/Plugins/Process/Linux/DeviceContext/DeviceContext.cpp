@@ -376,19 +376,18 @@ inline bool IsValidLocalAddr(lldb::addr_t addr, size_t size) {
   return true;
 }
 
-inline bool IsValidStack(addr_t addr, size_t size)
-{
-    constexpr uint64_t START_STACK_VA = 0x100000;
-    constexpr uint64_t END_STACK_VA = 0x1000000;
-    constexpr uint64_t MAX_STACK_SIZE = END_STACK_VA - START_STACK_VA;
+bool DeviceContext::IsValidStack(addr_t addr, size_t size) {
+  constexpr uint64_t START_STACK_VA = 0x10000;
+  constexpr uint64_t END_STACK_VA = 0x1000000;
+  constexpr uint64_t MAX_STACK_SIZE = END_STACK_VA - START_STACK_VA;
 
-    if (size == 0 || size >= MAX_STACK_SIZE) {
-      return false;
-    }
-    if (addr < START_STACK_VA || addr >= END_STACK_VA || addr + size >= END_STACK_VA) {
-      return false;
-    }
-    return true;
+  if (size == 0 || size >= MAX_STACK_SIZE) {
+    return false;
+  }
+  if (addr < START_STACK_VA || addr >= END_STACK_VA || addr + size >= END_STACK_VA) {
+    return false;
+  }
+  return true;
 }
 
 inline bool IsValidGlobalAddr(addr_t addr, size_t size)
@@ -411,14 +410,26 @@ size_t DeviceContext::ReadLocalMemory(lldb::addr_t addr, size_t size,
                                       const InterruptPosInfo &pos_info,
                                       void *data) {
   Log *log = GetLog(LLDBLog::Process);
-  LocalMemoryInfo event;
+  LocalMemoryInfo event{};
   event.core_id = pos_info.core_id;
   event.mem_type = DeviceAddressClassToMemType(memory_type_info.address_class);
+  if (memory_type_info.address_class == DeviceAddressClass::STACK) {
+    if (pos_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+      event.mem_type = MemType::SIMT_STACK;
+    } else if (pos_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
+      event.mem_type = MemType::SIMD_STACK;
+    }
+  }
   uint32_t align_byte = addr % BLOCK_MEM_SIZE;
   event.src_addr = addr - align_byte;
   event.core_type = static_cast<uint8_t>(pos_info.core_type);
-  LLDB_LOG(log, "Read local memory: {0:x}, core_id={1}, core_type={2}",
-           addr, event.core_id, event.core_type);
+  event.thread_id_x = pos_info.thread_pos.x;
+  event.thread_id_y = pos_info.thread_pos.y;
+  event.thread_id_z = pos_info.thread_pos.z;
+  LLDB_LOG(log,
+           "Read local memory: {0:x}, core_id={1}, core_type={2}, mem_type={3}",
+           addr, event.core_id, event.core_type,
+           static_cast<uint32_t>(event.mem_type));
 
   LocalMemoryData mem_data;
   if (INT32_MAX - align_byte < size) {
@@ -711,6 +722,13 @@ size_t DeviceContext::ReadMemory(lldb::addr_t addr, size_t size, const MemoryTyp
   LLDB_LOGF(log, "ReadMemory device_addr=%#lx, size=%lu", addr, size);
   auto address_class = memory_type_info.address_class;
   auto mem_type = DeviceAddressClassToMemType(address_class);
+  if (address_class == DeviceAddressClass::STACK) {
+    if (pos_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+      mem_type = MemType::SIMT_STACK;
+    } else if (pos_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
+      mem_type = MemType::SIMD_STACK;
+    }
+  }
   LLDB_LOG(log, "{0} query address_class={1}, mem_type={2}", __FUNCTION__,
       static_cast<uint32_t>(address_class), static_cast<uint32_t>(mem_type));
   if (mem_type == MemType::MEM_LAST) {

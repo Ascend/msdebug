@@ -251,15 +251,29 @@ bool Breakpoint::IsInternal() const { return LLDB_BREAK_ID_IS_INTERNAL(m_bid); }
 BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                              bool *new_location) {
 #ifdef MS_DEBUGGER
-  const auto *function = addr.CalculateSymbolContextFunction();
+  auto *function = addr.CalculateSymbolContextFunction();
+  auto *block = addr.CalculateSymbolContextBlock();
   if (function) {
     Log *log = GetLog(LLDBLog::Breakpoints);
-    LLDB_LOG(log, "Detect function_calss={0:x}, with addr={1:x}",
-             function->GetFunctionClass(), addr.GetOffset());
-    if (function->GetFunctionClass() &
+    uint32_t function_class = function->GetFunctionClass();
+    addr_t func_base_addr = function->GetAddressRange().GetBaseAddress().GetOffset();
+    if (function_class == 0 && block) {
+      // inlined, so we use block to find
+      block = block->FindFirstBlockContainsClassByOffset(addr.GetOffset() - func_base_addr);
+      if (block) {
+        function_class = block->GetFunctionClass();
+      }
+    }
+    LLDB_LOG(log,
+             "Detect function_class={0:x}, with addr={1:x}, block "
+             "function_class={2:x}, "
+             "function base addr={3:x}",
+             function_class, addr.GetOffset(),
+             block ? block->GetFunctionClass() : -1, func_base_addr);
+    if (function_class &
         (static_cast<uint32_t>(DeviceFunctionClass::SIMD_CALLEE) |
          static_cast<uint32_t>(DeviceFunctionClass::SIMT_CALLEE) |
-         static_cast<uint32_t>(DeviceFunctionClass::SIMT_ENTRY) |
+         static_cast<uint32_t>(DeviceFunctionClass::SIMD_ENTRY) |
          static_cast<uint32_t>(DeviceFunctionClass::SIMT_ENTRY))) {
       m_hardware = true;
       LLDB_LOG(log, "Simt/Simd function only support hardware breakpoint, auto "

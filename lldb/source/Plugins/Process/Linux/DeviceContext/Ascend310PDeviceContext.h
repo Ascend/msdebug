@@ -19,7 +19,6 @@ public:
 
   MemType GetStackMemType() const override;
 
-
   Status Resume(const InterruptPosInfo &pos_info) const override;
 
   Status InvalidInstrCache(const lldb::addr_t &addr, const InterruptPosInfo &pos_info,

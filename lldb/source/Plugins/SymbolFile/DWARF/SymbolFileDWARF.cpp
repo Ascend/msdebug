@@ -1413,6 +1413,9 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
                 subprogram_low_pc);
           }
         }
+#ifdef MS_DEBUGGER
+        block->SetFunctionClass(function_class ? function_class.value() : 0);
+#endif
         block->FinalizeRanges();
 
         if (tag != DW_TAG_subprogram &&

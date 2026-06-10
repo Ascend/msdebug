@@ -133,6 +133,21 @@ Block *Block::FindInnermostBlockByOffset(const lldb::addr_t offset) {
   return this;
 }
 
+#ifdef MS_DEBUGGER
+Block *Block::FindFirstBlockContainsClassByOffset(const lldb::addr_t offset) {
+  if (!Contains(offset))
+    return nullptr;
+  if (m_function_class != 0) {
+    return this;
+  }
+  auto *parent = GetParent();
+  if (parent) {
+    return parent->FindFirstBlockContainsClassByOffset(offset);
+  }
+  return nullptr;
+}
+#endif
+
 void Block::CalculateSymbolContext(SymbolContext *sc) {
   if (m_parent_scope)
     m_parent_scope->CalculateSymbolContext(sc);

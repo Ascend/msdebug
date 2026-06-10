@@ -266,6 +266,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           if (!function_class) {
             function_class = form_value.Unsigned();
           }
+          break;
 #endif
 
         default:
@@ -298,7 +299,6 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                                            decl_file, decl_line, decl_column,
                                            call_file, call_line, call_column);
 #else
-        std::optional<int> function_class;
         die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
                                            decl_file, decl_line, decl_column,
                                            call_file, call_line, call_column, function_class);

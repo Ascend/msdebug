@@ -89,6 +89,10 @@ MemType Ascend950DeviceContext::GetStackMemType() const {
   return MemType::OUT_MEM;
 }
 
+bool Ascend950DeviceContext::IsValidStack(addr_t addr, size_t size) {
+  return true;
+}
+
 Status Ascend950DeviceContext::GetDeviceInfo(DeviceInfo &device_info) {
   Status error;
   DeviceCoreMask info;

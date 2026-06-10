@@ -21,6 +21,8 @@ public:
 
   MemType GetStackMemType() const override;
 
+  bool IsValidStack(lldb::addr_t addr, size_t size) override;
+
   Status InvalidInstrCache(const lldb::addr_t &addr,
       const InterruptPosInfo &pos_info, uint8_t redirect_ifu = 0) const override;
 

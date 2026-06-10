@@ -340,6 +340,10 @@ public:
 
   Block *FindInnermostBlockByOffset(const lldb::addr_t offset);
 
+#ifdef MS_DEBUGGER
+  Block *FindFirstBlockContainsClassByOffset(const lldb::addr_t offset);
+#endif
+
   size_t GetNumRanges() const { return m_ranges.GetSize(); }
 
   bool GetRangeContainingOffset(const lldb::addr_t offset, Range &range);
@@ -361,6 +365,10 @@ public:
 
   void SetDidParseVariables(bool b, bool set_children);
 
+#ifdef MS_DEBUGGER
+  uint32_t GetFunctionClass() const { return m_function_class; }
+  void SetFunctionClass(uint32_t function_class) { m_function_class = function_class; }
+#endif
 protected:
   typedef std::vector<lldb::BlockSP> collection;
   // Member variables.
@@ -382,6 +390,9 @@ protected:
 private:
   Block(const Block &) = delete;
   const Block &operator=(const Block &) = delete;
+#ifdef MS_DEBUGGER
+  uint32_t m_function_class{0};
+#endif
 };
 
 } // namespace lldb_private
