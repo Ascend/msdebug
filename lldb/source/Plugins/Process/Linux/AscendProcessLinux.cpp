@@ -968,8 +968,22 @@ Status AscendProcessLinux::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, s
       return Status("device context is null!");
     }
     Status status;
-    if (m_pos_info.core_type == CoreType::UNKNOWN_CORE_TYPE) {
+    Log *log = GetLog(LLDBLog::Process);
+    // if app is not stopped at device point, m_pos_info.core_type is unknown
+    if ((m_pos_info.core_type == CoreType::UNKNOWN_CORE_TYPE) &&
+        (param.address_class != DeviceAddressClass::GM)) {
+      LLDB_LOG(log,
+               "AscendProcessLinux::{0}, Core type is unknown. "
+               "only GM is allowed to be read. address_class={1}",
+               __FUNCTION__, static_cast<int32_t>(param.address_class));
       status.SetErrorString("Core type is unknown, read memory from ascend device failed.");
+      return status;
+    } else if ((m_pos_info.core_type == CoreType::UNKNOWN_CORE_TYPE) &&
+               (param.address_class == DeviceAddressClass::GM)) {
+      bytes_read = m_device_context->ReadGlobalMemory(addr, size, buf);
+      if (bytes_read != size) {
+        status.SetErrorString("ReadGlobalMemory failed.");
+      }
       return status;
     }
     MemoryTypeInfo memory_type_info{};

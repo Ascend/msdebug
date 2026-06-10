@@ -619,24 +619,63 @@ size_t DeviceContext::ReadGlobalMemory(addr_t addr, size_t size, void *data) {
     LLDB_LOG(log, "Invalid global addr={0}, size={1}", addr, size);
     return 0;
   }
-  DebugInfo debug_info = { m_device_id, g_timeout, 0, m_pid };
-  DmaParam *param = (DmaParam*)debug_info.data;
-  std::vector<uint8_t> tmpData(size, 0);
-  param->host_addr = (uint64_t)&tmpData[0];
-  param->device_addr = addr;
-  param->size = size;
-  param->direction = DEVDRV_DMA_DEVICE_TO_HOST;
-  LLDB_LOGF(log, "host_addr=%#lx, device_addr=%#lx, size=%lu, direction=%d",
-            param->host_addr, param->device_addr, param->size, param->direction);
-  int32_t rtn = ioctl(m_drv_fd, CMD_GM_COPY, &debug_info);
-  if (rtn != 0) {
+  // GM can be read via driver api but only one page for once.
+  // So it is necessary to check if the host address "param->host_addr" crosses
+  // pages. If so, calls to the driver interface should be made in batches, with
+  // each page being called separately.
+
+  constexpr uint64_t page_size = 4096;
+  uint8_t *dest = static_cast<uint8_t *>(data);
+  std::vector<uint8_t> tmp_data(size, 0);
+
+  // calculate page numbers
+  uint64_t host_addr = reinterpret_cast<uint64_t>(&tmp_data[0]);
+  uint64_t addr_len = static_cast<uint64_t>(size);
+  uint64_t align_addr_len = ((host_addr & (page_size - 1)) + addr_len);
+  uint64_t total_page_num = align_addr_len / page_size;
+  if ((align_addr_len & (page_size - 1)) != 0) {
+    total_page_num++;
+  }
+
+  LLDB_LOG(log, "Total pages to read: {0}", total_page_num);
+
+  uint64_t bytes_read_total = 0;
+  uint64_t current_device_addr = addr;
+
+  // call driver api once for each page
+  for (uint64_t i = 0; i < total_page_num; i++) {
+    // calculate byte size for current page
+    uint64_t current_host_addr = host_addr + bytes_read_total;
+    uint64_t offset_in_page = current_host_addr % page_size;
+    uint64_t bytes_this_page = page_size - offset_in_page;
+    uint64_t bytes_to_read = std::min(bytes_this_page, size - bytes_read_total);
+
+    // prepare parameters for driver api
+    DebugInfo debug_info = {m_device_id, g_timeout, 0, m_pid};
+    DmaParam *param = (DmaParam *)debug_info.data;
+    param->host_addr = current_host_addr;
+    param->device_addr = current_device_addr;
+    param->size = bytes_to_read;
+    param->direction = DEVDRV_DMA_DEVICE_TO_HOST;
+
+    LLDB_LOGF(
+        log, "Reading page %lu/%lu: host_addr=%#lx, device_addr=%#lx, size=%lu",
+        i, total_page_num, param->host_addr, param->device_addr, param->size);
+
+    // call driver api
+    int32_t rtn = ioctl(m_drv_fd, CMD_GM_COPY, &debug_info);
+    if (rtn != 0) {
       LLDB_LOGF(log, "call gm copy failed: %d", rtn);
-      return 0;
+      return bytes_read_total;
+    }
+
+    bytes_read_total += bytes_to_read;
+    current_device_addr += bytes_to_read;
   }
-  if (size > 0) {
-    std::copy(tmpData.begin(), tmpData.end(), static_cast<uint8_t*>(data));
-  }
-  return size;
+
+  // 最后把tmpData中的所有数据复制到目标位置
+  std::copy(tmp_data.begin(), tmp_data.end(), dest);
+  return bytes_read_total;
 }
 
 size_t DeviceContext::WriteGlobalMemory(addr_t addr, size_t size, const void *data) {
