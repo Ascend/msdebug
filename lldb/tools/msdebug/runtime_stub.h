@@ -82,8 +82,11 @@ uint64_t GetFixedPcStartAddr(const KernelInfo &kernelInfo,
     const std::string &targetKernelName, uint64_t pcStartAddr);
 int32_t ConvertToVisibleDeviceId(int32_t devId);
 
-extern "C" {
 using rtError_t = int32_t;
+rtError_t rtRegisterFuncSymbolOrigin(void *binHandle, const void *symbol,
+                                     const char *kernelName, void *reserve);
+
+extern "C" {
 using rtSmDesc_t = void;
 using rtStream_t = void *;
 using rtArgsEx_t = void;

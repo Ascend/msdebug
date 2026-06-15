@@ -33,6 +33,12 @@ static std::map<const void *, std::string> &GetStubFuncPtrNameMap()
     return inst;
 }
 
+static std::map<const void *, std::pair<const void *, std::string>> &GetSymbolToBinMap()
+{
+    static std::map<const void *, std::pair<const void *, std::string>> inst{};
+    return inst;
+}
+
 static std::map<const aclrtBinary, rtDevBinary_t> &GetDevBinaryMap()
 {
     static std::map<const aclrtBinary, rtDevBinary_t> inst{};
@@ -102,6 +108,9 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
           {"aclrtGetUserDevIdByLogicDevIdImpl",
            {"aclrtGetUserDevIdByLogicDevIdImpl",
             ACLRT_GET_USER_DEVID_BY_LOGIC_DEVID_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtGetFuncBySymbolImpl",
+           {"aclrtGetFuncBySymbolImpl",
+            ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
           {"aclrtSynchronizeStreamWithTimeoutImpl",
            {"aclrtSynchronizeStreamWithTimeoutImpl",
             ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}}};
@@ -600,6 +609,32 @@ aclError aclrtBinaryGetFunctionByEntryImpl(aclrtBinHandle binHandle, uint64_t fu
     return ret;
 }
 
+aclError aclrtGetFuncBySymbolImpl(const void *symbol,
+                                  aclrtFuncHandle *funcHandle) {
+  using FuncType = decltype(&aclrtGetFuncBySymbolImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
+  auto ret = func(symbol, funcHandle);
+  if (ret == ACL_SUCCESS && *funcHandle) {
+    auto info = GetSymbolToBinMap()[symbol];
+    auto *binHandle = info.first;
+    if (binHandle) {
+        GetStubFuncPtrNameMap()[*funcHandle] = info.second;
+        MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
+    }
+  }
+  return ret;
+}
+
+// only rt
+rtError_t rtRegisterFuncSymbol(void *binHandle, const void *symbol, const char *kernelName, void *reserve) {
+  RT_STUB_LOG_INFO("Enter rtRegisterFuncSymbol\n");
+  auto ret = rtRegisterFuncSymbolOrigin(binHandle, symbol, kernelName, reserve);
+  if (ret == ACL_SUCCESS && binHandle && kernelName) {
+    GetSymbolToBinMap()[symbol] = {binHandle, kernelName};
+  }
+  return ret;
+}
+
 aclError aclrtLaunchKernelWithConfigImpl(aclrtFuncHandle funcHandle,
     uint32_t blockDim, aclrtStream stream,
     aclrtLaunchKernelCfg *cfg, aclrtArgsHandle argsHandle, void *reserve)
@@ -694,5 +729,7 @@ aclError aclrtCreateContextImpl(aclrtContext *context, int32_t deviceId)
     }
     return ret;
 }
+
 }
+
 #endif

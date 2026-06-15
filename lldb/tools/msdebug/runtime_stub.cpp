@@ -28,6 +28,7 @@ typedef rtError_t (*rtSetDeviceExFunc)(int32_t);
 typedef rtError_t (*rtCtxCreateExFunc)(void **ctx, uint32_t flags, int32_t device);
 typedef rtError_t (*rtFunctionRegisterFunc)(void *, const void *, const char *,
     const void *, uint32_t);
+typedef rtError_t (*rtRegisterFuncSymbolFunc)(void *, const void *, const char *, void *);
 typedef rtError_t (*rtGetFunctionByNameFunc)(const char *, void **);
 typedef rtError_t (*rtGetAddrByFunFunc)(const void *, void **);
 typedef rtError_t (*rtKernelLaunchFunc)(const void *, uint32_t, void *, uint32_t, rtSmDesc_t *, rtStream_t);
@@ -98,6 +99,8 @@ static std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
                 {"rtStreamSynchronizeWithTimeout", RT_STREAM_SYNC_WITH_TIMEOUT_NOT_FOUND_ERR, nullptr}},
             {"rtStreamSynchronize",
                 {"rtStreamSynchronize", RT_STREAM_SYNC_NOT_FOUND_ERR, nullptr}},
+            {"rtRegisterFuncSymbol",
+                {"rtRegisterFuncSymbol", RT_REGISTER_FUNC_SYMBOL_NOT_FOUND_ERR, nullptr}},
             {"rtGetVisibleDeviceIdByLogicDeviceId",
                 {"rtGetVisibleDeviceIdByLogicDeviceId", RT_GET_VISIBLE_DEVID_BY_LOGIC_DEVID_NOT_FOUND_ERR, nullptr}},
             {"rtMemGetAddressRange",
@@ -690,6 +693,14 @@ bool BinaryRegisterPost(const rtDevBinary_t *bin, void *hdl, const string &hash,
     MapManager::Instance().AddKernelInfoMap(hdl, kernelInfo);
     return true;
 }
+
+rtError_t rtRegisterFuncSymbolOrigin(void *binHandle, const void *symbol, const char *kernelName, void *reserve)
+{
+  rtRegisterFuncSymbolFunc func =
+      (rtRegisterFuncSymbolFunc)GetStubFuncPtr("rtRegisterFuncSymbol");
+  return func(binHandle, symbol, kernelName, reserve);
+}
+
 
 int32_t ConvertToVisibleDeviceId(int32_t devId)
 {
