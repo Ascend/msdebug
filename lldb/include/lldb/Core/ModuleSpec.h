@@ -19,9 +19,11 @@
 
 #include "llvm/Support/Chrono.h"
 #ifdef MS_DEBUGGER
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #endif
 
 #include <mutex>
@@ -272,20 +274,20 @@ public:
     FileSpec &file = GetFileSpec();
     llvm::ErrorOr<llvm::vfs::Status> status = FileSystem::Instance().GetStatus(file);
     const uint32_t permissions = FileSystem::Instance().GetPermissions(file);
+    Log *log = GetLog(LLDBLog::Host);
 
     if (status) {
       // 不允许其他用户组可写
       if (permissions & lldb::eFilePermissionsWorldWrite) {
-        error.SetErrorStringWithFormat("Risky action, \"%s\" is writable by any other users.",
-                                       file.GetPath().c_str());
-        return error;
+        LLDB_LOGF(log, "Risky action, \"%s\" is writable by any other users.",
+                  file.GetPath().c_str());
       }
       // 目标文件是root所有的，可以被任意用户执行；目标文件非root所有，只能被实际所有者执行
       // 当前用户为root时, 不做文件从属权限校验
       if ((getuid() != 0) && (status->getUser() != 0 && status->getUser() != getuid())) {
-        error.SetErrorStringWithFormat("Risky action, \"%s\" is not owned by root or current user.",
-                                       file.GetPath().c_str());
-        return error;
+        LLDB_LOGF(log,
+                  "Risky action, \"%s\" is not owned by root or current user.",
+                  file.GetPath().c_str());
       }
     } else {
       error.SetErrorStringWithFormat(
@@ -378,9 +380,11 @@ public:
     Status error;
     FileSpec &file = GetFileSpec();
     std::string path = file.GetPath();
-
+    Log *log = GetLog(LLDBLog::Host);
     if(FileSystem::Instance().IsSymlink(path)){
-      printf("Warning : The path %s is a soft link, which may cause security problems.\n", path.c_str());
+      LLDB_LOGF(
+          log, "The path %s is a soft link, which may cause security problems.",
+          path.c_str());
     }
     return error;
   }
@@ -424,19 +428,21 @@ public:
     FileSpec parentFile(GetFileSpec().GetDirectory().GetStringRef());
     llvm::ErrorOr<llvm::vfs::Status> status = FileSystem::Instance().GetStatus(parentFile);
     const uint32_t permissions = FileSystem::Instance().GetPermissions(parentFile);
-
+    Log *log = GetLog(LLDBLog::Host);
     if (status) {
       // 目标文件是root所有的，可以被任意用户执行；目标文件非root所有，只能被实际所有者执行
       // 当前用户为root时, 不做文件从属权限校验
       if ((getuid() != 0) && (status->getUser() != 0 && status->getUser() != getuid())) {
-        error.SetErrorStringWithFormat("Risky action, \"%s\" is not owned by root or current user.",
-                                       parentFile.GetPath().c_str());
-        return error;
+        LLDB_LOGF(log, "Risky action, %s is not owned by root or current user.",
+                  parentFile.GetPath().c_str());
       }
 
       // 不允许其他或用户组可写
       if (permissions & (lldb::eFilePermissionsWorldWrite | lldb::eFilePermissionsGroupWrite)) {
-        printf("Warning : The path %s is in the same groups or in the other groups have write permission, which may cause security problems.\n", parentFile.GetPath().c_str());
+        LLDB_LOGF(log,
+                  "The path %s is in the same groups or in the other groups "
+                  "have write permission, which may cause security problems.",
+                  parentFile.GetPath().c_str());
       }
     } else {
       error.SetErrorStringWithFormat(

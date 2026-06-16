@@ -38,7 +38,8 @@ Status AscendDomainSocket::Accept(Socket *&socket) {
   // 获取客户端凭证（uid/gid）
   struct ucred cred{};
   socklen_t cred_len = sizeof(cred);
-  if (getsockopt(GetNativeSocket(), SOL_SOCKET, SO_PEERCRED, &cred, &cred_len) == -1) {
+  if (getsockopt(socket->GetNativeSocket(), SOL_SOCKET, SO_PEERCRED, &cred,
+                 &cred_len) == -1) {
     error.SetErrorStringWithFormatv("Get client SO_PEERCRED failed: {0}", std::string(strerror(errno)));
     return error;
   }
