@@ -395,6 +395,7 @@ uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle)
     RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize = %lu", pcStartAddr, (uint64_t)base_ptr, psize);
     int32_t deviceId{0};
     aclrtGetDeviceImpl(&deviceId);
+    deviceId = ConvertToVisibleDeviceId(deviceId);
     if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {
         RT_STUB_LOG_WARNING("halMemAdvise failed, "
                 "If the memory used by your process is in a read-only state, "

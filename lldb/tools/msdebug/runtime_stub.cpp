@@ -613,6 +613,7 @@ static void SetMemoryWritable(uint64_t pcStartAddr)
                      pcStartAddr, (uint64_t)base_ptr, psize);
     int32_t deviceId{0};
     GetDeviceId(&deviceId);
+    deviceId = ConvertToVisibleDeviceId(deviceId);
     if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {
         RT_STUB_LOG_WARNING("halMemAdvise failed, "
                 "If the memory used by your process is in a read-only state, "
