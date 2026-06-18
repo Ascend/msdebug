@@ -58,11 +58,38 @@ inline void ReplacePCBit(uint32_t reg_value, uint64_t mask0, uint64_t mask1,
   pc = (pc & ~(1ULL * mask1)) | pc0;
 }
 
+std::vector<ErrInfoReg>
+RegisterContextPOSIXCore_ascend::GetValidRegInfos(const ErrRegMask &err_map) {
+  if (err_map.su_err_info_regs.empty()) {
+    return err_map.err_info_regs;
+  }
+  bool is_valid = true;
+  uint32_t zero_num = 0;
+  for (const auto &info_reg_mask : err_map.err_info_regs) {
+    const RegisterInfo *reg_info =
+        GetRegisterInfoAtIndex(info_reg_mask.reg_num);
+    RegisterValue err_info_reg_value;
+    if (!ReadRegister(reg_info, err_info_reg_value)) {
+      is_valid = false;
+      break;
+    }
+    uint32_t err_info_u32_value = err_info_reg_value.GetAsUInt32();
+    zero_num += (err_info_u32_value == 0U);
+  }
+  if (is_valid) {
+    if (zero_num == err_map.err_info_regs.size()) {
+      return err_map.su_err_info_regs;
+    }
+    return err_map.err_info_regs;
+  }
+  return err_map.su_err_info_regs;
+}
+
 void RegisterContextPOSIXCore_ascend::FixPCByErrorInfoReg(
-    const ErrRegMask &err_map, uint64_t &pc) {
+    const vector<ErrInfoReg> &err_info_regs, uint64_t &pc) {
   Log *log = GetLog(LLDBLog::Thread);
   // hit one kind of xx_err_info register
-  for (const auto &info_reg_mask: err_map.err_info_regs) {
+  for (const auto &info_reg_mask : err_info_regs) {
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex(info_reg_mask.reg_num);
     RegisterValue err_info_reg_value;
     if (!ReadRegister(reg_info, err_info_reg_value)) {
@@ -176,7 +203,7 @@ void RegisterContextPOSIXCore_ascend::FixPC(uint64_t &pc) {
       return;
     }
     uint64_t new_pc = pc;
-    FixPCByErrorInfoReg(err_reg_mask, new_pc);
+    FixPCByErrorInfoReg(GetValidRegInfos(err_reg_mask), new_pc);
     LLDB_LOG(log, "Got new_pc={0:x}, old_pc={1:x}", new_pc, pc);
     pc = new_pc;
   }

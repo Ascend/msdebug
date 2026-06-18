@@ -1887,7 +1887,7 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
     {ASCEND_REG_4B(CUBE_ERROR_T0_0, lldb_cube_error_t0_0), 0x8700, AIC_MASK},
     {ASCEND_REG_4B(CUBE_ERROR_T0_1, lldb_cube_error_t0_1), 0x8704, AIC_MASK},
     {ASCEND_REG_4B(L1_ERROR_T0_0, lldb_l1_error_t0_0), 0xa700, MIX_MASK},
-    {ASCEND_REG_4B(L1_ERROR_T0_1, lldb_l1_error_t0_0), 0xa704, MIX_MASK},
+    {ASCEND_REG_4B(L1_ERROR_T0_1, lldb_l1_error_t0_1), 0xa704, MIX_MASK},
 
     {ASCEND_REG_4B(SC_ERR_INFO_T0_0, lldb_sc_err_info_t0_0), 0x4730, MIX_MASK},
     {ASCEND_REG_4B(SC_ERR_INFO_T0_1, lldb_sc_err_info_t0_1), 0x4734, MIX_MASK},
@@ -1899,37 +1899,37 @@ static const DeviceRegisterInfo REGISTER_950_INFO[] = {
 
     {ASCEND_REG_4B(MTE_ERR_INFO_T0_0, lldb_mte_err_info_t0_0), 0x6718,
      MIX_MASK},
-    {ASCEND_REG_4B(MTE_ERR_INFO_T0_1, lldb_mte_err_info_t0_0), 0x671c,
+    {ASCEND_REG_4B(MTE_ERR_INFO_T0_1, lldb_mte_err_info_t0_1), 0x671c,
      MIX_MASK},
-    {ASCEND_REG_4B(MTE_ERR_INFO_T0_2, lldb_mte_err_info_t0_0), 0x6720,
+    {ASCEND_REG_4B(MTE_ERR_INFO_T0_2, lldb_mte_err_info_t0_2), 0x6720,
      MIX_MASK},
-    {ASCEND_REG_4B(MTE_ERR_INFO_T1_0, lldb_mte_err_info_t0_0), 0x6724,
+    {ASCEND_REG_4B(MTE_ERR_INFO_T1_0, lldb_mte_err_info_t1_0), 0x6724,
      MIX_MASK},
-    {ASCEND_REG_4B(MTE_ERR_INFO_T1_1, lldb_mte_err_info_t0_0), 0x6728,
+    {ASCEND_REG_4B(MTE_ERR_INFO_T1_1, lldb_mte_err_info_t1_1), 0x6728,
      MIX_MASK},
-    {ASCEND_REG_4B(MTE_ERR_INFO_T1_2, lldb_mte_err_info_t0_0), 0x673c,
+    {ASCEND_REG_4B(MTE_ERR_INFO_T1_2, lldb_mte_err_info_t1_2), 0x673c,
      MIX_MASK}, // 地址是否有问题？
 
     {ASCEND_REG_4B(VEC_ERR_INFO_T0_0, lldb_vec_err_info_t0_0), 0x7730,
      AIV_MASK},
-    {ASCEND_REG_4B(VEC_ERR_INFO_T0_1, lldb_vec_err_info_t0_0), 0x7734,
+    {ASCEND_REG_4B(VEC_ERR_INFO_T0_1, lldb_vec_err_info_t0_1), 0x7734,
      AIV_MASK},
-    {ASCEND_REG_4B(VEC_ERR_INFO_T0_2, lldb_vec_err_info_t0_0), 0x7738,
+    {ASCEND_REG_4B(VEC_ERR_INFO_T0_2, lldb_vec_err_info_t0_2), 0x7738,
      AIV_MASK},
-    {ASCEND_REG_4B(VEC_ERR_INFO_T0_3, lldb_vec_err_info_t0_0), 0x773c,
+    {ASCEND_REG_4B(VEC_ERR_INFO_T0_3, lldb_vec_err_info_t0_3), 0x773c,
      AIV_MASK},
-    {ASCEND_REG_4B(VEC_ERR_INFO_T0_4, lldb_vec_err_info_t0_0), 0x7740,
+    {ASCEND_REG_4B(VEC_ERR_INFO_T0_4, lldb_vec_err_info_t0_4), 0x7740,
      AIV_MASK},
-    {ASCEND_REG_4B(VEC_ERR_INFO_T0_5, lldb_vec_err_info_t0_0), 0x7744,
+    {ASCEND_REG_4B(VEC_ERR_INFO_T0_5, lldb_vec_err_info_t0_5), 0x7744,
      AIV_MASK},
 
     {ASCEND_REG_4B(CUBE_ERR_INFO_T0_1, lldb_cube_err_info_t0_0), 0x8730,
      AIC_MASK},
-    {ASCEND_REG_4B(CUBE_ERR_INFO_T0_2, lldb_cube_err_info_t0_0), 0x8734,
+    {ASCEND_REG_4B(CUBE_ERR_INFO_T0_2, lldb_cube_err_info_t0_1), 0x8734,
      AIC_MASK},
 
     {ASCEND_REG_4B(L1_ERR_INFO_T0_0, lldb_l1_err_info_t0_0), 0xa718, MIX_MASK},
-    {ASCEND_REG_4B(L1_ERR_INFO_T0_1, lldb_l1_err_info_t0_0), 0xa71c, MIX_MASK},
+    {ASCEND_REG_4B(L1_ERR_INFO_T0_1, lldb_l1_err_info_t0_1), 0xa71c, MIX_MASK},
 };
 
 // Returns uint32_t with bits [start, end] = 1
@@ -1965,6 +1965,11 @@ inline void AddVecMask(uint32_t mask, vector<ErrRegMask> &err_infos) {
       }
   };
   info_map.err_info_regs.emplace_back(pc_map);
+  pc_map = {lldb_vec_err_info_t0_0,
+            {
+                {GenMask(0, 15), GenMask(2, 17)},
+            }};
+  info_map.su_err_info_regs.emplace_back(pc_map);
   err_infos.emplace_back(info_map);
 }
 

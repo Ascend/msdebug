@@ -517,6 +517,7 @@ struct ErrInfoReg {
 struct ErrRegMask {
   uint32_t mask;
   std::vector<ErrInfoReg> err_info_regs;
+  std::vector<ErrInfoReg> su_err_info_regs; // only simt/simd vf
 };
 
 struct RegExtractor {

@@ -27,8 +27,9 @@ public:
   bool ReadRegister(const RegisterInfo *reg_info,
                   RegisterValue &value) override;
 
-  Status ReadRegister(uint64_t addr, const RegisterInfo* reg_info, 
-        uint32_t core_id, CoreType core_type, RegisterValue &value) const override;
+  Status ReadRegister(uint64_t addr, const RegisterInfo *reg_info,
+                      uint32_t core_id, CoreType core_type,
+                      RegisterValue &value) const override;
 
   bool WriteRegister(const RegisterInfo *reg_info,
                      const RegisterValue &value) override;
@@ -49,13 +50,16 @@ public:
 
 private:
   void FixPC(uint64_t &pc);
- 
-  void FixPCByErrorInfoReg(const ErrRegMask &err_reg_mask, uint64_t &pc);
- 
+
+  void FixPCByErrorInfoReg(const std::vector<ErrInfoReg> &err_info_regs,
+                           uint64_t &pc);
+
   bool CheckAicErrorRegisterIsValid(size_t num_registers,
                                     const vector<vector<ErrRegMask>> *error_table,
                                     const RegisterSet *const reg_set,
                                     ErrRegMask &err_reg_mask);
+
+  std::vector<ErrInfoReg> GetValidRegInfos(const ErrRegMask &err_map);
 
 private:
   std::unique_ptr<RegisterInfoPOSIX_ascend> m_register_info;
