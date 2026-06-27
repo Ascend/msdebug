@@ -11,10 +11,10 @@
 
 ### Related Product Versions
 
-| msDebug | makeself | libedit | ncurses
+| msDebug | makeself | libedit | ncurses |
 |----------|-----------------|----------|-------|
-| 26.0.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | 6.6
-| 8.3.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | openEuler-24.03-LTS-SP1-release
+| 26.0.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | 6.6 |
+| 8.3.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | openEuler-24.03-LTS-SP1-release |
 
 ## Version Compatibility
 

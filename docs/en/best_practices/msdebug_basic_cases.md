@@ -27,11 +27,11 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
         > [!NOTE]NOTE  
         > In non-initial scenarios, you can run the `make clean && make` command instead of the `make` command.
-
-        ```bash
-        cd ./mstt/sample/normal_sample/vec_only/
-        make clean && make
-        ```
+        > 
+        > ```bash
+        > cd ./mstt/sample/normal_sample/vec_only/
+        > make clean && make
+        > ```
 
 2. Set a breakpoint.
     1. Start msDebug to start the operator program and enter the debugging page.

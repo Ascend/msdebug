@@ -338,7 +338,6 @@ protected:
 | e_shentsize     | Size of each entry in the section header table, in bytes.  |
 | e_shnum  | Total number of entries in the section header table.   |
 | e_shstrndx  | Index of the entry in the section header table that corresponds to the section name table.   |
-| e_shnum  | Total number of entries in the section header table.   |
 
 3.Section Header
 
@@ -534,7 +533,7 @@ ST: Tests whether each complete function works correctly.
 
     ST directory structure:
 
-    ```bash
+    ```text
     lldb
     ├── test
     │    ├── API
@@ -547,7 +546,7 @@ ST: Tests whether each complete function works correctly.
 
     UT directory structure:
 
-    ```bash
+    ```text
     lldb
     └── unittests
         └── Process

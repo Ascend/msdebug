@@ -80,5 +80,5 @@ python build.py test
 
 It is possible that `cmake ..` is used when running the `cmake` command. The `cmake` command is described as follows:
 
-- `cmake ..`: Only the current project is built. The `make install` command installs the project to the `output/` directory, but does not call `makeself`. Therefore, no `Ascend-mindstudio-sanitizer-xxx .run` file is generated.
+- `cmake ..`: Only the current project is built. The `make install` command installs the project to the `output/` directory, but does not call `makeself`. Therefore, no `mindstudio-debugger_<version>_<arch>.run` file is generated.
 - `cmake ../cmake`: The "super build" of `cmake/CMakeLists.txt` is used. The project is built and installed first, and then `parser.py` and `makeself` are executed to generate the .run file in the `output/` directory.

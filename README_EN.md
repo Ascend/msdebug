@@ -22,7 +22,7 @@ MindStudio Debugger (msDebug) is an operator debugging tool built on the LLVM co
 
 <div align="center">
   <h4>▶️ Quick demo</h4>
-  <img src="./docs/zh/figures/demo-msdebug.gif" alt="Quick demo" width="600">
+  <img src="./docs/en/figures/demo-msdebug.gif" alt="Quick demo" width="600">
   <p><sup>Figure: Demonstrates operations such as setting breakpoints for board debugging, printing variables, and step-by-step debugging of operators.</sup></p>
 </div>
 
@@ -55,11 +55,11 @@ For details about how to use the tool, see [msDebug User Guide](docs/en/user_gui
 
 ## 💡 Typical Cases
 
-For details about how to use the tool in typical scenarios, see [msDebug Typical Cases](docs/en/best_practices/basic_cases.md).
+For details about how to use the tool in typical scenarios, see [msDebug Typical Cases](docs/en/best_practices/msdebug_basic_cases.md).
 
 ## ❓ FAQs
 
-For details about frequently asked questions and solutions, see [msDebug FAQs](docs/en/support/faq.md).
+For details about frequently asked questions and solutions, see [msDebug FAQs](docs/en/support/msdebug_faq.md).
 
 ## 🛠️ Contribution Guide
 

@@ -10,15 +10,15 @@ The following operator call scenarios are supported:
 
 - Kernel launch operator development: kernel launch
 
-    For details about the kernel launch scenario, see section "[Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Debugging a Vector Operator on the Board](../best_practices/basic_cases.md#debugging-a-vector-operator-on-the-board)".
+    For details about the kernel launch scenario, see section "[Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board)".
 
 - Project-based operator development: single-operator API calling
 
-    For details about the single-operator API execution scenario, see "Project-based Operator Development" > "[Single-Operator API Execution](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Calling AscendCL Single-Operator](../best_practices/basic_cases.md#calling-ascendcl-single-operator)".
+    For details about the single-operator API execution scenario, see "Project-based Operator Development" > "[Single-Operator API Execution](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator)".
 
 - AI framework operator adaptation: PyTorch framework
 
-    For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*. For details about the operation, see "[Debugging the Operators Called by a PyTorch Interface](../best_practices/basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface)".
+    For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*. For details about the operation, see "[Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface)".
 
 **Additional Information**
 
@@ -350,7 +350,7 @@ Command Options Usage:
 
 **Importing Debugging Information**
 
-Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool.
+Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool.
 
 **Starting the tool**
 

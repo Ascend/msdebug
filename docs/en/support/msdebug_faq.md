@@ -14,13 +14,13 @@ The step-by-step debugging function does not support tensor passing by value.
 
 This problem occurs when the printed object a is of the Tensor type and the value is passed as the input parameter of the function.
 
-```bash
+```cpp
 void Foo(const LocalTensor<float> a); // The variable a fails to be printed.
 ```
 
 To print the variable, modify the code so that object *a* is passed by reference as the input parameter of the function.
 
-```bash
+```cpp
 void Foo(const LocalTensor<float> &a); // The variable a can be printed normally.
 ```
 
@@ -113,4 +113,4 @@ ld.lld: error: undefined symbol: g_opSystemRunCfg
 ```
 
 **Solution**  
-The `- DL2_CACHE_HINT` compilation option needs to be removed.
+The `-DL2_CACHE_HINT` compilation option needs to be removed.

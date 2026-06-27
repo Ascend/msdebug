@@ -13,7 +13,7 @@ msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧
 
 ### 1.2 环境准备
 
-请严格按照<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/installation_guide.md" target="_blank">《昇腾 AI 算子开发工具链学习环境安装指南》</a>完成环境安装与工作区配置。
+请严格按照<a href="https://gitcode.com/Ascend/msot/blob/26.0.0/docs/zh/quick_start/installation_guide.md" target="_blank">《昇腾 AI 算子开发工具链学习环境安装指南》</a>完成环境安装与工作区配置。
 即使您已具备类似环境，也需按该指南重新执行一遍，以确保所有依赖组件、环境变量等完整且一致。
 
 ## 2. 操作步骤
@@ -32,7 +32,7 @@ python3 -c "import numpy, sympy, scipy, attrs, psutil, decorator; from packaging
 
 ### 2.2 【前提】算子工程准备完成
 
-按照<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《昇腾算子开发工具链快速入门》</a>中的指导，完成2.1节和2.3节。
+按照<a href="https://gitcode.com/Ascend/msot/blob/26.0.0/docs/zh/quick_start/op_tool_quick_start.md" target="_blank">《昇腾算子开发工具链快速入门》</a>中的指导，完成2.1节和2.3节。
 
 ### 2.3 【调试】断点调试算子代码（msDebug）
 

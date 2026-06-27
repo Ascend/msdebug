@@ -9,11 +9,11 @@ This document demonstrates the core functions of msDebug based on the simple add
 
 ### 1.1 Recommendations
 
-This document assumes that you have completed all operations in <a href="https://gitcode.com/Ascend/msot/blob/master/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Ascend Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
+This document assumes that you have completed all operations in <a href="https://gitcode.com/Ascend/msot/blob/26.0.0/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Ascend Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
 
 ### 1.2 Environment Setup
 
-Strictly follow the <a href="https://gitcode.com/Ascend/msot/blob/master/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a> to complete the environment installation and workspace configuration.
+Strictly follow the <a href="https://gitcode.com/Ascend/msot/blob/26.0.0/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a> to complete the environment installation and workspace configuration.
 Even if you have a similar environment, perform the steps in the guide again to ensure that all dependent components and environment variables are complete and consistent.
 
 ## 2. Operation
@@ -32,7 +32,7 @@ If an error occurs, refer to [Section 1.2](#12-environment-setup) for correct in
 
 ### 2.2 [Prerequisite] Completing Operator Project Preparation
 
-Follow the instructions in <a href="https://gitcode.com/Ascend/msot/blob/master/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Ascend Operator Development Toolchain Quick Start</a> to complete sections 2.1 and 2.3.
+Follow the instructions in <a href="https://gitcode.com/Ascend/msot/blob/26.0.0/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Ascend Operator Development Toolchain Quick Start</a> to complete sections 2.1 and 2.3.
 
 ### 2.3 [Debugging] Debugging Operator Code Using Breakpoints (msDebug)
 
@@ -84,8 +84,8 @@ MY_OP_PKG=$(find ./build_out -maxdepth 1 -name "custom_opp_*.run" | head -1) && 
 >You need to set `LAUNCH_KERNEL_PATH` for all projects except the `<<<>>>` project. That is, when the operator binary exists and is deployed independently in the form of an .o file,
 >you need to explicitly tell msDebug to import the operator debugging information. Otherwise, the debugging function will be abnormal.
 
-Set `LAUNCH_KERNEL_PATH` to specify the path for loading the operator .obj file and import the debugging symbol information.
-> **Method for searching for the operator .obj file path:** Search in the operator deployment path. The example path is as follows: `/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_ab1b6750d7f510985325b603cb06dc8b.o`
+Set `LAUNCH_KERNEL_PATH` to specify the path for loading the operator .o file and import the debugging symbol information.
+> **Method for searching for the operator .o file path:** Search in the operator deployment path. The example path is as follows: `/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_ab1b6750d7f510985325b603cb06dc8b.o`
 
 ```shell
 export LAUNCH_KERNEL_PATH={path_to_kernel}/my_kernel.o

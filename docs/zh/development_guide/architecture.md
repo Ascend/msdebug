@@ -338,7 +338,6 @@ protected:
 | e_shentsize     | 此字段表明在节头表中每一个表项的大小，以字节为单位   |
 | e_shnum  | 此字段表明节头表中总共有多少个表项    |
 | e_shstrndx  | 节头表中与节名字表相对应的表项的索引    |
-| e_shnum  | 此字段表明节头表中总共有多少个表项    |
 
 3.Section Header
 
