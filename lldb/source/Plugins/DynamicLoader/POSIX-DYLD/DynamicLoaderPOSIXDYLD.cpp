@@ -499,6 +499,8 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
                module_sp->GetUUID() == device_module->GetUUID()) {
       old_modules.Append(module_sp);
       m_process->GetTarget().UpdateBreakpoints(module_sp, device_module);
+      LLDB_LOG(log, "device module{0} replaced old module named {1}",
+               device_module->GetFileSpec(), module_sp->GetFileSpec());
     }
   }
 
@@ -514,7 +516,9 @@ void DynamicLoaderPOSIXDYLD::RefreshDeviceModules() {
   loaded_modules.AppendIfNeeded(device_module);
   UpdateLoadedSections(device_module, LLDB_INVALID_ADDRESS, info.pc_base_addr, true);
   m_process->GetTarget().ModulesDidLoad(new_modules);
-  LLDB_LOG(log, "Device module did loaded at {0:x}, size is {1}, device_module_file_spec={2}",
+  LLDB_LOG(log,
+           "Device module did loaded at {0:x}, size is {1}, "
+           "device_module_file_spec={2}",
            info.pc_base_addr, info.binary.size(), device_module->GetFileSpec());
   AddRendezvousVFCallBreakpoint(device_module, info.pc_base_addr);
 }
