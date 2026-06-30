@@ -27,12 +27,12 @@
 #### 2.3.1 环境准备
 
 请按照以下文档进行环境配置：[《算子工具开发环境安装指导》](https://gitcode.com/Ascend/msot/blob/master/docs/zh/common/dev_env_setup.md)。
- 
+
 编译工具要求如下：
 
 - gcc版本应大于7.4.0。
 
-- CMake版本应大于3.20.2，小于3.31.10。
+- CMake版本应大于等于3.20.2。
 
 - 安装git-lfs
 
@@ -53,7 +53,7 @@
     python build.py
     ```
 
-> [!NOTE]  
+> [!NOTE]
 >
 > 如果本地更改了依赖子仓库中的代码，不想构建过程中执行更新动作，可以执行`python build.py local`。
 
@@ -93,7 +93,7 @@ chmod +x mindstudio-debugger_<version>_<arch>.run
 mindstudio-debugger package install success!
 ```
 
-> [!NOTE]  
+> [!NOTE]
 >
 > - 如果环境中配置过`ASCEND_HOME_PATH`环境变量，则会安装到`${ASCEND_HOME_PATH}`目录下；否则会默认安装到`${HOME}/Ascend`目录下。
 >
