@@ -977,11 +977,9 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           len = cstr_len;
 
 #ifdef MS_DEBUGGER
-        // Do not print data of uint8_t* pointers that are of gm/ub memory types.
+        // Do not print data of uint8_t* pointers
         // Because they are not readable string
-        if (compiler_type.GetAddressClass() != 0) {
-          break;
-        }
+        break;
 #endif
 
         for (size_t offset = 0; offset < bytes_read; offset++)
@@ -2965,7 +2963,7 @@ ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
   // type, unless we know this is a load address.  Getting the size wrong for
-  // a host side storage could leak lldb memory, so we absolutely want to 
+  // a host side storage could leak lldb memory, so we absolutely want to
   // prevent that.  We may not always get the right value, for instance if we
   // have an expression result value that's copied into a storage location in
   // the target may not have copied enough memory.  I'm not trying to fix that
@@ -2983,13 +2981,13 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   ExecutionContextScope *exe_scope
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope)
-      <= GetCompilerType().GetByteSize(exe_scope) 
-      || m_value.GetValueType() == Value::ValueType::LoadAddress)
-        return DoCast(compiler_type);
+  if (compiler_type.GetByteSize(exe_scope) <=
+          GetCompilerType().GetByteSize(exe_scope) ||
+      m_value.GetValueType() == Value::ValueType::LoadAddress)
+    return DoCast(compiler_type);
 
   error.SetErrorString("Can only cast to a type that is equal to or smaller "
-                       "than the orignal type.");
+                       "than the original type.");
 
   return ValueObjectConstResult::Create(
       ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope(),

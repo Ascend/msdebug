@@ -15,6 +15,11 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Target/Process.h"
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -229,9 +234,24 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
       }
     }
     if (!device_bp_locations.empty()) {
-      for (const auto &bp: host_bp_locations) {
-        bp->ClearBreakpointSite();
-        RemoveLocation(bp);
+      Log *log = GetLog(LLDBLog::Breakpoints);
+      ProcessSP process_sp(m_owner.GetTarget().GetProcessSP());
+      // If process_sp is non-null, the debugged process is running.
+      // However, when the breakpoint is hit on the device side,
+      // the host side is still running, and the host-side breakpoint
+      // cannot be removed. This leads to a failed removal:
+      // the breakpoint record is deleted but the breakpoint itself
+      // remains active. Additionally, due to internal false breakpoints,
+      // we currently cannot distinguish whether the host has truly halted.
+      if (!process_sp) {
+        LLDB_LOG(log, "Start remove location on host, num={0}",
+                 host_bp_locations.size());
+        for (const auto &bp : host_bp_locations) {
+          bp->ClearBreakpointSite();
+          RemoveLocation(bp);
+          LLDB_LOG(log, "removed host location with breakpoint {0}.{1}",
+                   bp->GetID(), bp->m_loc_id);
+        }
       }
       if (m_locations.empty()) {
         return nullptr;

@@ -32,7 +32,7 @@ AscendCommunicationClient::AscendCommunicationClient()
     retryTimes++;
   }
   auto timeout = timeval {};
-  timeout.tv_sec = 10; // 暂设置read超时时间为1s
+  timeout.tv_sec = 30; // 设置read超时时间为30s, 30MB传输需要40s，后面会重试3次
   timeout.tv_usec = 0;
   if (setsockopt(domain_client_->GetNativeSocket(), SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
     return;
