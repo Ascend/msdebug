@@ -1,14 +1,5 @@
 cmake_minimum_required(VERSION 3.20.2)
 
-set(MAX_SUPPORTED_CMAKE_VERSION "3.31.10")
-if(CMAKE_VERSION VERSION_GREATER MAX_SUPPORTED_CMAKE_VERSION)
-    message(FATAL_ERROR 
-        "CMake ${CMAKE_VERSION} is too new! The maximum supported version is ${MAX_SUPPORTED_CMAKE_VERSION}."
-    )
-else()
-    message(STATUS "CMake version check passed: ${CMAKE_VERSION} ≤ ${MAX_SUPPORTED_CMAKE_VERSION}")
-endif()
-
 project(MindStudio-Debugger)
 
 get_filename_component(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} ABSOLUTE)
@@ -45,7 +36,7 @@ endif()
 if (${CMAKE_INSTALL_PREFIX} STREQUAL "/usr/local" OR ${CMAKE_INSTALL_PREFIX} STREQUAL "/usr" OR NOT DEFINED CMAKE_INSTALL_PREFIX)
   set(CMAKE_INSTALL_PREFIX ${ROOT_DIR}/output CACHE STRING "install prefix" FORCE)
   message(STATUS "No install prefix selected, default to ${CMAKE_INSTALL_PREFIX}")
-endif() 
+endif()
 
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -74,7 +65,7 @@ set(ALL_EXTERNAL_TARGETS
 )
 
 
-add_custom_target(build_debugger 
+add_custom_target(build_debugger
         COMMENT "Building all Debugger components"
         DEPENDS ${ALL_EXTERNAL_TARGETS}
 )

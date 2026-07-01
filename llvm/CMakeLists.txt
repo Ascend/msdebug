@@ -1,6 +1,6 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.20.2)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -65,10 +65,19 @@ if (MS_DEBUGGER)
   add_link_options("-Wl,-z,now")
   add_link_options("-Wl,-z,noexecstack")
   add_link_options("-s")
-  add_link_options("-pie")
+  # -pie 仅用于可执行文件，不能用于共享库。CMake 4.1+ 的 add_link_options 会将 -pie
+  # 传递到共享库链接命令中，导致 "undefined reference to main" 错误，因此改用
+  # CMAKE_EXE_LINKER_FLAGS 确保 -pie 只作用于可执行目标。
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
+  # -fPIC，保证探测结果和你真实工程编译环境一致，避免 “探测通过、实际编译失败”。
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fPIC")
   add_compile_options("-D_FORTIFY_SOURCE=2")
   add_compile_options("-ftrapv")
   set(CMAKE_SKIP_RPATH TRUE)
+endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-Wno-maybe-uninitialized)
 endif()
 
 if (MS_DEBUGGER AND MS_DEBUGGER_LIBEDIT)
@@ -361,7 +370,7 @@ option(LLVM_INSTALL_UTILS "Include utility binaries in the 'install' target." OF
 
 option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
-# Unfortunatly Clang is too eager to search directories for module maps, which can cause the
+# Unfortunately Clang is too eager to search directories for module maps, which can cause the
 # installed version of the maps to be found when building LLVM from source. Therefore we turn off
 # the installation by default. See llvm.org/PR31905.
 option(LLVM_INSTALL_MODULEMAPS "Install the modulemap files in the 'install' target." OFF)
@@ -1262,7 +1271,7 @@ if( LLVM_INCLUDE_UTILS )
   if( LLVM_INCLUDE_TESTS )
     set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE) 
+    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )
@@ -1447,4 +1456,3 @@ endif()
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)
   add_subdirectory(utils/llvm-locstats)
 endif()
-

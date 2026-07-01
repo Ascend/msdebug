@@ -1,20 +1,20 @@
-cmake_minimum_required(VERSION 3.4.3) 
- 
+cmake_minimum_required(VERSION 3.20.2)
+
 if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
- 
+
 project(lldb-mi)
- 
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
- 
+
 if (USE_LLDB_FRAMEWORK AND !APPLE)
-  message(FATAL_ERROR "USE_LLDB_FRAMEWORK is only avaliable on Darwin")
+  message(FATAL_ERROR "USE_LLDB_FRAMEWORK is only available on Darwin")
 endif()
 
- 
+
 find_package(LLVM REQUIRED CONFIG)
- 
+
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
@@ -45,10 +45,10 @@ if(LLVM_BUILD_MAIN_SRC_DIR)
   include_directories(${LLVM_BUILD_MAIN_SRC_DIR}/../lldb/include)
   include_directories(${LLVM_BUILD_BINARY_DIR}/tools/lldb/include)
 endif()
- 
+
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
- 
+
 if (NOT LLVM_ENABLE_EH)
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     add_compile_options("-fno-exceptions")
@@ -83,9 +83,8 @@ if (INCLUDE_TESTS AND WIN32)
   message(WARNING "Not supported on Windows due to a bug: https://gitlab.kitware.com/cmake/cmake/-/issues/22659. Testing will be disabled.")
   SET(INCLUDE_TESTS FALSE)
 endif()
- 
+
 if (INCLUDE_TESTS)
   include(CTest)
   add_subdirectory(test)
 endif()
- 

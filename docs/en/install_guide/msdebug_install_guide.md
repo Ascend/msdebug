@@ -25,12 +25,12 @@ To use the functions of the latest code or modify the source code to enhance fun
 ### 2.1 Environment Setup
 
 Set up the environment by referring to the [Operator Tool Development Environment Setup Guide](https://gitcode.com/Ascend/msot/blob/master/docs/en/common/dev_env_setup.md).
- 
+
 The requirements for compilation tools are as follows:
 
 - The GCC version must be later than 7.4.0.
 
-- The CMake version must be later than 3.20.2 and earlier than 3.31.10.
+- The CMake version must be 3.20.2 or later.
 
 - Git LFS is installed.
 
@@ -95,7 +95,7 @@ mindstudio-debugger package install success!
 Run the following command to uninstall the software:
 
 ```shell
-./mindstudio-debugger_<version>_<arch>.run --uninstall 
+./mindstudio-debugger_<version>_<arch>.run --uninstall
 ```
 
 When the following information is displayed, the software package is successfully uninstalled:
