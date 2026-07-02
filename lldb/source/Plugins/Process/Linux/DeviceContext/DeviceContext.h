@@ -164,6 +164,12 @@ public:
   bool IsDeviceIdMatched(const uint32_t device_id) const;
   bool IsTgidMatched(const int32_t tgid) const;
   void UpdateTgid(const int32_t tgid);
+  virtual bool IsValidGlobalAddr(lldb::addr_t addr, size_t size);
+  virtual void AddIpcMemInfo(lldb::addr_t addr, size_t size,
+                             std::vector<char> key) {
+    return;
+  }
+  virtual void RemoveIpcMemInfo(lldb::addr_t addr) { return; }
 
 protected:
   int32_t m_drv_fd;

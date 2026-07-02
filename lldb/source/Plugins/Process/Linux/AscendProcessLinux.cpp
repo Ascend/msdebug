@@ -21,6 +21,7 @@ using namespace lldb_private::process_linux;
 using namespace llvm;
 const std::string DEVICE_INFO_HEADER{"device_id:"};
 const std::string KERNEL_INFO_HEADER{"kernel_name:"};
+const std::string IPC_MEMORY_INFO_HEADER{"ipc_mem_addr:"};
 constexpr uint32_t VEC_SIZE = 4;
 
 static std::condition_variable g_pause_cv;
@@ -204,6 +205,48 @@ HandleResult AscendProcessLinux::HandleStubKernelInfo(const KernelInfoMsg& kerne
   return final_error;
 }
 
+HandleResult AscendProcessLinux::HandleStubIpcMemInfo(
+    const IpcMemInfoMsg &ipc_mem_info_msg) {
+  Log *log = GetLog(POSIXLog::Process);
+  LLDB_LOG(log, "Process ipc mem info");
+  Status final_error;
+  do {
+    if (m_device_context == nullptr) {
+      LLDB_LOG(log, "{0} device context is not initialized!", __FUNCTION__);
+      break;
+    }
+    // query device id from socket handle
+    auto it = m_socket_device_pid.find(m_client_socket);
+    if (it == m_socket_device_pid.end()) {
+      LLDB_LOG(log, "ipc mem {0} comes from unknown device",
+               ipc_mem_info_msg.addr);
+      break;
+    }
+
+    auto device_id = it->second.first;
+    auto tgid = it->second.second;
+    if (!m_device_context->IsDeviceIdMatched(device_id)) {
+      LLDB_LOG(log, "device id {0} from client {1} is not matched", device_id,
+               m_client_socket);
+      break;
+    }
+    LLDB_LOG(log, "device id matched. device id:{0} client:{1}", device_id,
+             m_client_socket);
+
+    if (ipc_mem_info_msg.free == 1) {
+      m_device_context->RemoveIpcMemInfo(ipc_mem_info_msg.addr);
+    } else {
+      std::vector<char> keyVec(std::begin(ipc_mem_info_msg.key),
+                               std::end(ipc_mem_info_msg.key));
+      m_device_context->AddIpcMemInfo(ipc_mem_info_msg.addr,
+                                      ipc_mem_info_msg.size, keyVec);
+    }
+
+  } while (0);
+
+  return final_error;
+}
+
 void AscendProcessLinux::RegisterParsers() {
   m_parser.Register(
     DEVICE_INFO_HEADER,
@@ -218,6 +261,12 @@ void AscendProcessLinux::RegisterParsers() {
         return HandleStubKernelInfo(msg);
     })
   );
+
+  m_parser.Register(
+      IPC_MEMORY_INFO_HEADER,
+      std::make_shared<IpcMemHandler>([this](const IpcMemInfoMsg &msg) {
+        return HandleStubIpcMemInfo(msg);
+      }));
 }
 
 void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg) {
@@ -373,32 +422,46 @@ Status AscendProcessLinux::Resume(const ResumeActionList &resume_actions) {
   }
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "{0} pid {1}", __FUNCTION__, GetID());
-  const auto &thread = GetCurrentThread();
-  if (!thread) {
-    return Status("AscendProcessLinux::%s (): can not get current thread.",
-                  __FUNCTION__);
-  }
-  const ResumeAction *const action =
-      resume_actions.GetActionForThread(thread->GetID(), true);
-  if (!action) {
-    return Status("AscendProcessLinux::%s (): can not get action.",
-                  __FUNCTION__);
-  }
-
-  switch (action->state) {
-    case eStateRunning:
-    case eStateStepping: {
-      const int signo = action->signal;
-      ResumeThread(static_cast<NativeThreadLinux &>(*thread), action->state,
-                   signo);
-      break;
+  for (const auto &thread_up : m_threads) {
+    const ResumeAction *const action =
+        resume_actions.GetActionForThread(thread_up->GetID(), true);
+    if (!action) {
+      LLDB_LOG(log, "no action specified for pid {0} tid {1}", GetID(),
+               thread_up->GetID());
+      continue;
     }
-    case eStateSuspended:
-    case eStateStopped:
-      break;
-    default:
-      return Status("AscendProcessLinux::%s (): unexpected state %d",
-                    __FUNCTION__, action->state);
+
+    if (thread_up->GetID() == GetID()) {
+      switch (action->state) {
+      case eStateRunning:
+      case eStateStepping: {
+        const int signo = action->signal;
+        ResumeThread(static_cast<NativeThreadLinux &>(*thread_up),
+                     action->state, signo);
+        break;
+      }
+      case eStateSuspended:
+      case eStateStopped:
+        break;
+      default:
+        return Status("AscendProcessLinux::%s (): unexpected state %d",
+                      __FUNCTION__, action->state);
+      }
+    } else {
+      switch (action->state) {
+      case eStateRunning:
+      case eStateStepping: {
+        ResumeThread(static_cast<NativeThreadLinux &>(*thread_up),
+                     action->state, action->signal);
+        break;
+      }
+      case eStateSuspended:
+      case eStateStopped:
+        break;
+      default:
+        break;
+      }
+    }
   }
   return Status();
 }

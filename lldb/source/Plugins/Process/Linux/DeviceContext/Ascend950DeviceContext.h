@@ -44,6 +44,27 @@ private:
   SocType m_soc_type;
 };
 
+class Ascend950DTDeviceContext : public Ascend950DeviceContext {
+public:
+  Ascend950DTDeviceContext(const ::pid_t pid, const uint32_t device_id): Ascend950DeviceContext(pid, device_id)
+  {
+    m_soc_type = SocType::ASCEND950DT;
+    m_aclrt_handle = nullptr;
+  }
+  ~Ascend950DTDeviceContext() = default;
+
+  virtual Status Init() override;
+  size_t ReadGlobalMemory(lldb::addr_t addr, size_t size, void *data) override;
+  size_t WriteGlobalMemory(lldb::addr_t addr, size_t size, const void *data) override;
+  virtual void AddIpcMemInfo(lldb::addr_t addr, size_t size, std::vector<char> key) override;
+  virtual void RemoveIpcMemInfo(lldb::addr_t addr) override;
+
+private:
+  SocType m_soc_type;
+  void *m_aclrt_handle;
+};
+
+
 } // namespace lldb_private
 
 #endif //ASCEND950DEVICECONTEXT_H

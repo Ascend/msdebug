@@ -27,6 +27,7 @@ enum class SocType {
   ASCEND910B,
   ASCEND310P,
   ASCEND950,
+  ASCEND950DT,
   SOC_END,
 };
 
@@ -127,6 +128,17 @@ struct KernelInfoMsg {
   lldb::addr_t pc_base_addr;
   int32_t stream_id;
   std::vector<char> elf;
+};
+
+struct IpcMemInfoMsg {
+  static constexpr int32_t KEY_LEN = 65;
+  lldb::addr_t addr;
+  uint64_t size;
+  int32_t free; // close ipc mem when free is 1
+  char key[KEY_LEN];
+  IpcMemInfoMsg() : addr(0U), size(0), free(0) {
+    std::memset(key, 0, sizeof(key));
+  }
 };
 
 // Message from lldb-server to lldb-client

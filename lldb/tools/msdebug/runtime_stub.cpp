@@ -127,6 +127,22 @@ static std::map<std::string, StubFuncInfo>& GetDrvStubFuncInfoMap()
 }
 
 
+struct IpcMem {
+    uint64_t addr;
+    std::vector<char> key;
+
+    bool operator<(const IpcMem& other) const
+    {
+        return addr < other.addr;
+    }
+};
+
+static std::map<int32_t, std::set<IpcMem>> GetIpcMemMap()
+{
+    static std::map<int32_t, std::set<IpcMem>> inst{};
+    return inst;
+}
+
 static void GetDeviceId(int32_t* device)
 {
     rtGetDeviceFunc func =
@@ -312,9 +328,148 @@ static string GetEscapedBytes(const vector<char> &raw) {
   return escapedBytes;
 }
 
+int32_t SendIpcMemInfo(uint64_t addr, uint64_t size, const std::vector<char> &key)
+{
+  RT_STUB_LOG_INFO("SendIpcMemInfo addr=0x%lx size=%lu\n", addr, size);
+
+  auto ipcMemMap = GetIpcMemMap();
+  int32_t deviceId;
+  GetDeviceId(&deviceId);
+  static std::mutex mtx;
+  {
+    std::unique_lock<std::mutex> lk(mtx);
+    if (ipcMemMap.count(deviceId) == 0) {
+      IpcMem temp{addr, key};
+      std::set<IpcMem> initSet = {temp};
+      ipcMemMap[deviceId] = initSet;
+    } else {
+      auto &addrSet = ipcMemMap[deviceId];
+      IpcMem temp{addr, key};
+      if (addrSet.find(temp) == addrSet.end()) {
+        addrSet.insert(temp);
+        RT_STUB_LOG_INFO("ipc mem addr 0x%lx on device %d has been added\n",
+          addr, deviceId);
+      } else {
+        RT_STUB_LOG_INFO("ipc mem addr 0x%lx on device %d has already been added before\n",
+          addr, deviceId);
+        return 0;
+      }
+    }
+  }
+
+  std::stringstream ss;
+  ss << std::hex << addr;
+  std::string buf = "$";
+  buf += "ipc_mem_addr:" + ss.str() + ";";
+  buf += "size:" + std::to_string(size) + ";";
+  buf += "key:" + GetEscapedBytes(key) + ";";
+  buf += "#";
+  auto ret = SendInfoAndWaitForReply(buf);
+  return ret;
+}
+
+int32_t ExportIpcMemByKey(uint64_t addr, uint64_t size, std::vector<char> &key)
+{
+    RT_STUB_LOG_INFO("start to export shmem\n");
+
+    constexpr int32_t KEY_LEN = 65;
+    key.reserve(KEY_LEN);
+    int32_t ret = 0;
+
+    char keyArray[KEY_LEN];
+
+    ret = aclrtIpcMemGetExportKeyImpl((void *)addr, size, keyArray, KEY_LEN,
+        ACL_RT_IPC_MEM_EXPORT_FLAG_DISABLE_PID_VALIDATION);
+
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_WARNING("aclrtIpcMemGetExportKeyImpl failed ret=%d", ret);
+        PrintErrorCode(ACLRT_IPC_MEM_GET_EXPORT_KEY_FAILED_ERR);
+        return ret;
+    }
+
+    key.assign(keyArray, keyArray + KEY_LEN);
+
+    return ret;
+}
+void ProcessAddrAsIpcMem(uint64_t addr)
+{
+    // only enable ipc mem on 950DT
+    static std::string soc_version = GetSocName();
+    if (!StartsWith(soc_version, "Ascend950DT")) {
+      return;
+    }
+
+    RT_STUB_LOG_INFO("start to export ipc mem key\n");
+
+    // get original address
+    uint64_t base_ptr{};
+    uint64_t psize{};
+    auto ret = aclrtMemGetAddressRangeImpl((void *)addr, (void**)&base_ptr, &psize);
+    if (ret != ACL_SUCCESS) {
+        RT_STUB_LOG_WARNING("aclrtMemGetAddressRange failed");
+        PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
+        return;
+    }
+
+    std::vector<char> keyVec;
+    ret = ExportIpcMemByKey(base_ptr, psize, keyVec);
+    if (ret == ACL_SUCCESS) {
+        SendIpcMemInfo(base_ptr, psize, keyVec);
+    }
+}
+
+int32_t SendIpcMemFreeInfo(uint64_t addr)
+{
+  static std::string soc_version = GetSocName();
+  if (!StartsWith(soc_version, "Ascend950DT")) {
+    return 0;
+  }
+  RT_STUB_LOG_INFO("SendIpcMemFreeInfo addr=0x%lx\n", addr);
+
+  auto ipcMemMap = GetIpcMemMap();
+  int32_t deviceId;
+  GetDeviceId(&deviceId);
+  if (ipcMemMap.count(deviceId) == 0) {
+    RT_STUB_LOG_ERROR("there is no ipc map for device %d\n", deviceId);
+    return -1;
+  }
+
+  std::stringstream ss;
+  ss << std::hex << addr;
+  std::string buf = "$";
+  buf += "ipc_mem_addr:" + ss.str() + ";";
+  buf += "free:1;";
+  buf += "#";
+
+  auto ret = SendInfoAndWaitForReply(buf);
+
+  std::vector<char> key;
+  auto &addrSet = ipcMemMap[deviceId];
+  IpcMem temp{addr, {}};
+  auto it = addrSet.find(temp);
+    if (it == addrSet.end()) {
+        RT_STUB_LOG_ERROR("addr 0x%lx cannot be found in map\n", addr);
+        return -1;
+    } else {
+        key = it->key;
+    }
+
+  aclrtIpcMemCloseImpl(key.data());
+
+  static std::mutex mtx;
+  {
+    std::unique_lock<std::mutex> lk(mtx);
+    if (it != addrSet.end()) {
+        addrSet.erase(it);
+    }
+  }
+  return ret;
+}
+
 int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash,
                        const std::vector<char> &elf, uint64_t pcAddr, int32_t stream_id)
 {
+  ProcessAddrAsIpcMem(pcAddr);
   int32_t deviceId;
   GetDeviceId(&deviceId);
   static std::mutex mtx;

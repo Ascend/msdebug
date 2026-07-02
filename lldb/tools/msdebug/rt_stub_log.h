@@ -109,6 +109,15 @@ enum MSDEBUG_ERROR_CODE {
   ACLRT_STREAM_GET_ID_IMPL_FAILED_ERR = 0x20006, // aclrtStreamGetIdImpl返回异常
   ACLRT_GET_DEVICE_IMPL_FAILED_ERR = 0x20007, // aclrtGetDeviceImpl返回异常
   RT_GET_STREAM_ID_FAILED_ERR = 0x20008,      // rtGetStreamId返回异常
+  ACLRT_IPC_MEM_GET_EXPORT_KEY_FAILED_ERR = 0x20009, // aclrtIpcMemGetExportKeyImpl返回异常
+  ACLRT_IPC_MEM_CLOSE_FAILED_ERR = 0x2000a, // aclrtIpcMemCloseImpl返回异常
+
+  ACLRT_MALLOC_FAILED_ERR = 0x20030, // aclrtMallocImpl返回异常
+  ACLRT_MALLOC_ALIGN_32_FAILED_ERR = 0x20031, // aclrtMallocAlign32Impl返回异常
+  ACLRT_MALLOC_CACHED_FAILED_ERR = 0x20032, // aclrtMallocCachedImpl返回异常
+  ACLRT_MALLOC_WITH_CFG_FAILED_ERR = 0x20033, // aclrtMallocWithCfgImpl返回异常
+  ACLRT_FREE_FAILED_ERR = 0x20034, // aclrtFreeImpl返回异常
+  ACLRT_FREE_WITH_DEV_SYNC_FAILED_ERR = 0x20035, // aclrtFreeWithDevSyncImpl返回异常
 
   // 其他错误
   LLDB_REPLY_NOT_RECOGNIZED_ERR = 0x20100, // lldb的回复字符串异常
@@ -126,6 +135,7 @@ enum MSDEBUG_ERROR_CODE {
   INVALID_KERNEL_INFO_ERR = 0x20206,
   INVALID_STREAM_ID_ERR = 0x20207,
   INVALID_HEADER_ERR = 0x20208,
+  INVALID_IPC_MEM_INFO_ERR = 0x20209,
 
   // send kernel name error
   SEND_KERNEL_NAME_ERROR = 0x20301,

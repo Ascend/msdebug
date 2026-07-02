@@ -9,10 +9,10 @@
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 #include "llvm/Support/SHA256.h"
 
-#include <unistd.h>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <regex>
+#include <unistd.h>
 
 using namespace llvm;
 using namespace lldb_private;
@@ -22,7 +22,8 @@ enum MESSAGE_ERROR_CODE {
   INVALID_DEVICE_INFO_ERR = 0x20205,
   INVALID_KERNEL_INFO_ERR = 0x20206,
   INVALID_STREAM_ID_ERR = 0x20207,
-  INVALID_HEADER_ERR = 0x20208
+  INVALID_HEADER_ERR = 0x20208,
+  INVALID_IPC_MEM_INFO_ERR = 0x20209
 };
 
 AscendCommunicationServer::AscendCommunicationServer(std::size_t max_client_num,
@@ -201,8 +202,10 @@ HandleResult KernelHandler::Parse(const std::string& msg) {
       m_kernel_info.kernel_hash = value;
     } else if (key.compare("pc_base_addr") == 0) {
       value.getAsInteger(16, m_kernel_info.pc_base_addr);
+      LLDB_LOGF(log, "m_kernel_info.pc_base_addr=0x%lx", m_kernel_info.pc_base_addr);
     } else if (key.compare("stream_id") == 0) {
       value.getAsInteger(10, m_kernel_info.stream_id);
+      LLDB_LOG(log, "m_kernel_info.stream_id={0}", m_kernel_info.stream_id);
     }
     num_colon++;
   }
@@ -236,6 +239,47 @@ HandleResult KernelHandler::Parse(const std::string& msg) {
   }
   m_kernel_info.elf.assign(data, data + num_bytes);
   ShowKernelHashReceived(data, num_bytes);
+  return error;
+}
+
+HandleResult IpcMemHandler::Parse(const std::string& msg) {
+  Log *log = GetLog(POSIXLog::Process);
+  Status error;
+  // ipc_mem msg pattern:
+  // "$ipc_mem_addr:0x1240000000;size:9000;key:xxxxxxxxxxxxxxxxxxxxxxxx#"
+  // "$ipc_mem_addr:0x1240000000;free:1#"
+
+  StringExtractorGDBRemote packet = StringExtractorGDBRemote(msg);
+  StringRef key;
+  StringRef value;
+  m_ipc_mem_info = IpcMemInfoMsg();
+  constexpr int max_colon = 3;
+  int num_colon = 0;
+
+  // we should not change index after max_colon times get from packet
+  while (num_colon < max_colon && packet.GetNameColonValue(key, value) ) {
+    if (key.compare("ipc_mem_addr") == 0) {
+      value.getAsInteger(16, m_ipc_mem_info.addr);
+      LLDB_LOGF(log, "m_ipc_mem_info.addr=0x%lx", m_ipc_mem_info.addr);
+    } else if (key.compare("size") == 0) {
+      value.getAsInteger(10, m_ipc_mem_info.size);
+      LLDB_LOGF(log, "m_ipc_mem_info.size=%lu", m_ipc_mem_info.size);
+    } else if (key.compare("free") == 0) {
+      value.getAsInteger(10, m_ipc_mem_info.free);
+      LLDB_LOGF(log, "m_ipc_mem_info.size=%d", m_ipc_mem_info.free);
+    } else if (key.compare("key") == 0) {
+      std::string tempVal(value);
+      tempVal.copy(m_ipc_mem_info.key, IpcMemInfoMsg::KEY_LEN);
+      LLDB_LOGF(log, "tempVal=%s", tempVal.c_str());
+      LLDB_LOGF(log, "m_ipc_mem_info.key=%s", m_ipc_mem_info.key);
+    }
+    num_colon++;
+  }
+
+  if (num_colon > max_colon) {
+    error.SetError(INVALID_IPC_MEM_INFO_ERR, lldb::eErrorTypeGeneric);
+    return error;
+  }
   return error;
 }
 

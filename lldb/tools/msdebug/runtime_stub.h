@@ -74,7 +74,12 @@ int32_t SendStreamId(uint32_t stream_id);
 int32_t SendDeviceInfo(int32_t device, const std::string &socVersion, pid_t tgid);
 int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash,
                        const std::vector<char> &elf, uint64_t pcAddr, int32_t streamId);
+int32_t SendIpcMemInfo(uint64_t addr, uint64_t size,
+                       const std::vector<char> &key);
+int32_t SendIpcMemFreeInfo(uint64_t addr);
+int32_t ExportIpcMemByKey(uint64_t addr, uint64_t size, std::vector<char> &key);
 void ShowKernelLaunchInfo(const std::string &kernelName, int32_t deviceId);
+void ProcessAddrAsIpcMem(uint64_t addr);
 void EnvCheck();
 bool BinaryRegisterPost(const rtDevBinary_t *bin, void *hdl, const std::string &hash, std::string &err);
 std::string GetKernelNameByTilingKey(const void *hdl, uint64_t tilingKey);
