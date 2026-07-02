@@ -7,11 +7,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
-#include <map>
 #include <fstream>
 #include <iomanip>
+#include <map>
 #include <mutex>
 #include <unistd.h>
+#include <unordered_set>
 
 #include "acl.h"
 #include "HijackedLayerManager.h"
@@ -113,7 +114,27 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
           {"aclrtSynchronizeStreamWithTimeoutImpl",
            {"aclrtSynchronizeStreamWithTimeoutImpl",
-            ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}}};
+            ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtIpcMemGetExportKeyImpl",
+           {"aclrtIpcMemGetExportKeyImpl",
+            ACLRT_IPC_MEM_GET_EXPORT_KEY_FAILED_ERR, nullptr}},
+          {"aclrtIpcMemCloseImpl",
+           {"aclrtIpcMemCloseImpl", ACLRT_IPC_MEM_CLOSE_FAILED_ERR, nullptr}},
+          {"aclrtMallocImpl",
+           {"aclrtMallocImpl", ACLRT_MALLOC_FAILED_ERR, nullptr}},
+          {"aclrtMallocAlign32Impl",
+           {"aclrtMallocAlign32Impl", ACLRT_MALLOC_ALIGN_32_FAILED_ERR,
+            nullptr}},
+          {"aclrtMallocCachedImpl",
+           {"aclrtMallocCachedImpl", ACLRT_MALLOC_CACHED_FAILED_ERR, nullptr}},
+          {"aclrtMallocWithCfgImpl",
+           {"aclrtMallocWithCfgImpl", ACLRT_MALLOC_WITH_CFG_FAILED_ERR,
+            nullptr}},
+          {"aclrtFreeImpl", {"aclrtFreeImpl", ACLRT_FREE_FAILED_ERR, nullptr}},
+          {"aclrtFreeWithDevSyncImpl",
+           {"aclrtFreeWithDevSyncImpl", ACLRT_FREE_WITH_DEV_SYNC_FAILED_ERR,
+            nullptr}},
+      };
     }
     return stubFuncInfoMap;
 }
@@ -144,22 +165,6 @@ std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
         stubFuncInfoMap.insert(stubMap.begin(), stubMap.end());
     }
     return stubFuncInfoMap;
-}
-
-aclError aclrtMemGetAddressRangeImpl(void *ptr, void **pbase, size_t *psize)
-{
-    using FuncType = decltype(&aclrtMemGetAddressRangeImpl);
-    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
-    if (func == nullptr) {
-        RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
-        return 1;
-    }
-    auto ret = func(ptr, pbase, psize);
-    if (ret != ACL_SUCCESS) {
-        RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
-        ThrowErrorCode(ACLRT_GET_DEVICE_IMPL_FAILED_ERR);
-    }
-    return ret;
 }
 
 aclError aclrtGetDeviceImpl(int32_t *deviceId)
@@ -211,40 +216,41 @@ aclError aclrtGetUserDevIdByLogicDevIdImpl(const int32_t logicDevId,
   return ret;
 }
 
-void OpenAclrtLib()
-{
+void OpenAclrtLib() {
+  if (g_handle == nullptr) {
+    char *toolkitPath = getenv("ASCEND_TOOLKIT_HOME");
+    if (toolkitPath == nullptr) {
+      ThrowErrorCode(ASCEND_TOOLKIT_HOME_NOT_FOUND_ERR);
+    }
+    std::string runtimeLibPath(toolkitPath);
+    runtimeLibPath += "/lib64/libacl_rt_impl.so";
+    g_handle = dlopen(runtimeLibPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (g_handle == nullptr) {
-        char *toolkitPath = getenv("ASCEND_TOOLKIT_HOME");
-        if (toolkitPath == nullptr) {
-            ThrowErrorCode(ASCEND_TOOLKIT_HOME_NOT_FOUND_ERR);
-        }
-        std::string runtimeLibPath(toolkitPath);
-        runtimeLibPath += "/lib64/libacl_rt_impl.so";
-        g_handle = dlopen(runtimeLibPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
-        if (g_handle == nullptr) {
-            std::string oldAclImplPath(toolkitPath);
-            oldAclImplPath += "/lib64/libascendcl_impl.so";
-            RT_STUB_LOG_INFO("dlopen %s failed, change to open %s\n", runtimeLibPath.c_str(), oldAclImplPath.c_str());
-            g_handle = dlopen(oldAclImplPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
-            if (g_handle == nullptr) {
-                ThrowErrorCode(LIB_ACL_RUNTIME_IMPL_NOT_FOUND_ERR);
-            }
-        }
-        RT_STUB_LOG_INFO("dlopen aclrt impl done\n");
+      std::string oldAclImplPath(toolkitPath);
+      oldAclImplPath += "/lib64/libascendcl_impl.so";
+      RT_STUB_LOG_INFO("dlopen %s failed, change to open %s\n",
+                       runtimeLibPath.c_str(), oldAclImplPath.c_str());
+      g_handle = dlopen(oldAclImplPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
+      if (g_handle == nullptr) {
+        ThrowErrorCode(LIB_ACL_RUNTIME_IMPL_NOT_FOUND_ERR);
+      }
     }
+    RT_STUB_LOG_INFO("dlopen aclrt impl done\n");
+  }
 
-    for (auto &it : GetAclrtStubFuncInfoMap()) {
-        it.second.funcPtr = dlsym(g_handle, it.second.name.c_str());
-        if (it.second.funcPtr == nullptr) {
-            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
-                                it.second.name.c_str());
-            continue;
-        }
-        GetStubFuncInfoMap()[it.first] = it.second;
+  for (auto &it : GetAclrtStubFuncInfoMap()) {
+    it.second.funcPtr = dlsym(g_handle, it.second.name.c_str());
+    if (it.second.funcPtr == nullptr) {
+      RT_STUB_LOG_WARNING(
+          "dlsym %s failed, may cause error if user's program required.",
+          it.second.name.c_str());
+      continue;
     }
-    if (GetStubFuncInfoMap().empty()) {
-        ThrowErrorCode(DLSYM_ALL_STUBFUNC_ERROR);
-    }
+    GetStubFuncInfoMap()[it.first] = it.second;
+  }
+  if (GetStubFuncInfoMap().empty()) {
+    ThrowErrorCode(DLSYM_ALL_STUBFUNC_ERROR);
+  }
 }
 
 void OpenDrvLib()
@@ -484,6 +490,9 @@ void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)
       RT_STUB_LOG_INFO("Get start pc for kernel=%.1024s failed, skip it", kernelName.c_str());
       return;
     }
+
+    ProcessAddrAsIpcMem(pcStartAddr);
+
     const auto *binHandle = MapManager::Instance().GetHandle(funcHandle);
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(binHandle);
     int32_t streamId{};
@@ -731,6 +740,151 @@ aclError aclrtCreateContextImpl(aclrtContext *context, int32_t deviceId)
     return ret;
 }
 
+aclError aclrtMemGetAddressRangeImpl(void *ptr, void **pbase, size_t *psize) {
+  using FuncType = decltype(&aclrtMemGetAddressRangeImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+  auto ret = func(ptr, pbase, psize);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    ThrowErrorCode(ACLRT_GET_DEVICE_IMPL_FAILED_ERR);
+  }
+  return ret;
+}
+
+aclError aclrtIpcMemGetExportKeyImpl(void *devPtr, size_t size, char *key,
+                                     size_t len, uint64_t flags) {
+  using FuncType = decltype(&aclrtIpcMemGetExportKeyImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+  auto ret = func(devPtr, size, key, len, flags);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    ThrowErrorCode(ACLRT_IPC_MEM_GET_EXPORT_KEY_FAILED_ERR);
+  }
+  return ret;
+}
+
+aclError aclrtIpcMemCloseImpl(const char *key) {
+  using FuncType = decltype(&aclrtIpcMemCloseImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+  auto ret = func(key);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    ThrowErrorCode(ACLRT_IPC_MEM_GET_EXPORT_KEY_FAILED_ERR);
+  }
+  return ret;
+}
+
+aclError aclrtMallocImpl(void **devPtr, size_t size,
+                         aclrtMemMallocPolicy policy) {
+  using FuncType = decltype(&aclrtMallocImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+  auto ret = func(devPtr, size, policy);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    return ret;
+  }
+
+  ProcessAddrAsIpcMem((uint64_t)*devPtr);
+  return ret;
+}
+
+aclError aclrtMallocAlign32Impl(void **devPtr, size_t size,
+                                aclrtMemMallocPolicy policy) {
+  using FuncType = decltype(&aclrtMallocAlign32Impl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+  auto ret = func(devPtr, size, policy);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    return ret;
+  }
+
+  ProcessAddrAsIpcMem((uint64_t)*devPtr);
+  return ret;
+}
+
+aclError aclrtMallocCachedImpl(void **devPtr, size_t size,
+                               aclrtMemMallocPolicy policy) {
+  using FuncType = decltype(&aclrtMallocCachedImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+  auto ret = func(devPtr, size, policy);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    return ret;
+  }
+
+  ProcessAddrAsIpcMem((uint64_t)*devPtr);
+  return ret;
+}
+
+aclError aclrtMallocWithCfgImpl(void **devPtr, size_t size,
+                                aclrtMemMallocPolicy policy, void *cfg) {
+  using FuncType = decltype(&aclrtMallocWithCfgImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+  auto ret = func(devPtr, size, policy, cfg);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+    return ret;
+  }
+
+  ProcessAddrAsIpcMem((uint64_t)*devPtr);
+  return ret;
+}
+
+aclError aclrtFreeImpl(void *devPtr) {
+  using FuncType = decltype(&aclrtFreeImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+
+  SendIpcMemFreeInfo((uint64_t)devPtr);
+
+  auto ret = func(devPtr);
+  return ret;
+}
+
+aclError aclrtFreeWithDevSyncImpl(void *devPtr) {
+  using FuncType = decltype(&aclrtFreeWithDevSyncImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+
+  SendIpcMemFreeInfo((uint64_t)devPtr);
+
+  auto ret = func(devPtr);
+  return ret;
+}
 }
 
 #endif

@@ -80,6 +80,19 @@ private:
   HandlerFunc m_handler;
 };
 
+class IpcMemHandler : public MsgHandler {
+public:
+  using HandlerFunc = std::function<HandleResult(const IpcMemInfoMsg &)>;
+
+  IpcMemHandler(const HandlerFunc &handler) : m_handler(handler) {}
+  HandleResult Parse(const std::string &msg) override;
+  HandleResult Handle() override { return m_handler(m_ipc_mem_info); }
+
+private:
+  IpcMemInfoMsg m_ipc_mem_info{};
+  HandlerFunc m_handler;
+};
+
 class MsgParser {
 public:
   void Register(const std::string& prefix, std::shared_ptr<MsgHandler> handler);

@@ -3,29 +3,27 @@
  */
 
 #ifdef MS_DEBUGGER
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <thread>
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <map>
 #include "DeviceContext.h"
-#include "Ascend910BDeviceContext.h"
 #include "Ascend310PDeviceContext.h"
+#include "Ascend910BDeviceContext.h"
 #include "Ascend950DeviceContext.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
-#include "llvm/Support/Errno.h"
-#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
-
-
+#include "llvm/Support/Errno.h"
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <map>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <thread>
+#include <unistd.h>
 
 using namespace llvm;
 using namespace lldb;
@@ -69,58 +67,58 @@ static std::map<CmdType, std::string> CMD_TO_STRING = {
 };
 
 static const std::map<std::string, SocType> SOC_STRING_TO_TYPE = {
-  {"Ascend910B1", SocType::ASCEND910B},
-  {"Ascend910B2", SocType::ASCEND910B},
-  {"Ascend910B3", SocType::ASCEND910B},
-  {"Ascend910B4", SocType::ASCEND910B},
-  {"Ascend910B2C", SocType::ASCEND910B},
-  {"Ascend910B4-1", SocType::ASCEND910B},
-  {"Ascend910_9391", SocType::ASCEND910B},
-  {"Ascend910_9392", SocType::ASCEND910B},
-  {"Ascend910_9381", SocType::ASCEND910B},
-  {"Ascend910_9382", SocType::ASCEND910B},
-  {"Ascend910_9372", SocType::ASCEND910B},
-  {"Ascend910_9362", SocType::ASCEND910B},
-  {"Ascend310P1", SocType::ASCEND310P},
-  {"Ascend310P2", SocType::ASCEND310P},
-  {"Ascend310P3", SocType::ASCEND310P},
-  {"Ascend310P3Vir01", SocType::ASCEND310P},
-  {"Ascend310P3Vir02", SocType::ASCEND310P},
-  {"Ascend310P3Vir03", SocType::ASCEND310P},
-  {"Ascend310P3Vir04", SocType::ASCEND310P},
-  {"Ascend310P4", SocType::ASCEND310P},
-  {"Ascend950DT_950x",  SocType::ASCEND950},
-  {"Ascend950DT_950y",  SocType::ASCEND950},
-  {"Ascend950DT_9571",  SocType::ASCEND950},
-  {"Ascend950DT_9572",  SocType::ASCEND950},
-  {"Ascend950DT_9573",  SocType::ASCEND950},
-  {"Ascend950DT_9574",  SocType::ASCEND950},
-  {"Ascend950DT_9575",  SocType::ASCEND950},
-  {"Ascend950DT_9576",  SocType::ASCEND950},
-  {"Ascend950DT_9577",  SocType::ASCEND950},
-  {"Ascend950DT_9578",  SocType::ASCEND950},
-  {"Ascend950DT_9581",  SocType::ASCEND950},
-  {"Ascend950DT_9582",  SocType::ASCEND950},
-  {"Ascend950DT_9583",  SocType::ASCEND950},
-  {"Ascend950DT_9584",  SocType::ASCEND950},
-  {"Ascend950DT_9585",  SocType::ASCEND950},
-  {"Ascend950DT_9586",  SocType::ASCEND950},
-  {"Ascend950DT_9587",  SocType::ASCEND950},
-  {"Ascend950DT_9588",  SocType::ASCEND950},
-  {"Ascend950DT_9591",  SocType::ASCEND950},
-  {"Ascend950DT_9592",  SocType::ASCEND950},
-  {"Ascend950DT_9595",  SocType::ASCEND950},
-  {"Ascend950DT_9596",  SocType::ASCEND950},
-  {"Ascend950DT_95A1",  SocType::ASCEND950},
-  {"Ascend950DT_95A2",  SocType::ASCEND950},
-  {"Ascend950PR_950z",  SocType::ASCEND950},
-  {"Ascend950PR_9579",  SocType::ASCEND950},
-  {"Ascend950PR_957b",  SocType::ASCEND950},
-  {"Ascend950PR_957c",  SocType::ASCEND950},
-  {"Ascend950PR_957d",  SocType::ASCEND950},
-  {"Ascend950PR_9589",  SocType::ASCEND950},
-  {"Ascend950PR_958b",  SocType::ASCEND950},
-  {"Ascend950PR_9599",  SocType::ASCEND950},
+    {"Ascend910B1", SocType::ASCEND910B},
+    {"Ascend910B2", SocType::ASCEND910B},
+    {"Ascend910B3", SocType::ASCEND910B},
+    {"Ascend910B4", SocType::ASCEND910B},
+    {"Ascend910B2C", SocType::ASCEND910B},
+    {"Ascend910B4-1", SocType::ASCEND910B},
+    {"Ascend910_9391", SocType::ASCEND910B},
+    {"Ascend910_9392", SocType::ASCEND910B},
+    {"Ascend910_9381", SocType::ASCEND910B},
+    {"Ascend910_9382", SocType::ASCEND910B},
+    {"Ascend910_9372", SocType::ASCEND910B},
+    {"Ascend910_9362", SocType::ASCEND910B},
+    {"Ascend310P1", SocType::ASCEND310P},
+    {"Ascend310P2", SocType::ASCEND310P},
+    {"Ascend310P3", SocType::ASCEND310P},
+    {"Ascend310P3Vir01", SocType::ASCEND310P},
+    {"Ascend310P3Vir02", SocType::ASCEND310P},
+    {"Ascend310P3Vir03", SocType::ASCEND310P},
+    {"Ascend310P3Vir04", SocType::ASCEND310P},
+    {"Ascend310P4", SocType::ASCEND310P},
+    {"Ascend950DT_950x", SocType::ASCEND950DT},
+    {"Ascend950DT_950y", SocType::ASCEND950DT},
+    {"Ascend950DT_9571", SocType::ASCEND950DT},
+    {"Ascend950DT_9572", SocType::ASCEND950DT},
+    {"Ascend950DT_9573", SocType::ASCEND950DT},
+    {"Ascend950DT_9574", SocType::ASCEND950DT},
+    {"Ascend950DT_9575", SocType::ASCEND950DT},
+    {"Ascend950DT_9576", SocType::ASCEND950DT},
+    {"Ascend950DT_9577", SocType::ASCEND950DT},
+    {"Ascend950DT_9578", SocType::ASCEND950DT},
+    {"Ascend950DT_9581", SocType::ASCEND950DT},
+    {"Ascend950DT_9582", SocType::ASCEND950DT},
+    {"Ascend950DT_9583", SocType::ASCEND950DT},
+    {"Ascend950DT_9584", SocType::ASCEND950DT},
+    {"Ascend950DT_9585", SocType::ASCEND950DT},
+    {"Ascend950DT_9586", SocType::ASCEND950DT},
+    {"Ascend950DT_9587", SocType::ASCEND950DT},
+    {"Ascend950DT_9588", SocType::ASCEND950DT},
+    {"Ascend950DT_9591", SocType::ASCEND950DT},
+    {"Ascend950DT_9592", SocType::ASCEND950DT},
+    {"Ascend950DT_9595", SocType::ASCEND950DT},
+    {"Ascend950DT_9596", SocType::ASCEND950DT},
+    {"Ascend950DT_95A1", SocType::ASCEND950DT},
+    {"Ascend950DT_95A2", SocType::ASCEND950DT},
+    {"Ascend950PR_950z", SocType::ASCEND950},
+    {"Ascend950PR_9579", SocType::ASCEND950},
+    {"Ascend950PR_957b", SocType::ASCEND950},
+    {"Ascend950PR_957c", SocType::ASCEND950},
+    {"Ascend950PR_957d", SocType::ASCEND950},
+    {"Ascend950PR_9589", SocType::ASCEND950},
+    {"Ascend950PR_958b", SocType::ASCEND950},
+    {"Ascend950PR_9599", SocType::ASCEND950},
 };
 
 std::shared_ptr<DeviceContext> DeviceContext::Factory::GetDeviceContext(
@@ -140,6 +138,8 @@ std::shared_ptr<DeviceContext> DeviceContext::Factory::GetDeviceContext(
       return std::make_shared<Ascend310PDeviceContext>(pid, device_id);
     case SocType::ASCEND950:
       return std::make_shared<Ascend950DeviceContext>(pid, device_id);
+    case SocType::ASCEND950DT:
+      return std::make_shared<Ascend950DTDeviceContext>(pid, device_id);
     default:
       LLDB_LOG(log, "unsupported soc type: {0}", (int)soc_type);
       return nullptr;
@@ -390,19 +390,19 @@ bool DeviceContext::IsValidStack(addr_t addr, size_t size) {
   return true;
 }
 
-inline bool IsValidGlobalAddr(addr_t addr, size_t size)
-{
-    constexpr uint64_t START_DEVICE_ADDR = 0x020000000000;
-    constexpr uint64_t END_DEVICE_ADDR = 0x330000000000;
-    constexpr uint64_t MAX_GLOBAL_SIZE = 1ULL << 48;
+inline bool DeviceContext::IsValidGlobalAddr(lldb::addr_t addr, size_t size) {
+  constexpr uint64_t START_DEVICE_ADDR = 0x020000000000;
+  constexpr uint64_t END_DEVICE_ADDR = 0x330000000000;
+  constexpr uint64_t MAX_GLOBAL_SIZE = 1ULL << 48;
 
-    if (size == 0 || size >= MAX_GLOBAL_SIZE) {
-      return false;
-    }
-    if (addr < START_DEVICE_ADDR || addr >= END_DEVICE_ADDR || addr + size >= END_DEVICE_ADDR) {
-      return false;
-    }
-    return true;
+  if (size == 0 || size >= MAX_GLOBAL_SIZE) {
+    return false;
+  }
+  if (addr < START_DEVICE_ADDR || addr >= END_DEVICE_ADDR ||
+      addr + size >= END_DEVICE_ADDR) {
+    return false;
+  }
+  return true;
 }
 
 size_t DeviceContext::ReadLocalMemory(lldb::addr_t addr, size_t size,
@@ -630,6 +630,7 @@ size_t DeviceContext::ReadGlobalMemory(addr_t addr, size_t size, void *data) {
     LLDB_LOG(log, "Invalid global addr={0}, size={1}", addr, size);
     return 0;
   }
+
   // GM can be read via driver api but only one page for once.
   // So it is necessary to check if the host address "param->host_addr" crosses
   // pages. If so, calls to the driver interface should be made in batches, with

@@ -12,6 +12,9 @@
 
 #define VISIBILITY_EXPORT __attribute__((visibility("default")))
 
+#define ACL_RT_IPC_MEM_EXPORT_FLAG_DEFAULT 0x0UL
+#define ACL_RT_IPC_MEM_EXPORT_FLAG_DISABLE_PID_VALIDATION 0x1UL
+
 typedef enum aclrtLaunchKernelAttrId {
     ACL_RT_LAUNCH_KERNEL_ATTR_SCHEM_MODE = 1,  // 调度模式
 } aclrtLaunchKernelAttrId;
@@ -71,6 +74,20 @@ typedef enum aclrtBinaryLoadOptionType {
     ACL_RT_BINARY_LOAD_OPT_LAZY_LOAD = 1, // 指定解析算子二进制、注册算子后，是否加载算子到Device侧
     ACL_RT_LOAD_BINARY_OPT_MAGIC = 2,     // 标识算子类型的魔术数字
 } aclrtBinaryLoadOptionType;
+
+typedef enum aclrtMemMallocPolicy {
+  ACL_MEM_MALLOC_HUGE_FIRST,
+  ACL_MEM_MALLOC_HUGE_ONLY,
+  ACL_MEM_MALLOC_NORMAL_ONLY,
+  ACL_MEM_MALLOC_HUGE_FIRST_P2P,
+  ACL_MEM_MALLOC_HUGE_ONLY_P2P,
+  ACL_MEM_MALLOC_NORMAL_ONLY_P2P,
+  ACL_MEM_MALLOC_HUGE1G_ONLY,
+  ACL_MEM_MALLOC_HUGE1G_ONLY_P2P,
+  ACL_MEM_TYPE_LOW_BAND_WIDTH = 0x0100U,
+  ACL_MEM_TYPE_HIGH_BAND_WIDTH = 0x1000U,
+  ACL_MEM_ACCESS_USER_SPACE_READONLY = 0x100000U,
+} aclrtMemMallocPolicy;
 
 typedef union aclrtBinaryLoadOptionValue {
     uint32_t isLazyLoad;
@@ -132,6 +149,25 @@ VISIBILITY_EXPORT aclError aclrtLaunchKernelV2Impl(
 VISIBILITY_EXPORT aclError aclrtBinaryLoadFromDataImpl(
     const void *data, size_t length, const aclrtBinaryLoadOptions *options,
     aclrtBinHandle *binHandle);
+
+VISIBILITY_EXPORT aclError aclrtIpcMemGetExportKeyImpl(void *devPtr,
+                                                       size_t size, char *key,
+                                                       size_t len,
+                                                       uint64_t flags);
+VISIBILITY_EXPORT aclError aclrtMemGetAddressRangeImpl(void *ptr, void **pbase,
+                                                       size_t *psize);
+VISIBILITY_EXPORT aclError aclrtIpcMemCloseImpl(const char *key);
+VISIBILITY_EXPORT aclError aclrtMallocImpl(void **devPtr, size_t size,
+                                           aclrtMemMallocPolicy policy);
+VISIBILITY_EXPORT aclError aclrtMallocAlign32Impl(void **devPtr, size_t size,
+                                                  aclrtMemMallocPolicy policy);
+VISIBILITY_EXPORT aclError aclrtMallocCachedImpl(void **devPtr, size_t size,
+                                                 aclrtMemMallocPolicy policy);
+VISIBILITY_EXPORT aclError aclrtMallocWithCfgImpl(void **devPtr, size_t size,
+                                                  aclrtMemMallocPolicy policy,
+                                                  void *cfg);
+VISIBILITY_EXPORT aclError aclrtFreeImpl(void *devPtr);
+VISIBILITY_EXPORT aclError aclrtFreeWithDevSyncImpl(void *devPtr);
 }
 
 #endif

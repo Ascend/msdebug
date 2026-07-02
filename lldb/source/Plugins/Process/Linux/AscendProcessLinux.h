@@ -100,6 +100,7 @@ private:
   void HandleMsg(Socket *client_socket, const std::string &msg);
   HandleResult HandleStubDeviceInfo(const DeviceInfoMsg& device_info_msg);
   HandleResult HandleStubKernelInfo(const KernelInfoMsg& kernel_info_msg);
+  HandleResult HandleStubIpcMemInfo(const IpcMemInfoMsg& ipc_mem_info_msg);
 
   void FixSimdPC(uint64_t &pc);
 
