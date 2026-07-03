@@ -171,6 +171,10 @@ public:
   }
   virtual void RemoveIpcMemInfo(lldb::addr_t addr) { return; }
 
+  size_t ReadSIMTStack(lldb::addr_t addr, size_t size,
+                       const MemoryTypeInfo &memory_type_info,
+                       const InterruptPosInfo &pos_info, void *data);
+
 protected:
   int32_t m_drv_fd;
   int32_t m_pid;

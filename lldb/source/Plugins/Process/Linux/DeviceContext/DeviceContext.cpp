@@ -405,6 +405,67 @@ inline bool DeviceContext::IsValidGlobalAddr(lldb::addr_t addr, size_t size) {
   return true;
 }
 
+size_t DeviceContext::ReadSIMTStack(lldb::addr_t addr, size_t size,
+                                    const MemoryTypeInfo &memory_type_info,
+                                    const InterruptPosInfo &pos_info,
+                                    void *data) {
+  Log *log = GetLog(LLDBLog::Process);
+  LocalMemoryInfo event{};
+  event.core_id = pos_info.core_id;
+  event.mem_type = MemType::SIMT_STACK;
+  event.src_addr = addr;
+  event.core_type = static_cast<uint8_t>(pos_info.core_type);
+  event.thread_id_x = pos_info.thread_pos.x;
+  event.thread_id_y = pos_info.thread_pos.y;
+  event.thread_id_z = pos_info.thread_pos.z;
+  LLDB_LOG(
+      log,
+      "Read simt stack memory: {0:x}, core_id={1}, core_type={2}, mem_type={3}",
+      addr, event.core_id, event.core_type,
+      static_cast<uint32_t>(event.mem_type));
+
+  LocalMemoryData mem_data;
+  if (INT32_MAX < size) {
+    return 0;
+  }
+  size_t left_size = size;
+  uint8_t *cur_data = (uint8_t *)data;
+  constexpr uint8_t dcache_size = 4; // byte
+  while (left_size > 0) {
+    Status error =
+        BaseSqCqComm(CmdType::READ_LOCAL_MEMORY, (const uint8_t *)&event,
+                     sizeof(event), (uint8_t *)&mem_data, sizeof(mem_data));
+    if (error.Fail()) {
+      LLDB_LOG(log, "Read local memory failed: {0}", error);
+      return 0;
+    }
+    // check size
+    if (left_size > INT32_MAX) {
+      LLDB_LOG(log, "Read local memory byte size error.");
+      return 0;
+    }
+    size_t real_size = std::min((size_t)dcache_size, left_size);
+    for (size_t i = 0; i < real_size; ++i) {
+      cur_data[i] = mem_data.out[i];
+    }
+    LLDB_LOG(log, "cpy success, left_size: {0}", left_size);
+    cur_data += real_size;
+    left_size = left_size < dcache_size ? 0 : left_size - dcache_size;
+    event.src_addr += dcache_size;
+  }
+  if (log) {
+    StreamString ss;
+    ss << "0x";
+    cur_data = static_cast<uint8_t *>(data);
+    for (size_t i = 0; i < std::min(size, 8UL); i++) {
+      ss.Printf("%02x", cur_data[i]);
+    }
+    LLDB_LOG(log, "Read simt vf memory, first {0} byte value: {1}",
+             std::min(size, 8UL), ss.GetString());
+  }
+  return size;
+}
+
 size_t DeviceContext::ReadLocalMemory(lldb::addr_t addr, size_t size,
                                       const MemoryTypeInfo &memory_type_info,
                                       const InterruptPosInfo &pos_info,
@@ -751,6 +812,9 @@ size_t DeviceContext::ReadMemory(lldb::addr_t addr, size_t size, const MemoryTyp
   } else if (!IsValidLocalAddr(addr, size)) {
     LLDB_LOG(log, "Invalid local addr or size.");
     return 0;
+  }
+  if (mem_type == MemType::SIMT_STACK) {
+    return ReadSIMTStack(addr, size, memory_type_info, pos_info, out);
   }
   // can read gm and local memory
   return ReadLocalMemory(addr, size, memory_type_info, pos_info, out);

@@ -398,15 +398,19 @@ uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle)
         PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
         return pcStartAddr;
     }
-    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize = %lu", pcStartAddr, (uint64_t)base_ptr, psize);
+    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize=%lu\n",
+                     pcStartAddr, (uint64_t)base_ptr, psize);
     int32_t deviceId{0};
     aclrtGetDeviceImpl(&deviceId);
     deviceId = ConvertToVisibleDeviceId(deviceId);
-    if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {
-        RT_STUB_LOG_WARNING("halMemAdvise failed, "
-                "If the memory used by your process is in a read-only state, "
-                "it may lead to failure in setting breakpoints.\n");
-        return pcStartAddr;
+    drvError_t hal_ret = halMemAdvise(pcStartAddr, psize, 3, deviceId);
+    if (hal_ret != 0) {
+      RT_STUB_LOG_WARNING(
+          "halMemAdvise failed, ret=%u, device_id=%u, "
+          "If the memory used by your process is in a read-only state, "
+          "it may lead to failure in setting breakpoints.\n",
+          hal_ret, deviceId);
+      return pcStartAddr;
     }
     return pcStartAddr;
 }
