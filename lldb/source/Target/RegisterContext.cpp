@@ -354,8 +354,20 @@ Status RegisterContext::ReadRegisterValueFromMemory(
         process_sp->ReadMemory(src_addr, src.data(), src_len, error);
 #ifdef MS_DEBUGGER
     Log *log = GetLog(LLDBLog::Process);
-    LLDB_LOG(log, "Got {0} bytes with src_addr={1:x}, src_len={2}, through ReadMemory",
+    LLDB_LOG(log,
+             "Got {0} bytes with src_addr={1:x}, src_len={2}, through stack "
+             "ReadMemory",
              bytes_read, src_addr, src_len);
+    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
+      // here must be stack of simt
+      // change 4 bytes verse
+      if (process_sp->IsStopInSimtKernel()) {
+        auto *first4_begin = src.begin();
+        auto *first4_end = src.begin() + 4;
+        auto *last4_begin = src.begin() + 4;
+        std::swap_ranges(first4_begin, first4_end, last4_begin);
+      }
+    }
 #endif
 
     // Make sure the memory read succeeded...

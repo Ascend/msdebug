@@ -769,11 +769,14 @@ static void SetMemoryWritable(uint64_t pcStartAddr)
     int32_t deviceId{0};
     GetDeviceId(&deviceId);
     deviceId = ConvertToVisibleDeviceId(deviceId);
-    if (halMemAdvise(pcStartAddr, psize, 3, deviceId) != 0) {
-        RT_STUB_LOG_WARNING("halMemAdvise failed, "
-                "If the memory used by your process is in a read-only state, "
-                "it may lead to failure in setting breakpoints.\n");
-        return;
+    drvError_t hal_ret = halMemAdvise(pcStartAddr, psize, 3, deviceId);
+    if (hal_ret != 0) {
+      RT_STUB_LOG_WARNING(
+          "halMemAdvise failed, ret=%u, device_id=%u, "
+          "If the memory used by your process is in a read-only state, "
+          "it may lead to failure in setting breakpoints.\n",
+          hal_ret, deviceId);
+      return;
     }
     return;
 }
