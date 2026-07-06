@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-msDebug is an operator debugging tool designed for Ascend devices. It is used to debug operator programs executed on the NPU and provides key debugging capabilities for operator developers, including reading the memory and registers of Ascend devices, and pausing and resuming program running status.  
+msDebug is an operator debugging tool designed for Ascend devices. It is used to debug operator programs executed on the NPU and provides key debugging capabilities for operator developers, including reading the memory and registers of Ascend devices, and pausing and resuming program running status.
 This document demonstrates the core functions of msDebug based on the simple addition operator developed in the introductory tutorial. It helps beginners intuitively experience the efficiency and convenience the tool brings to the operator development process.
 
 ### 1.1 Recommendations
@@ -40,9 +40,9 @@ If the operator function is abnormal, you can use msDebug to debug the operator 
 
 #### 2.3.1 Enabling Kernel Debugging
 
->[!CAUTION]CAUTION  
->**msDebug requires the root permission.**  
->msDebug can work properly only when the kernel debugging switch `/proc/debug_switch` is enabled. However, for security purposes, the switch is disabled by default and can be enabled only by the `root` user.  
+>[!CAUTION]CAUTION
+>**msDebug requires the root permission.**
+>msDebug can work properly only when the kernel debugging switch `/proc/debug_switch` is enabled. However, for security purposes, the switch is disabled by default and can be enabled only by the `root` user.
 >This may not be possible in many environments (such as shared development machines and containers). In this case, contact the system administrator to enable the function or experience it in a privileged container.
 
 Check whether the kernel debugging switch `debug_switch` is enabled.
@@ -61,7 +61,7 @@ If the value cannot be set to `1`, the msDebug function is unavailable. In this 
 
 #### 2.3.2 Modifying Compilation Options and Redeploying the Operator
 
-**1. Modify the compilation options.**  
+**1. Modify the compilation options.**
 Insert a line of configuration to the first line of the `CMakeLists.txt` file on the kernel to enable debugging information and disable compilation optimization.
 
 ```shell
@@ -79,8 +79,8 @@ MY_OP_PKG=$(find ./build_out -maxdepth 1 -name "custom_opp_*.run" | head -1) && 
 
 #### 2.3.3 Setting Debugging Environment Variables
 
->[!NOTE]NOTE   
->**Q: When do I need to set LAUNCH_KERNEL_PATH?**  
+>[!NOTE]NOTE
+>**Q: When do I need to set LAUNCH_KERNEL_PATH?**
 >You need to set `LAUNCH_KERNEL_PATH` for all projects except the `<<<>>>` project. That is, when the operator binary exists and is deployed independently in the form of an .o file,
 >you need to explicitly tell msDebug to import the operator debugging information. Otherwise, the debugging function will be abnormal.
 
@@ -108,8 +108,8 @@ After the (msdebug) prompt is displayed, set a breakpoint at line 34 in `add_cus
 b add_custom.cpp:34
 ```
 
->[!CAUTION]CAUTION  
->**If you perform operations in the directly applied container environment, pay attention to the fact that the `/proc/debug_switch = 1` may be in a false state.**      
+>[!CAUTION]CAUTION
+>**If you perform operations in the directly applied container environment, pay attention to the fact that the `/proc/debug_switch = 1` may be in a false state.**
 > If you perform operations in the container environment provided by the cloud service provider, even if the `/proc/debug_switch` is successfully set to 1 and queried in the container, the status may be false. For security purposes,
 > the underlying host machine usually isolates the `/proc` directory through mechanisms such as copy-on-write (CoW), shadow files, or overlay mount. As a result, the settings do not take effect.
 > In this case, setting breakpoints as described in the previous section will trigger a warning. When you run the `run` command according to the following sections, the following error message is displayed:
@@ -120,7 +120,7 @@ b add_custom.cpp:34
 >
 > If you cannot correctly set `/proc/debug_switch` on the host machine with the `root` permission or you do not have the conditions to switch to another proper environment, skip the hands-on experience of `msDebug` in this section.
 
-##### 2.3.4.3 Running an Operator  
+##### 2.3.4.3 Running an Operator
 
 Enter `run` to start the program and wait for the breakpoint to be hit.
 
@@ -139,7 +139,7 @@ Process 163027 stopped
 * thread #1, name = 'execute_add_op', stop reason = breakpoint 1.1
     frame #0: 0x00000000000007e0 AddCustom_ab1b6750d7f510985325b603cb06dc8b.o`KernelAdd::Init(this=0x00000000001d78a8, x=0x12c0c0013000, y=0x12c0c001c000, z=0x12c0c0025000, totalLength=16384, tileNum=8) (.vector) at add_custom.cpp:34:9
    31           this->tileLength = this->blockLength / tileNum / BUFFER_NUM;
-   32  
+   32
    33           // Set the global memory buffer and allocate the global memory area to the current AI Core.
 -> 34           xGm.SetGlobalBuffer((__gm__ DTYPE_X *)x + this->blockLength * AscendC::GetBlockIdx(), this->blockLength);
    35           yGm.SetGlobalBuffer((__gm__ DTYPE_Y *)y + this->blockLength * AscendC::GetBlockIdx(), this->blockLength);
@@ -211,15 +211,15 @@ Output example:
 
 ```text
 (msdebug) ascend info cores
-  CoreId  Type  Device Stream Task Block         PC               stop reason
-*   0     aiv      3     47     0     4     0x12c041200920         breakpoint 1.1
-    1     aiv      3     47     0     5     0x12c041200920         breakpoint 1.1
-    2     aiv      3     47     0     6     0x12c041200920         breakpoint 1.1
-    3     aiv      3     47     0     7     0x12c041200920         breakpoint 1.1
-   44     aiv      3     47     0     0     0x12c041200920         breakpoint 1.1
-   45     aiv      3     47     0     1     0x12c041200920         breakpoint 1.1
-   46     aiv      3     47     0     2     0x12c041200920         breakpoint 1.1
-   47     aiv      3     47     0     3     0x12c041200920         breakpoint 1.1
+  CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+*      0  aiv      3    47    0     4  0x12c041200920  breakpoint 1.1       NA   NA
+       1  aiv      3    47    0     5  0x12c041200920  breakpoint 1.1       NA   NA
+       2  aiv      3    47    0     6  0x12c041200920  breakpoint 1.1       NA   NA
+       3  aiv      3    47    0     7  0x12c041200920  breakpoint 1.1       NA   NA
+      44  aiv      3    47    0     0  0x12c041200920  breakpoint 1.1       NA   NA
+      45  aiv      3    47    0     1  0x12c041200920  breakpoint 1.1       NA   NA
+      46  aiv      3    47    0     2  0x12c041200920  breakpoint 1.1       NA   NA
+      47  aiv      3    47    0     3  0x12c041200920  breakpoint 1.1       NA   NA
 ```
 
 ##### 2.3.4.8 Querying Task Information of an Operator
@@ -253,13 +253,13 @@ Output example:
 ##### 2.3.4.10 Querying Block Information of an Operator
 
 ```shell
-ascend info blocks 
+ascend info blocks
 ```
 
 Output example:
 
 ```text
-(msdebug) ascend info blocks 
+(msdebug) ascend info blocks
   Device Stream Task Block
 *   3      47     0     4
     3      47     0     5

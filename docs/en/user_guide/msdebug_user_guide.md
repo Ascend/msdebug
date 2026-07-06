@@ -67,13 +67,13 @@ msDebug also provides the following extension program. For details, see [**Table
 
 ## Supported Products
 
-The following products are supported: 
+The following products are supported:
 
-- Atlas A3 training products/Atlas A3 inference products 
-- Atlas A2 training products/Atlas A2 inference products 
+- Atlas A3 training products/Atlas A3 inference products
+- Atlas A2 training products/Atlas A2 inference products
 
 > [!NOTE]NOTE
-> 
+>
 >- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
 >- For details about the supported functions, see the documentation of the corresponding function module.
 
@@ -336,7 +336,7 @@ Command Options Usage:
 </table>
 
 > [!NOTE]NOTE
-> 
+>
 > - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop\_reason` is `CUBE\_ERROR`, `CCU\_ERROR`, `MTE\_ERROR`, `VEC\_ERROR`, and `FIXP\_ERROR`.
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
@@ -356,7 +356,7 @@ Before debugging an operator, enable the debugging `-g -O0` option and recompile
 
 The msDebug tool can be started in either of the following ways.
 
-> [!NOTE]NOTE  
+> [!NOTE]NOTE
 > If `Cannot read termcap database; using dumb terminal settings` is displayed, configure `export TERMINFO=xx` to eliminate the message. `xx` indicates the local TERMINFO path.
 >
 > ```bash
@@ -372,7 +372,7 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]NOTE
-        > 
+        >
         > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> "[Kernel Launch](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*.
         > - If the executable file has other input parameters, pass them as follows:
         >
@@ -395,7 +395,7 @@ The msDebug tool can be started in either of the following ways.
         (msdebug)
         ```
 
-        > [!NOTE]NOTE  
+        > [!NOTE]NOTE
         > For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*.
 
 **Exiting Debugging**
@@ -404,10 +404,10 @@ Exit the debugger.
 
 ```bash
 (msdebug) q
-[localhost add_ascendc_sample]$ 
+[localhost add_ascendc_sample]$
 ```
 
-> [!NOTE]NOTE  
+> [!NOTE]NOTE
 > The debugging channel cannot be disabled independently. To disable the debugging channel, you need to enable the overwrite mode. For details, see the NPU driver and firmware installation documents.
 
 **Specifying a Device ID (MC2 Operator Scenario)**
@@ -419,7 +419,7 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 - Issue isolation: If a performance or function issue occurs, you can specify different device IDs to check whether the issue is caused by a specific device, thereby making it easier to locate the issue.
 
 > [!NOTE]NOTE
-> 
+>
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
 > - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > "[HCCL Kernel APIs](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_0869.html)" in *Ascend C Operator Development API Reference*.
 
@@ -478,13 +478,13 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
 - If the operator code is compiled into the dynamic library and loaded by using the operator launch symbol, when a breakpoint is set before the `run` command is executed, the command output indicates that the breakpoint position is not found (pending on future shared library load). The dynamic library is loaded only after the program is executed. The operator debugging information is parsed after the `run` command is executed, and then the breakpoint is updated and reset.
 
     ```bash
-    (msdebug) b matmul_leakyrelu_kernel.cpp:55 
-    Breakpoint 1: no locations (pending on future shared library load). 
-    WARNING:  Unable to resolve breakpoint to any actual locations. 
-    (msdebug) run 
-    ... 
+    (msdebug) b matmul_leakyrelu_kernel.cpp:55
+    Breakpoint 1: no locations (pending on future shared library load).
+    WARNING:  Unable to resolve breakpoint to any actual locations.
+    (msdebug) run
+    ...
     1 location added to breakpoint 1
-    ...  
+    ...
     ```
 
 ### Example
@@ -561,10 +561,10 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
 Run the following command to print the positions and sequence numbers of all breakpoints that have been set.
 
 ```bash
-(msdebug) breakpoint list 
+(msdebug) breakpoint list
 Current breakpoints:
 1: file = 'add_custom.cpp', line = 85, exact_match = 0, locations = 1, resolved = 1, hit count = 1
-  1.1: where = device_debugdata`::add_custom(uint8_t *__restrict, uint8_t *__restrict, uint8_t *__restrict) + 14348 [inlined] KernelAdd::CopyOut(int) + 1700 at add_custom.cpp:85:9, address = 0x000000000000380c, resolved, hit count = 1 
+  1.1: where = device_debugdata`::add_custom(uint8_t *__restrict, uint8_t *__restrict, uint8_t *__restrict) + 14348 [inlined] KernelAdd::CopyOut(int) + 1700 at add_custom.cpp:85:9, address = 0x000000000000380c, resolved, hit count = 1
 ```
 
 **Deleting Breakpoints**
@@ -663,7 +663,7 @@ The actual values of `GlobalTensor` variables are stored in the GM. Run the foll
 ```
 
 > [!NOTE]NOTE
-> 
+>
 > - If you want to print other custom addresses, ensure the validity of the custom addresses. Otherwise, errors may occur during operator running.
 > - If you want to print the memory starting from a custom address, you can add an offset based on the `address\_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
 
@@ -741,7 +741,7 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
         frame #0: 0x000000000000f01c device_debugdata`_ZN17MatmulLeakyKernelIDhDhffE10CalcOffsetEiiRK11TCubeTilingRiS4_S4_S4__mix_aiv(this=0x0000000000217b60, blockIdx=0, usedCoreNum=2, tiling=0x0000000000217e28, offsetA=0x00000000002175c8, offsetB=0x00000000002175c4, offsetC=0x00000000002175c0, offsetBias=0x00000000002175bc) at matmul_leakyrelu_kernel.cpp:129:15
        126
        127      offsetA = mCoreIndx * tiling.Ka * tiling.singleCoreM;
-       128      offsetB = nCoreIndx * tiling.singleCoreN;             
+       128      offsetB = nCoreIndx * tiling.singleCoreN;
     -> 129      offsetC = mCoreIndx * tiling.N * tiling.singleCoreM + nCoreIndx * tiling.singleCoreN;        // Breakpoint position
        130      offsetBias = nCoreIndx * tiling.singleCoreN;
        131  }
@@ -768,14 +768,14 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
     ```cpp
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       12     aic      1     3     0     0     0x12c0c00f03b0         breakpoint 1.2
-    *  44     aiv      1     3     0     0     0x12c0c00f8048         step over               // * indicates the core that is currently running.
-       45     aiv      1     3     0     0     0x12c0c00f801c         breakpoint 1.2
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          12  aic      1     3    0     0  0x12c0c00f03b0  breakpoint 1.2       NA   NA
+    *     44  aiv      1     3    0     0  0x12c0c00f8048       step over       NA   NA               // * indicates the core that is currently running.
+          45  aiv      1     3    0     0  0x12c0c00f801c  breakpoint 1.2       NA   NA
     ```
 
     > [!NOTE]NOTE
-    > 
+    >
     > - If the current core is stopped due to both step-by-step debugging and breakpoints, "breakpoint" is displayed.
     > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows:
     >    - The user program itself has an infinite loop, which needs to be rectified by repairing the program.
@@ -830,13 +830,15 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
     ```cpp
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       13     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-    *  46     aiv      1     3     0     0     0x12c0c00f8ebc         step in          // * indicates the core that is currently running.
-       47     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          13  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+    *     46  aiv      1     3    0     0  0x12c0c00f8ebc         step in       NA   NA
+          47  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
+          // * indicates the core that is currently running.
+          47  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
-    > [!NOTE]NOTE  
+    > [!NOTE]NOTE
     > If the current core is stopped due to both function debugging and breakpoints, `breakpoint` is displayed.
 
 4. After debugging the CopyOut function, run the `finish` command to exit the CopyOut function and return to the main program to continue execution.
@@ -929,10 +931,13 @@ Switch the current core to the specified core. After the core is switched, the p
 
     ```bash
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       17     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-        2     aiv      1     3     0     0     0x12c0c00f8fbc         breakpoint 1.1
-    *   3     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          17  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+           2  aiv      1     3    0     0  0x12c0c00f8fbc  breakpoint 1.1       NA   NA
+    *      3  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
+          17  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+           2  aiv      1     3    0     0  0x12c0c00f8fbc  breakpoint 1.1       NA   NA
+    *      3  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
 - Assume that the running core is core 3 of the AIV, and the core to be switched is core 17 of the AIC.
@@ -955,10 +960,10 @@ Switch the current core to the specified core. After the core is switched, the p
 
     ```bash
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-    *  17     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-        2     aiv      1     3     0     0     0x12c0c00f8fbc         breakpoint 1.1
-        3     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+    *    17  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+          2  aiv      1     3    0     0  0x12c0c00f8fbc  breakpoint 1.1       NA   NA
+          3  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
 ## Program Status Checking
@@ -1054,7 +1059,7 @@ Run the following command to query the information about the device where the op
 *    1      1       2      0x10000     0x3
 ```
 
-> [!NOTE]NOTE  
+> [!NOTE]NOTE
 > In the MC2 operator scenario, multiple device IDs are displayed.
 
 For details about the command output, see the following table.
@@ -1100,11 +1105,11 @@ For details about the command output, see the following table.
 Run the following command to query the information about the core where the operator is running. The line where `*` is located indicates the target core. In the following example, the target core is core 0 of the AIV.
 
 ```bash
-(msdebug) ascend info cores
-  CoreId  Type  Device Stream Task Block         PC               stop reason
-   16     aic      1     3     0     0     0x12c0c00f1fc0         breakpoint 1.1
-*   0     aiv      1     3     0     0     0x12c0c00f8fcc         breakpoint 1.1
-    1     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+(mdebug) ascend info cores
+  CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+      16  aic      1     3    0     0  0x12c0c00f1fc0  breakpoint 1.1       NA   NA
+*      0  aiv      1     3    0     0  0x12c0c00f8fcc  breakpoint 1.1       NA   NA
+       1  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
 ```
 
 For details about the command output, see the following table.
@@ -1197,7 +1202,7 @@ Run the following command to print the code of the running block at the current 
 ```bash
 (msdebug) ascend info blocks -d
 Current stop state of all blocks:
- 
+
 [CoreId 16, Block 0]
 * thread #1, name = 'matmul_leakyrelu', stop reason = breakpoint 1.1
     frame #0: 0x0000000000008fc0 device_debugdata`_ZN7AscendC14KfcMsgGetStateEj_mix_aic(flag=0) at kfc_comm.h:188
@@ -1208,7 +1213,7 @@ Current stop state of all blocks:
    189      return (flag & 0x00008000);
    190  }
    191  __aicore__ inline uint32_t KfcMsgMakeFlag(KFC_Enum funID, uint16_t instID)
- 
+
 [* CoreId 0, Block 0]
 * thread #1, name = 'matmul_leakyrelu', stop reason = breakpoint 1.1
     frame #0: 0x000000000000ffcc device_debugdata`_ZN17MatmulLeakyKernelIDhDhffE7CopyOutEj_mix_aiv(this=0x0000000000167b60, count=0) at matmul_leakyrelu_kernel.cpp:116:1
@@ -1219,7 +1224,7 @@ Current stop state of all blocks:
    117
    118  template <typename aType, typename bType, typename cType, typename biasType>
    119  __aicore__ inline void MatmulLeakyKernel<aType, bType, cType, biasType>::CalcOffset(int32_t blockIdx,
- 
+
 [CoreId 1, Block 0]
 * thread #1, name = 'matmul_leakyrelu', stop reason = breakpoint 1.1
     frame #0: 0x000000000000fd3c device_debugdata`_ZN7AscendC13WaitEventImplEt_mix_aiv(flagId=1) at kernel_operator_sync_impl.h:142:5
@@ -1238,7 +1243,7 @@ Current stop state of all blocks:
 
 If a hardware issue happens onsite, repeated stress tests are needed to reproduce the issue, which slows down troubleshooting. To solve this problem, the system initiates a dump operation upon detecting a potential hardware issue, and captures the current status information. The msDebug tool parses the dump file of an abnormal operator. You can collect sufficient data for fault analysis even without a stress test. The above functions enhance hardware exception detection and minimize repetitive stress tests.
 
-> [!NOTE]NOTE  
+> [!NOTE]NOTE
 > Currently, only the function of parsing dump files of abnormal operators is supported by Ascend 950 products. Other functions are not supported by Ascend 950 products.
 
 ### Precautions
@@ -1268,18 +1273,18 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
     [Switching to focus on CoreId 26, Type aiv]
     ```
 
-    > [!NOTE]NOTE  
+    > [!NOTE]NOTE
     > To view the call stack, use the `-O2/O3 + -g` option to compile and generate the `kernel.o` file that contains debugging information, or generate the ELF file of the fatbin structure.
-    > 
+    >
     > Cause: During operator execution, if a hardware exception occurs due to instruction execution, the hardware usually continues to execute several instructions before reporting the exception and generating a core file. Therefore, the memory and register data in the core file may be inaccurate. However, the value of the PC register is usually corrected.
-    > 
+    >
     > At the O2/O3 optimization level, the inline function is used by default. Call stack can still be traced accurately without requiring stack memory data. At the O0 optimization level, no inline function is used forcibly, and the stack memory data is inaccurate. Generally, accurate data requires the 0 stack frame.
 
 5. View the dump file information of the abnormal operator.
 
     ```bash
     msdebug --core output2/extra-info/data-dump/0/xxx.core /home/xxxxx/Ascend/cann/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_xxxx.o
-    
+
     msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
     The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
     This enables developers to debug Ascend kernels without being affected by potential changes brought by simulation and emulation environments.
@@ -1287,7 +1292,7 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
     Core file '/home/xxx/output2
     /extra-info/data-dump/0/xxx.core' (hiipu64) was loaded.
     [Switching to focus on CoreId 34, Type aiv]
-    
+
     (msdebug) ascend info summary
       CoreId  CoreType        PC         DeviceId    ChipType
         33       AIV    0x12c0412004c8       0        A2/A3
@@ -1298,7 +1303,7 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
         38       AIV    0x12c0412007c0       0        A2/A3
         39       AIV    0x12c0412007c0       0        A2/A3
         40       AIV    0x12c0412007c0       0        A2/A3
-    
+
       Id           DataType                   MemType                     Addr                       Size             CoreId    CoreType    Dim
        0    DEVICE_KERNEL_OBJECT                GM                   0x12c041200000                 167872             NA         AIV        NA
        1            STACK                    GM/DCACHE           0xff000108000(invalid)              32768             33         AIV        NA
@@ -1315,7 +1320,7 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
       12        INPUT_TENSOR                    GM                   0x12c0c0012000                  32768             NA          NA        [8, 2048]
       13        INPUT_TENSOR                    GM                   0x12c0c001b000                  32768             NA          NA        [8, 2048]
       14            ARGS                     GM/DCACHE               0x12c100000000                   96               NA          NA        NA
-    
+
     (msdebug) bt
        * thread #1, stop reason = VEC_ERROR
          * frame #0: 0x000012c0412004c8 AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
@@ -1338,7 +1343,7 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
        unavailable>) at AddCustom_xxx_3800102_kernel.cpp:43:5
            frame #7: 0x000012c04120004c AddCustom_xxx.o`::AddCustom_xxx_0(x_in__=<unavailable>, y_in__=<unavailable>, z_out_=<
        unavailable>, workspace=<unavailable>, tiling=<unavailable>) at AddCustom_xxx_3800102_kernel.cpp:48:5
-    
+
     ```
 
 6. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), and [Memory and Variable Printing](#memory-and-variable-printing).

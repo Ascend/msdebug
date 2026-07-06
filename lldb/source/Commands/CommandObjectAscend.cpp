@@ -320,35 +320,60 @@ protected:
       return;
     }
 
+    Target *target = m_exe_ctx.GetTargetPtr();
     auto stop_reason = process->GetCoreStopReason();
-    strm << "  CoreId  Type  Device Stream Task Block         PC               stop reason\n";
-    for (uint32_t i = 0; i < commonInfo.m_core_info_vec.size(); ++i) {
-      std::stringstream ss;
-      std::string core_type_str;
-      auto &core_info = commonInfo.m_core_info_vec[i];
-      if (core_info.core_type == CoreType::AIC) {
-        core_type_str = "aic";
-      } else {
-        core_type_str = "aiv";
-      }
-      if (commonInfo.m_focused_info_index == i) {
-        ss << "*";
-      } else {
-        ss << " ";
-      }
-      static constexpr uint32_t CORE_ID_WIDTH = 4;
-      static constexpr uint32_t BLOCK_ID_WIDTH = 6;
 
-      std::string stopReasonKey = std::to_string(static_cast<uint8_t>(core_info.core_type)) + '_' +
-        std::to_string(core_info.core_id);
+    vector<string> headers = {"CoreId", "Type", "Device", "Stream",
+                              "Task", "Block", "PC", "stop reason",
+                              "Filename", "Line"};
+    vector<vector<string>> rows;
+
+    for (uint32_t i = 0; i < commonInfo.m_core_info_vec.size(); ++i) {
+      vector<string> row;
+      auto &core_info = commonInfo.m_core_info_vec[i];
+      string core_type_str =
+          (core_info.core_type == CoreType::AIC) ? "aic" : "aiv";
+
+      string stopReasonKey =
+          to_string(static_cast<uint8_t>(core_info.core_type)) + "_" +
+          to_string(core_info.core_id);
       auto iter = stop_reason.find(stopReasonKey);
-      ss << std::setw(CORE_ID_WIDTH) << static_cast<uint32_t>(core_info.core_id) << "     " <<
-        core_type_str << "      " << commonInfo.m_device_info.device_id << "     " <<
-        core_info.stream_id << "     " << core_info.task_id << std::setw(BLOCK_ID_WIDTH) <<
-        core_info.block_id << "     0x" << std::hex << core_info.pc <<
-        "         " << ((iter == stop_reason.end()) ? "NULL" : iter->second) << std::endl;
-      strm << ss.str();
+
+      stringstream pc_ss;
+      pc_ss << "0x" << hex << core_info.pc;
+      string pc_str = pc_ss.str();
+
+      // Resolve PC to source file and line
+      LineInfo line_info;
+      string filename;
+      string line;
+      if (target != nullptr &&
+          GetLineEntryForPC(target, core_info.pc, line_info)) {
+        filename = line_info.filename;
+        line = to_string(line_info.line);
+      } else {
+        filename = "NA";
+        line = "NA";
+      }
+
+      row.push_back(to_string(static_cast<uint32_t>(core_info.core_id)));
+      row.push_back(core_type_str);
+      row.push_back(to_string(commonInfo.m_device_info.device_id));
+      row.push_back(to_string(core_info.stream_id));
+      row.push_back(to_string(core_info.task_id));
+      row.push_back(to_string(core_info.block_id));
+      row.push_back(pc_str);
+      row.push_back((iter == stop_reason.end()) ? "NULL" : iter->second);
+      row.push_back(filename);
+      row.push_back(line);
+
+      rows.push_back(row);
     }
+
+    int focus_row = (commonInfo.m_focused_info_index < rows.size())
+                        ? static_cast<int>(commonInfo.m_focused_info_index)
+                        : -1;
+    PrettyPrintTable(headers, rows, focus_row, strm);
 
     strm.EOL();
     strm.Flush();
