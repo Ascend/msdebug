@@ -67,14 +67,14 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
 
 ## 产品支持情况
 
-支持的产品形态如下：  
+支持的产品形态如下：
 
-- Atlas A3 训练系列产品/Atlas A3 推理系列产品  
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品  
+- Atlas A3 训练系列产品/Atlas A3 推理系列产品
+- Atlas A2 训练系列产品/Atlas A2 推理系列产品
 - Atlas 350 加速卡
 
-> [!NOTE] 
-> 
+> [!NOTE]
+>
 >- 昇腾产品的具体型号，请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
 >- 具体功能支持范围可前往对应功能模块资料进行查看。
 
@@ -373,8 +373,8 @@ Command Options Usage:
 </tbody>
 </table>
 
-> [!NOTE] 
-> 
+> [!NOTE]
+>
 > - bt命令当前只适用于coredump特性场景，调用栈信息仅在stop_reason为以下error时：CUBE_ERROR、CCU_ERROR、MTE_ERROR、VEC_ERROR、FIXP_ERROR，保证准确性。
 > - 对于bt的展示，如果函数名过长，可以参考[链接](https://lldb.llvm.org/use/formatting.html)进行设置：
 >
@@ -394,7 +394,7 @@ Command Options Usage:
 
 msDebug工具支持以下两种启动方式：
 
-> [!NOTE]    
+> [!NOTE]
 > 若工具弹出**Cannot read termcap database; using dumb terminal settings.**  的提示信息，可以通过配置`export TERMINFO=xx`消除提示，xx为本地TERMINFO路径：
 >
 > ```bash
@@ -409,8 +409,8 @@ msDebug工具支持以下两种启动方式：
         $ msdebug ./application
         ```
 
-        > [!NOTE] 
-        > 
+        > [!NOTE]
+        >
         > - 基于Ascend C算子的Kernel侧框架执行一键式编译运行，可生成NPU侧可执行文件application，具体操作可参考《Ascend C算子开发指南》中的“Kernel直调算子开发 \>  [Kernel直调](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)”章节。
         > - 若可执行文件有其他入参，则按照如下形式传入入参：
         >
@@ -433,7 +433,7 @@ msDebug工具支持以下两种启动方式：
         (msdebug)
         ```
 
-        > [!NOTE]    
+        > [!NOTE]
         > 通过PyTorch框架进行单算子调用的场景，详细信息可参考《Ascend Extension for PyTorch 套件与三方库支持清单》中“[昇腾自研插件](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)”章节中OpPlugin插件。
 
 **调试退出**
@@ -442,10 +442,10 @@ msDebug工具支持以下两种启动方式：
 
 ```bash
 (msdebug) q
-[localhost add_ascendc_sample]$ 
+[localhost add_ascendc_sample]$
 ```
 
-> [!NOTE]    
+> [!NOTE]
 > 该调试通道无法单独关闭，若要关闭调试通道，需要通过覆盖安装方式，具体请参见对应的NPU驱动和固件安装文档。
 
 **指定Device ID（通算融合算子场景）**
@@ -456,8 +456,8 @@ msDebug工具支持以下两种启动方式：
 - 针对性强：能够针对特定设备进行调试，有助于发现和解决与该设备相关的性能瓶颈或兼容性问题。
 - 便于隔离问题：当遇到性能或功能问题时，可以通过指定不同的设备ID来确定问题是否由特定设备引起，从而更容易定位问题所在。
 
-> [!NOTE] 
-> 
+> [!NOTE]
+>
 > - 如果不指定，则仅对用户程序运行时首次设置的Device ID进行调试。
 > - Hccl接口不支持单步调试功能，具体接口明细请参见《Ascend C算子开发接口》中的“高阶API \> Hccl \>  [Hccl Kernel侧接口](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_0869.html)”章节。
 
@@ -516,14 +516,16 @@ Process 2625643 stopped
 - 若算子代码被编译进动态库中，通过算子调用符加载，当在运行run命令前设置断点时，回显会告知暂时未找到断点位置（pending on future shared library load），动态库在程序运行后才会被加载，算子调试信息在运行run命令后完成解析，此时断点会重新更新并完成设置。
 
     ```bash
-    (msdebug) b matmul_leakyrelu_kernel.cpp:55 
-    Breakpoint 1: no locations (pending on future shared library load). 
-    WARNING:  Unable to resolve breakpoint to any actual locations. 
-    (msdebug) run 
-    ... 
+    (msdebug) b matmul_leakyrelu_kernel.cpp:55
+    Breakpoint 1: no locations (pending on future shared library load).
+    WARNING:  Unable to resolve breakpoint to any actual locations.
+    (msdebug) run
+    ...
     1 location added to breakpoint 1
-    ...  
+    ...
     ```
+
+- Ascend950场景下，simd_vf函数及其子函数必须inline，导致大量代码行信息丢失，无法解析出断点信息。可通过在simd_vf内添加`__asm__("NOP")`语句，并在该行设置断点。
 
 ### 使用示例
 
@@ -599,10 +601,10 @@ Process 2625643 stopped
 输入以下命令，将会打印所有已设置的断点位置以及序号。
 
 ```bash
-(msdebug) breakpoint list 
+(msdebug) breakpoint list
 Current breakpoints:
 1: file = 'add_custom.cpp', line = 85, exact_match = 0, locations = 1, resolved = 1, hit count = 1
-  1.1: where = device_debugdata`::add_custom(uint8_t *__restrict, uint8_t *__restrict, uint8_t *__restrict) + 14348 [inlined] KernelAdd::CopyOut(int) + 1700 at add_custom.cpp:85:9, address = 0x000000000000380c, resolved, hit count = 1 
+  1.1: where = device_debugdata`::add_custom(uint8_t *__restrict, uint8_t *__restrict, uint8_t *__restrict) + 14348 [inlined] KernelAdd::CopyOut(int) + 1700 at add_custom.cpp:85:9, address = 0x000000000000380c, resolved, hit count = 1
 ```
 
 **删除断点**
@@ -700,8 +702,8 @@ GlobalTensor一般用来存放Global Memory（外部存储）的全局数据。
 0x12c045400000: {4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096}
 ```
 
-> [!NOTE] 
-> 
+> [!NOTE]
+>
 > - 若需要打印其他自定义地址，用户需自行保证该自定义地址的合法性，否则可能会导致算子运行出错。
 > - 若需要以自定义地址为起始进行内存打印，可基于address_字段作为起始地址增加偏移，偏移量单位为字节数，得到偏移后的GM内存地址后，传入内存打印命令即可。
 > - 当前支持断点停在Kernel侧和Host侧时读取并展示GM内存。
@@ -735,7 +737,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 0x00000000: {4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096}
 ```
 
-> [!NOTE]  
+> [!NOTE]
 >
 > - 本用例中，Tensor变量的实际内容保存在UB上，但LocalTensor不一定都保存在UB中，也可能在L1/L0A/L0B上，需要用户根据代码自行判断，然后在打印命令的`-m`选项中选择正确的内存类型。
 > - 若需要以自定义地址为起始进行内存打印，可基于address_字段作为起始地址增加偏移，偏移量单位为字节数，得到偏移后的GM内存地址后，传入内存打印命令即可。
@@ -780,7 +782,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
         frame #0: 0x000000000000f01c device_debugdata`_ZN17MatmulLeakyKernelIDhDhffE10CalcOffsetEiiRK11TCubeTilingRiS4_S4_S4__mix_aiv(this=0x0000000000217b60, blockIdx=0, usedCoreNum=2, tiling=0x0000000000217e28, offsetA=0x00000000002175c8, offsetB=0x00000000002175c4, offsetC=0x00000000002175c0, offsetBias=0x00000000002175bc) at matmul_leakyrelu_kernel.cpp:129:15
        126
        127      offsetA = mCoreIndx * tiling.Ka * tiling.singleCoreM;
-       128      offsetB = nCoreIndx * tiling.singleCoreN;             
+       128      offsetB = nCoreIndx * tiling.singleCoreN;
     -> 129      offsetC = mCoreIndx * tiling.N * tiling.singleCoreM + nCoreIndx * tiling.singleCoreN;        //断点位置
        130      offsetBias = nCoreIndx * tiling.singleCoreN;
        131  }
@@ -794,7 +796,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
     (msdebug) n
     Process 177943 stopped
     [Switching to focus on Kernel matmul_leakyrelu_custom, CoreId 44, Type aiv]
-    * thread #1, name = 'matmul_leakyrelu', stop reason = step over   //   通过回显可查看pc的位置，表示单步成功 
+    * thread #1, name = 'matmul_leakyrelu', stop reason = step over   //   通过回显可查看pc的位置，表示单步成功
         frame #0: 0x000000000000f048 device_debugdata`_ZN17MatmulLeakyKernelIDhDhffE10CalcOffsetEiiRK11TCubeTilingRiS4_S4_S4__mix_aiv(this=0x0000000000217b60, blockIdx=0, usedCoreNum=2, tiling=0x0000000000217e28, offsetA=0x00000000002175c8, offsetB=0x00000000002175c4, offsetC=0x00000000002175c0, offsetBias=0x00000000002175bc) at matmul_leakyrelu_kernel.cpp:130:18
        127      offsetA = mCoreIndx * tiling.Ka * tiling.singleCoreM;
        128      offsetB = nCoreIndx * tiling.singleCoreN;
@@ -813,8 +815,8 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
        45     aiv      1     3     0     0     0x12c0c00f801c         breakpoint 1.2
     ```
 
-    > [!NOTE] 
-    > 
+    > [!NOTE]
+    >
     > - 当前核的停止原因既有单步调试又有断点时，将展示为breakpoint。
     > - 若运行程序出现卡顿的现象，可以通过键盘输入“CTRL+C”中断运行程序。运行卡顿的原因可能是以下情况：
     >    - 用户程序本身存在死循环，需要通过修复程序解决。
@@ -875,7 +877,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
        47     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
     ```
 
-    > [!NOTE]    
+    > [!NOTE]
     > 当前核的停止原因既有调试函数又有断点时，将展示为breakpoint。
 
 4. 调试完CopyOut函数后，运行`finish`命令退出CopyOut函数，并返回主程序继续执行。
@@ -1093,7 +1095,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 *    1      1       2      0x10000     0x3
 ```
 
-> [!NOTE]    
+> [!NOTE]
 > 通算融合算子场景将会显示多个Device ID。
 
 关键信息说明如下表：
@@ -1236,7 +1238,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 ```bash
 (msdebug) ascend info blocks -d
 Current stop state of all blocks:
- 
+
 [CoreId 16, Block 0]
 * thread #1, name = 'matmul_leakyrelu', stop reason = breakpoint 1.1
     frame #0: 0x0000000000008fc0 device_debugdata`_ZN7AscendC14KfcMsgGetStateEj_mix_aic(flag=0) at kfc_comm.h:188
@@ -1247,7 +1249,7 @@ Current stop state of all blocks:
    189      return (flag & 0x00008000);
    190  }
    191  __aicore__ inline uint32_t KfcMsgMakeFlag(KFC_Enum funID, uint16_t instID)
- 
+
 [* CoreId 0, Block 0]
 * thread #1, name = 'matmul_leakyrelu', stop reason = breakpoint 1.1
     frame #0: 0x000000000000ffcc device_debugdata`_ZN17MatmulLeakyKernelIDhDhffE7CopyOutEj_mix_aiv(this=0x0000000000167b60, count=0) at matmul_leakyrelu_kernel.cpp:116:1
@@ -1258,7 +1260,7 @@ Current stop state of all blocks:
    117
    118  template <typename aType, typename bType, typename cType, typename biasType>
    119  __aicore__ inline void MatmulLeakyKernel<aType, bType, cType, biasType>::CalcOffset(int32_t blockIdx,
- 
+
 [CoreId 1, Block 0]
 * thread #1, name = 'matmul_leakyrelu', stop reason = breakpoint 1.1
     frame #0: 0x000000000000fd3c device_debugdata`_ZN7AscendC13WaitEventImplEt_mix_aiv(flagId=1) at kernel_operator_sync_impl.h:142:5
@@ -1381,18 +1383,18 @@ Current stop state of all blocks:
     [Switching to focus on Kernel add_custom, CoreId 1, Type aiv]
     ```
 
-    > [!NOTE]    
+    > [!NOTE]
     > 如果需要查看调用栈，需使用`-O2/O3 + -g`选项编译生成包含调试信息的kernel.o文件，或者生成fatbin结构的ELF文件。
-    > 
+    >
     > 原因：在算子执行过程中，若因指令执行导致硬件异常，硬件通常会继续执行若干条指令后再上报异常并生成core文件。因此，core文件中的内存和寄存器数据可能并不准确。不过，PC寄存器的值通常会被修正。
-    > 
+    >
     > 在O2/O3优化下默认inline，不需要栈内存数据，仍可以回溯准确的调用栈；而在O0优化下会强制no inline，且栈内存数据不准确，通常只有0栈帧是准确的。
 
 5. 查看异常算子dump文件信息。
 
     ```bash
     msdebug --core output2/extra-info/data-dump/0/xxx.core
-    
+
     msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
     The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
     This enables developers to debug Ascend kernels without being affected by potential changes brought by simulation and emulation environments.
@@ -1408,7 +1410,7 @@ Current stop state of all blocks:
        60               intriParams.srcStride, intriParams.dstStride);
        61       }
        62   }
-    
+
     (msdebug) bt
     * thread #1, stop reason = MTE_ERROR
       * frame #0: 0x000012c041200420 device_debugdata`::add_custom(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__) [inlined] void AscendC::DataCopyGM2UBImpl<short>(dst=0x0000000000000000, src=0, intriParams=<unavailable>) at kernel_operator_data_copy_impl.h:59:9
@@ -1442,7 +1444,7 @@ Current stop state of all blocks:
        9            ARGS                     GM/DCACHE               0x12c100000000                   24               NA          NA        NA
 
     (msdebug)
-    
+
     ```
 
 6. 请参考[核切换功能介绍](#核切换功能介绍)、[检查程序状态功能介绍](#检查程序状态功能介绍)、[内存与变量打印功能介绍](#内存与变量打印功能介绍)以及[SIMT线程切换功能介绍](#simt线程切换功能介绍)章节的内存打印相关操作定位硬件异常。
