@@ -71,7 +71,8 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
 
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品
-- Atlas 350 加速卡
+- Atlas 推理系列产品
+- Ascend 950 系列产品
 
 > [!NOTE]
 >
@@ -525,7 +526,16 @@ Process 2625643 stopped
     ...
     ```
 
-- Ascend950场景下，simd_vf函数及其子函数必须inline，导致大量代码行信息丢失，无法解析出断点信息。可通过在simd_vf内添加`__asm__("NOP")`语句，并在该行设置断点。
+- Ascend 950 系列产品中的场景中，simd vf函数及其子函数必须inline，导致大量代码行信息丢失，无法解析出断点信息。可通过在simd vf内添加`__asm__("NOP")`语句，并在该行设置断点。
+
+    ```cpp
+    __simd_vf__ inline void funcA () {
+        for(uint16_t i = 0; i < repeatTimes; ++i) {
+            AscendC::Reg::LoadAlign<>(xxxx);
+            __asm__("NOP"); // 增加这一行后，断点可以设置这行
+        }
+    }
+    ```
 
 ### 使用示例
 
