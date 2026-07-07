@@ -1485,6 +1485,33 @@ bool SBProcess::HandleDeviceSBProcessStateChanged() {
     return false;
   }
 }
+
+bool SBProcess::GetSBCurrentCoreThreadDim(uint16_t &dim_x, uint16_t &dim_y,
+                                          uint16_t &dim_z) {
+  ProcessSP process_sp(GetSP());
+  if (!process_sp)
+    return false;
+
+  DeviceStopInfo stop_info;
+  process_sp->GetDeviceStopInfoCached(stop_info);
+
+  std::vector<CoreInfo> infos;
+  Status error = process_sp->GetCoresInfo(infos);
+  if (error.Fail() || infos.empty())
+    return false;
+
+  for (const auto &info : infos) {
+    if (info.core_id == static_cast<uint8_t>(stop_info.core_id) &&
+        info.core_type == stop_info.core_type) {
+      dim_x = info.thread_dim_x;
+      dim_y = info.thread_dim_y;
+      dim_z = info.thread_dim_z;
+      return true;
+    }
+  }
+
+  return false;
+}
 #endif
 
 lldb::SBScriptObject SBProcess::GetScriptedImplementation() {
