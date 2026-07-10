@@ -247,18 +247,7 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation
     ```
 
-6. Import the operator dynamic loading path.
-
-    Import the path of the `.o` file output in the `build\_out` directory on the kernel after the custom operator project is compiled to environment variables.
-
-    ```bash
-    export LAUNCH_KERNEL_PATH=/{path_to_kernel}/kernel_name.o  # {path_to_kernel} indicates the path of the operator binary file *.o generated after the operator kernel is built. Replace it with the actual path.
-    ```
-
-    > [!NOTE]NOTE
-    > Multiple `.o` files may be generated for multiple dtypes of the operator on the kernel. Import the `.o` file called in [Step 4](#step-4-operator-compilation).
-
-7. Use msDebug to load the single-operator executable file `execute\_add\_op` obtained in [5](#step-5).
+6. Use msDebug to load the single-operator executable file `execute\_add\_op` obtained in [5](#step-5).
 
     ```bash
     export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/opp/vendors/customize/op_api/lib:$LD_LIBRARY_PATH
@@ -269,13 +258,13 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     (msdebug)
     ```
 
-8. Set a breakpoint.
+7. Set a breakpoint.
 
     ```bash
     b add_custom.cpp:55
     ```
 
-9. Run the operator program and wait until the breakpoint is hit.
+8. Run the operator program and wait until the breakpoint is hit.
 
     ```bash
     (msdebug) r
@@ -389,22 +378,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     INFO: Ascend C Add Custom  in torch.compile graph SUCCESS
     ```
 
-6. Manually import the operator debugging information. The following is an example.
-
-    > [!NOTE]NOTE
-    >
-    > - Replace `${INSTALL_DIR}` with the actual CANN installation directory. For example, if the installation is performed by the `root` user, the path is `/usr/local/Ascend/cann`.
-    > - For servers other than the <term>Atlas A3 training products/Atlas A3 inference products</term>: Run the `npu-smi info` command on the server where the Ascend AI Processor is installed to obtain the chip name. Note that the actual value is represented by `AscendChip name`. For example, if the chip name is `xxxyy`, the actual value is `Ascendxxxyy`. If `Ascendxxxyy` is the path of the code sample, set this parameter to `ascendxxxyy`.
-    > - For the <term>Atlas A3 training products/Atlas A3 inference products</term>, run the `npu-smi info -t board -i id -c chip_id` command on the server where the Ascend AI Processor is installed to obtain the chip name and NPU name. The actual value is represented by `Chip name_NPU name`. For example, if the chip name is `Ascendxxx` and the NPU name is `1234`, the actual value is `Ascendxxx_1234`. If `Ascendxxx_1234` is the path of the code sample, set this parameter to `ascendxxx_1234`.
-    >    Note that:
-    >    - `id`: device ID, which is the NPU ID obtained by running the `npu-smi info -l` command.
-    >    - `chip\_id`: chip ID, which is the same as the chip ID obtained by running the `npu-smi info -m` command.
-
-    ```bash
-    export LAUNCH_KERNEL_PATH=${INSTALL_DIR}/opp/vendors/customize/op_impl/ai_core/tbe/kernel/SOC_VERSION/add_custom/AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o
-    ```
-
-7. Start msDebug to start the Python program and enter the debugging page.
+6. Start msDebug to start the Python program and enter the debugging page.
 
     ```bash
     msdebug python3 test_ops_custom.py
@@ -414,7 +388,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     (msdebug)
     ```
 
-8. Set a breakpoint.
+7. Set a breakpoint.
 
     Set an NPU breakpoint in the kernel function based on the specified source code file and corresponding line number.
 
@@ -423,7 +397,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     Breakpoint 1: where = AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`::AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b_1(uint8_t *, uint8_t *, uint8_t *, uint8_t *, uint8_t *) + 9912 [inlined] KernelAdd::Compute(int) + 3400 at add_custom.cpp:60:9, address = 0x00000000000026b8
     ```
 
-9. Run the program and wait until the breakpoint is hit.
+8. Run the program and wait until the breakpoint is hit.
 
     ```bash
     (msdebug) r
@@ -448,8 +422,8 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     > [!NOTE]NOTE
     > For details about other debugging operations, see "[Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage)", "[Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing)", "[Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display)", and "[Core Switching](../user_guide/msdebug_user_guide.md#core-switching)".
 
-10. Delete the breakpoint. For details, see "[Setting Breakpoints] (../user_guide/msdebug_user_guide.md#setting-breakpoints)".
-11. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
+9. Delete the breakpoint. For details, see "[Setting Breakpoints] (../user_guide/msdebug_user_guide.md#setting-breakpoints)".
+10. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash
     (msdebug) q

@@ -77,30 +77,16 @@ bash ./build.sh
 MY_OP_PKG=$(find ./build_out -maxdepth 1 -name "custom_opp_*.run" | head -1) && bash $MY_OP_PKG
 ```
 
-#### 2.3.3 设置调试环境变量
+#### 2.3.3 断点调试与变量查看
 
-> [!NOTE]
-> **知识点：什么时候需要设置 LAUNCH_KERNEL_PATH？**
-> 除了 <<<>>> 这种直调的工程，其他都要设置 LAUNCH_KERNEL_PATH。也就是说算子二进制以 .o 文件形式独立存在并部署的情况下，
-> 需要明确告诉 msDebug 来导入算子调试信息，否则调试功能会异常。
-
-设置 LAUNCH_KERNEL_PATH，指定算子 obj 加载路径并导入调试符号信息：
-> **算子 obj 路径查找方法：**   需要在算子部署路径中搜索，示例路径：/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_ab1b6750d7f510985325b603cb06dc8b.o
-
-```shell
-export LAUNCH_KERNEL_PATH={path_to_kernel}/my_kernel.o
-```
-
-#### 2.3.4 断点调试与变量查看
-
-##### 2.3.4.1 启动调试器
+##### 2.3.3.1 启动调试器
 
 ```shell
 cd ~/ot_demo/workspace/src/caller/build
 msdebug execute_add_op
 ```
 
-##### 2.3.4.2 设置断点
+##### 2.3.3.2 设置断点
 
 待 (msdebug) 提示符出现后，设置断点于 add_custom.cpp 第 34 行：
 
@@ -120,7 +106,7 @@ b add_custom.cpp:34
 >
 > 若无法在宿主机上以 root 权限正确设置 `/proc/debug_switch`，或不具备切换至其他合适环境的条件，则只能跳过本节关于 `msDebug` 的实操体验。
 
-##### 2.3.4.3 运行算子
+##### 2.3.3.3 运行算子
 
 输入 run 启动程序，等待命中断点：
 
@@ -146,7 +132,7 @@ Process 163027 stopped
    36           zGm.SetGlobalBuffer((__gm__ DTYPE_Z *)z + this->blockLength * AscendC::GetBlockIdx(), this->blockLength);
 ```
 
-##### 2.3.4.4 查看变量的值
+##### 2.3.3.4 查看变量的值
 
 在断点处执行以下命令，显示当前作用域内的所有局部变量：
 
@@ -166,7 +152,7 @@ var
 (uint32_t) tileNum = 8
 ```
 
-##### 2.3.4.5 查看寄存器的值
+##### 2.3.3.5 查看寄存器的值
 
 ```shell
 register read -a
@@ -187,7 +173,7 @@ register read -a
                 GPR5 = 0x8
 ```
 
-##### 2.3.4.6 查询Device信息
+##### 2.3.3.6 查询Device信息
 
 ```shell
 ascend info devices
@@ -201,7 +187,7 @@ ascend info devices
 *    3      0       8      0x0     0xf0000000000f
 ```
 
-##### 2.3.4.7 查询算子所运行的aicore相关信息
+##### 2.3.3.7 查询算子所运行的aicore相关信息
 
 ```shell
 ascend info cores
@@ -222,7 +208,7 @@ ascend info cores
       47  aiv      3    47    0     3  0x12c041200920  breakpoint 1.1       NA   NA
 ```
 
-##### 2.3.4.8 查询算子所运行的task相关信息
+##### 2.3.3.8 查询算子所运行的task相关信息
 
 ```shell
 ascend info tasks
@@ -236,7 +222,7 @@ ascend info tasks
 *   3      47     0  AddCustom_ab1b6750d7f510985325b603cb06dc8b_0
 ```
 
-##### 2.3.4.9 查询算子所运行的stream相关信息
+##### 2.3.3.9 查询算子所运行的stream相关信息
 
 ```shell
 ascend info stream
@@ -250,7 +236,7 @@ ascend info stream
 *   3      47    aiv
 ```
 
-##### 2.3.4.10 查询算子所运行的block相关信息
+##### 2.3.3.10 查询算子所运行的block相关信息
 
 ```shell
 ascend info blocks
@@ -271,14 +257,14 @@ ascend info blocks
     3      47     0     3
 ```
 
-##### 2.3.4.11 退出调试器
+##### 2.3.3.11 退出调试器
 
 ```text
 q
 y
 ```
 
-#### 2.3.5 恢复被修改的文件
+#### 2.3.4 恢复被修改的文件
 
 执行如下命令：
 

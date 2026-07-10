@@ -77,30 +77,16 @@ bash ./build.sh
 MY_OP_PKG=$(find ./build_out -maxdepth 1 -name "custom_opp_*.run" | head -1) && bash $MY_OP_PKG
 ```
 
-#### 2.3.3 Setting Debugging Environment Variables
+#### 2.3.3 Debugging with Breakpoints and Viewing Variables
 
->[!NOTE]NOTE
->**Q: When do I need to set LAUNCH_KERNEL_PATH?**
->You need to set `LAUNCH_KERNEL_PATH` for all projects except the `<<<>>>` project. That is, when the operator binary exists and is deployed independently in the form of an .o file,
->you need to explicitly tell msDebug to import the operator debugging information. Otherwise, the debugging function will be abnormal.
-
-Set `LAUNCH_KERNEL_PATH` to specify the path for loading the operator .obj file and import the debugging symbol information.
-> **Method for searching for the operator .obj file path:** Search in the operator deployment path. The example path is as follows: `/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_ab1b6750d7f510985325b603cb06dc8b.o`
-
-```shell
-export LAUNCH_KERNEL_PATH={path_to_kernel}/my_kernel.o
-```
-
-#### 2.3.4 Debugging with Breakpoints and Viewing Variables
-
-##### 2.3.4.1 Starting the Debugger
+##### 2.3.3.1 Starting the Debugger
 
 ```shell
 cd ~/ot_demo/workspace/src/caller/build
 msdebug execute_add_op
 ```
 
-##### 2.3.4.2 Setting Breakpoints
+##### 2.3.3.2 Setting Breakpoints
 
 After the (msdebug) prompt is displayed, set a breakpoint at line 34 in `add_custom.cpp`.
 
@@ -120,7 +106,7 @@ b add_custom.cpp:34
 >
 > If you cannot correctly set `/proc/debug_switch` on the host machine with the `root` permission or you do not have the conditions to switch to another proper environment, skip the hands-on experience of `msDebug` in this section.
 
-##### 2.3.4.3 Running an Operator
+##### 2.3.3.3 Running an Operator
 
 Enter `run` to start the program and wait for the breakpoint to be hit.
 
@@ -146,7 +132,7 @@ Process 163027 stopped
    36           zGm.SetGlobalBuffer((__gm__ DTYPE_Z *)z + this->blockLength * AscendC::GetBlockIdx(), this->blockLength);
 ```
 
-##### 2.3.4.4 Viewing the Value of a Variable
+##### 2.3.3.4 Viewing the Value of a Variable
 
 Run the following command at the breakpoint to display all local variables in the current scope:
 
@@ -166,7 +152,7 @@ Output example:
 (uint32_t) tileNum = 8
 ```
 
-##### 2.3.4.5 Viewing the Register Value
+##### 2.3.3.5 Viewing the Register Value
 
 ```shell
 register read -a
@@ -187,7 +173,7 @@ Output example:
                 GPR5 = 0x8
 ```
 
-##### 2.3.4.6 Querying Device Information
+##### 2.3.3.6 Querying Device Information
 
 ```shell
 ascend info devices
@@ -201,7 +187,7 @@ Output example:
 *    3      0       8      0x0     0xf0000000000f
 ```
 
-##### 2.3.4.7 Querying AI Core Information of an Operator
+##### 2.3.3.7 Querying AI Core Information of an Operator
 
 ```shell
 ascend info cores
@@ -222,7 +208,7 @@ Output example:
       47  aiv      3    47    0     3  0x12c041200920  breakpoint 1.1       NA   NA
 ```
 
-##### 2.3.4.8 Querying Task Information of an Operator
+##### 2.3.3.8 Querying Task Information of an Operator
 
 ```shell
 ascend info tasks
@@ -236,7 +222,7 @@ Output example:
 *   3      47     0  AddCustom_ab1b6750d7f510985325b603cb06dc8b_0
 ```
 
-##### 2.3.4.9 Querying Stream Information of an Operator
+##### 2.3.3.9 Querying Stream Information of an Operator
 
 ```shell
 ascend info stream
@@ -250,7 +236,7 @@ Output example:
 *   3      47    aiv
 ```
 
-##### 2.3.4.10 Querying Block Information of an Operator
+##### 2.3.3.10 Querying Block Information of an Operator
 
 ```shell
 ascend info blocks
@@ -271,14 +257,14 @@ Output example:
     3      47     0     3
 ```
 
-##### 2.3.4.11 Exiting the Debugger
+##### 2.3.3.11 Exiting the Debugger
 
 ```text
 q
 y
 ```
 
-#### 2.3.5 Restoring Modified Files
+#### 2.3.4 Restoring Modified Files
 
 Run the following commands:
 

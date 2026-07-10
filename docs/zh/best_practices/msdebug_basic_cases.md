@@ -247,18 +247,7 @@
     cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation
     ```
 
-6. 导入算子动态加载路径。
-
-    将自定义算子工程编译后输出在build_out目录下Kernel侧的`.o`文件路径导入环境变量。
-
-    ```bash
-    export LAUNCH_KERNEL_PATH=/{path_to_kernel}/kernel_name.o  # {path_to_kernel}表示对算子Kernel侧实现编译后生成的算子二进制文件*.o所在路径，请根据实际情况进行替换
-    ```
-
-    > [!NOTE]
-    > 算子的多个dtype在Kernel侧可能会编译出多个`.o`文件，请选择[4](#步骤4算子编译)示例中所调用的`.o`文件进行导入。
-
-7. 使用msDebug工具加载[5](#步骤5)中得到的单算子可执行文件execute_add_op。
+6. 使用msDebug工具加载[5](#步骤5)中得到的单算子可执行文件execute_add_op。
 
     ```bash
     export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/opp/vendors/customize/op_api/lib:$LD_LIBRARY_PATH
@@ -269,13 +258,13 @@
     (msdebug)
     ```
 
-8. 断点设置。
+7. 断点设置。
 
     ```bash
     b add_custom.cpp:55
     ```
 
-9. 运行算子程序，等待直到命中断点。
+8. 运行算子程序，等待直到命中断点。
 
     ```bash
     (msdebug) r
@@ -389,22 +378,7 @@
     INFO: Ascend C Add Custom  in torch.compile graph SUCCESS
     ```
 
-6. 手动导入算子调试信息，示例如下。
-
-    > [!NOTE]
-    >
-    > - ${INSTALL_DIR}请替换为CANN软件安装后文件存储路径。以root安装举例，则安装后文件存储路径为：/usr/local/Ascend/cann。
-    > - 非<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在安装昇腾AI处理器的服务器执行`npu-smi info`命令进行查询，获取**Chip Name**信息。实际配置值为AscendChip Name，例如**Chip Name**取值为xxxyy，实际配置值为Ascend_xxxyy_。当Ascendxxxyy为代码样例的路径时，需要配置为ascendxxxyy。
-    > - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在安装昇腾AI处理器的服务器执行`npu-smi info -t board -i id -c chip_id`命令进行查询，获取**Chip Name**和**NPU Name**信息，实际配置值为Chip Name_NPU Name。例如**Chip Name**取值为Ascendxxx，**NPU Name**取值为1234，实际配置值为Ascendxxx_1234。当Ascendxxx_1234为代码样例的路径时，需要配置为ascendxxx_1234。
-    >    其中：
-    >    - id：设备id，通过`npu-smi info -l`命令查出的NPU ID即为设备id。
-    >    - chip_id：芯片id，通过`npu-smi info -m`命令查出的Chip ID即为芯片id。
-
-    ```bash
-    export LAUNCH_KERNEL_PATH=${INSTALL_DIR}/opp/vendors/customize/op_impl/ai_core/tbe/kernel/SOC_VERSION/add_custom/AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o
-    ```
-
-7. 启动msDebug工具拉起Python程序，进入调试界面。
+6. 启动msDebug工具拉起Python程序，进入调试界面。
 
     ```bash
     msdebug python3 test_ops_custom.py
@@ -414,7 +388,7 @@
     (msdebug)
     ```
 
-8. 设置断点。
+7. 设置断点。
 
     根据指定源码文件与对应行号，在核函数中设置NPU断点。
 
@@ -423,7 +397,7 @@
     Breakpoint 1: where = AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`::AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b_1(uint8_t *, uint8_t *, uint8_t *, uint8_t *, uint8_t *) + 9912 [inlined] KernelAdd::Compute(int) + 3400 at add_custom.cpp:60:9, address = 0x00000000000026b8
     ```
 
-9. 运行程序，等待直到命中断点。
+8. 运行程序，等待直到命中断点。
 
     ```bash
     (msdebug) r
@@ -448,8 +422,8 @@
     > [!NOTE]
     > 其他调试操作可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
-10. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
-11. 调试完以后，执行q命令并输入Y或y结束调试。
+9. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
+10. 调试完以后，执行q命令并输入Y或y结束调试。
 
     ```bash
     (msdebug) q

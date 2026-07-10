@@ -1248,20 +1248,26 @@ If a hardware issue happens onsite, repeated stress tests are needed to reproduc
 
 ### Precautions
 
-After the `acl.json` file is configured, other functions of msDebug cannot be used.
+If you enable the abnormal operator dump function, other functions of msDebug cannot be used after the configuration.
 
 ### Example
 
-1. Prepare the `acl.json` configuration file.
-    - Project-based operator development (single-operator API calling scenario): Create the `acl.json` file by referring to "[Initialization and Deinitialization](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/appdevg/acldevg/aclcppdevg_000007.html)" in *Application Development Guide \(C&C++\)* and load the file using the `aclinit` API.
-    - AI framework operator adaptation (PyTorch framework scenario): Search for the `acl.json` file in the installation directory of `torch_npu`.
+1. Enable the function of generating dump files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> "[aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910beta3/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)" in *Application Development Guide \(C&C++\)*.
 
-2. Enable the function of generating dump files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> "[aclInit](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/appdevgapi/aclcppdevg_03_0022.html)" in *Application Development Guide \(C&C++\)*.
-    1. In the `acl.json` configuration file, set `dump\_scene` to `aic\_err\_detail\_dump`.
-    2. In the `acl.json` configuration file, set `dump\_path` to the path for exporting the dump file of the abnormal operator.
+    > [!NOTE]NOTE
+    > Choose either of the following two methods:
 
-3. If the program crashes (for example, memory overflow or segmentation fault), a core file of the abnormal operator is generated. The file name ends with .core.
-4. Run the following command with the msDebug tool to load the dump file of the abnormal operator:
+    1. In the `acl.json` configuration file, set `dump\_scene` to `aic\_err\_detail\_dump` and set `dump\_path` to the path for exporting the dump file of the abnormal operator.
+
+    2. Run the following commands to set `dump\_scene` to `aic\_err\_detail\_dump` and set `dump\_path` to the path for exporting the dump file of the abnormal operator.
+
+        ```bash
+        export ASCEND_DUMP_SCENE="aic_err_detail_dump"
+        export ASCEND_DUMP_PATH="output"
+        ```
+
+2. When an aic_error exception occurs during operator execution (for example, memory out-of-bounds access), a core file of the abnormal operator is generated. The file name ends with .core.
+3. Run the following command with the msDebug tool to load the core file of the abnormal operator:
 
     ```bash
     msdebug --core output2/extra-info/data-dump/0/xxx.core add.fatbin
@@ -1280,7 +1286,7 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
     >
     > At the O2/O3 optimization level, the inline function is used by default. Call stack can still be traced accurately without requiring stack memory data. At the O0 optimization level, no inline function is used forcibly, and the stack memory data is inaccurate. Generally, accurate data requires the 0 stack frame.
 
-5. View the dump file information of the abnormal operator.
+4. View the core file information of the abnormal operator.
 
     ```bash
     msdebug --core output2/extra-info/data-dump/0/xxx.core /home/xxxxx/Ascend/cann/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_xxxx.o
@@ -1346,8 +1352,8 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
 
     ```
 
-6. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), and [Memory and Variable Printing](#memory-and-variable-printing).
-7. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
+5. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), and [Memory and Variable Printing](#memory-and-variable-printing).
+6. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash
     (msdebug) q
