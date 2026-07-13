@@ -113,4 +113,60 @@ ld.lld: error: undefined symbol: g_opSystemRunCfg
 ```
 
 **解决方案**
+
 需要去掉编译选项`- DL2_CACHE_HINT`。
+
+## 命中断点的代码位置与预期不符
+
+**问题现象**
+
+设置的断点行号与实际命中的代码行不一致。
+
+**原因分析**
+
+- 原因1：Host侧和Kernel侧存在同名文件，程序启动时先命中了Host侧文件的断点。若Host侧该行无断点，调试器会往下寻找最近的可用行。
+- 原因2：Kernel文件的目标行没有断点信息，调试器默认往下寻找最近的可用行。这属于工具的预期行为，通常是因为编译器在该行进行了优化，或Kernel未使用`-O0`编译。
+
+**解决方案**
+
+- 原因1：若回显中没有`[Switching to focus...]`且`stop reason = breakpoint x`，说明命中的是Host侧断点，执行`c`继续运行即可命中Kernel侧断点。Host侧断点地址通常以`0x7ff`开头，Kernel侧断点地址通常以`device_debugdata`开头。
+- 原因2：确保Kernel使用`-g -O0`选项编译，避免编译器优化导致断点信息丢失。
+
+以下为原因1的示例。设置第28行断点后，先命中了Host侧（`libascendc_ops.so`）的第49行：
+
+```bash
+(msdebug) b add_custom_kernel.asc:28
+Breakpoint 1: no locations (pending on future shared library load).
+WARNING:  Unable to resolve breakpoint to any actual locations.
+(msdebug) r
+...
+1 location added to breakpoint 1
+[Launch of Kernel _ZN11ascendc_ops10add_customEPfS0_S0_ on Device 0]
+1 location added to breakpoint 1
+Process 1436447 stopped
+* thread #1, name = 'python3', stop reason = breakpoint 1.1
+    frame #0: 0x00007ffe53b8a232 libascendc_ops.so`ascendc_ops::add_custom(cce_launch_config.block=8, cce_launch_config.dynamicShmemSz=0, cce_launch_config.stream=0x0000555583616d38, x=0x000012004ce30800, y=0x000012004ce20800, z=<unavailable>) at add_custom_kernel.asc:49:1
+   46
+   47       AscendC::DataCopy(zGm, zLocal, BLOCK_LENGTH);
+   48       AscendC::PipeBarrier<PIPE_ALL>();
+-> 49   }
+   50   } // namespace ascendc_ops
+```
+
+执行`c`继续运行，命中Kernel侧断点：
+
+```bash
+(msdebug) c
+Process 1436447 resuming
+Process 1436447 stopped
+[Switching to focus on Kernel _ZN11ascendc_ops10add_customEPfS0_S0_, CoreId 36, Type aiv]
+* thread #1, name = 'python3', stop reason = breakpoint 1.2
+    frame #0: 0x000012004100011c device_debugdata_0`ascendc_ops::add_custom(x=0x12004ce30800, y=0x12004ce20800, z=0x12004ce40800) at add_custom_kernel.asc:31:27
+   28       AscendC::GlobalTensor<float> xGm;
+   29       AscendC::GlobalTensor<float> yGm;
+   30       AscendC::GlobalTensor<float> zGm;
+-> 31       xGm.SetGlobalBuffer(x + block_idx * BLOCK_LENGTH, BLOCK_LENGTH);
+   32       yGm.SetGlobalBuffer(y + block_idx * BLOCK_LENGTH, BLOCK_LENGTH);
+   33       zGm.SetGlobalBuffer(z + block_idx * BLOCK_LENGTH, BLOCK_LENGTH);
+   34
+```

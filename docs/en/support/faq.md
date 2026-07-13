@@ -114,3 +114,58 @@ ld.lld: error: undefined symbol: g_opSystemRunCfg
 
 **Solution**  
 The `- DL2_CACHE_HINT` compilation option needs to be removed.
+
+## Hit Breakpoint Code Position Does Not Match Expectation
+
+**Symptom**
+
+The actual hit breakpoint line does not match the set line number.
+
+**Possible Causes**
+
+- Cause 1: Files with the same name exist on both the host and kernel sides. The breakpoint on the host-side file is hit first when the program starts. If there is no breakpoint at that line on the host side, the debugger searches downward for the nearest available line.
+- Cause 2: The target line in the kernel file does not contain breakpoint information. The debugger searches downward for the nearest available line. This is an expected behavior of the tool, usually caused by compiler optimization on that line, or the kernel not being compiled with `-O0`.
+
+**Solution**
+
+- Cause 1: If the output does not contain `[Switching to focus...]` and `stop reason = breakpoint x`, the host-side breakpoint is hit. Run `c` to continue execution and the kernel-side breakpoint will be hit. Host-side breakpoint addresses usually start with `0x7ff`, while kernel-side breakpoint addresses usually start with `device_debugdata`.
+- Cause 2: Ensure that the kernel is compiled with the `-g -O0` option to prevent compiler optimization from removing breakpoint information.
+
+The following is an example of cause 1. After setting a breakpoint at line 28, line 49 on the host side (`libascendc_ops.so`) is hit first:
+
+```bash
+(msdebug) b add_custom_kernel.asc:28
+Breakpoint 1: no locations (pending on future shared library load).
+WARNING:  Unable to resolve breakpoint to any actual locations.
+(msdebug) r
+...
+1 location added to breakpoint 1
+[Launch of Kernel _ZN11ascendc_ops10add_customEPfS0_S0_ on Device 0]
+1 location added to breakpoint 1
+Process 1436447 stopped
+* thread #1, name = 'python3', stop reason = breakpoint 1.1
+    frame #0: 0x00007ffe53b8a232 libascendc_ops.so`ascendc_ops::add_custom(cce_launch_config.block=8, cce_launch_config.dynamicShmemSz=0, cce_launch_config.stream=0x0000555583616d38, x=0x000012004ce30800, y=0x000012004ce20800, z=<unavailable>) at add_custom_kernel.asc:49:1
+   46
+   47       AscendC::DataCopy(zGm, zLocal, BLOCK_LENGTH);
+   48       AscendC::PipeBarrier<PIPE_ALL>();
+-> 49   }
+   50   } // namespace ascendc_ops
+```
+
+Run `c` to continue execution and hit the kernel-side breakpoint:
+
+```bash
+(msdebug) c
+Process 1436447 resuming
+Process 1436447 stopped
+[Switching to focus on Kernel _ZN11ascendc_ops10add_customEPfS0_S0_, CoreId 36, Type aiv]
+* thread #1, name = 'python3', stop reason = breakpoint 1.2
+    frame #0: 0x000012004100011c device_debugdata_0`ascendc_ops::add_custom(x=0x12004ce30800, y=0x12004ce20800, z=0x12004ce40800) at add_custom_kernel.asc:31:27
+   28       AscendC::GlobalTensor<float> xGm;
+   29       AscendC::GlobalTensor<float> yGm;
+   30       AscendC::GlobalTensor<float> zGm;
+-> 31       xGm.SetGlobalBuffer(x + block_idx * BLOCK_LENGTH, BLOCK_LENGTH);
+   32       yGm.SetGlobalBuffer(y + block_idx * BLOCK_LENGTH, BLOCK_LENGTH);
+   33       zGm.SetGlobalBuffer(z + block_idx * BLOCK_LENGTH, BLOCK_LENGTH);
+   34
+```
