@@ -25,7 +25,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
     2. Compile the operator.
 
-        > [!NOTE]NOTE  
+        > [!NOTE]NOTE
         > In non-initial scenarios, you can run the `make clean && make` command instead of the `make` command.
 
         ```bash
@@ -37,19 +37,19 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     1. Start msDebug to start the operator program and enter the debugging page.
 
         ```bash
-        msdebug add.fatbin  
+        msdebug add.fatbin
         (msdebug) target create "add.fatbin"
         Current executable set to '/home/mindstudio/projects/mstt/sample/build/add.fatbin' (aarch64).
-        (msdebug) 
+        (msdebug)
         ```
 
     2. In this sample, the implementation code of the kernel function is stored in `add\_kernel.cpp`. Set NPU breakpoints in this file for required code lines.
 
         ```bash
         (msdebug) b add_kernel.cpp:69
-        Breakpoint 1: where = device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) + 18804 [inlined] 
+        Breakpoint 1: where = device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) + 18804 [inlined]
         KernelAdd::Compute(int) + 5144 at add_kernel.cpp:69:9, address = 0x0000000000004974
-        (msdebug) 
+        (msdebug)
         ```
 
 3. Run the operator program.
@@ -78,7 +78,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     - Run the `ascend info cores` command to query NPU core information.
 
         ```bash
-        (msdebug) ascend info cores 
+        (msdebug) ascend info cores
           CoreId  Type  Device Stream Task Block         PC               Exception
         *  13     aiv      0     3     0     0     0x1240c0034974         f0000000
            14     aiv      0     3     0     1     0x1240c0034974         f0000000
@@ -94,14 +94,14 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     - Run the `print` command to print variable information.
 
         ```bash
-        (msdebug) print progress 
+        (msdebug) print progress
         (int32_t) $0 = 0
         ```
 
     - Run the `print` and `memory read` commands together to print values stored in the tensor variables.
         - Print the data stored in LocalTensor in the UB memory.
 
-            > [!NOTE]NOTE  
+            > [!NOTE]NOTE
             > For details about the start address for printing the UB memory, see the `bufferAddr` parameter in the `address\_` field of the LocalTensor variable. The following uses the `xLocal` variable as an example. The start address of the memory is `0`.
 
             ```bash
@@ -118,12 +118,12 @@ This section shows how to use msDebug to debug a vector operator on the board. T
             }
             (msdebug) memory read -m UB -f int16_t[] 0 -s 256 -c 1
             0x00000000: {0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127}
-            (msdebug) 
+            (msdebug)
             ```
 
         - Print the data stored in GlobalTensor in the GM.
 
-            > [!NOTE]NOTE  
+            > [!NOTE]NOTE
             > For details about the start address for GM memory printing, see the `address\_` field of the GlobalTensor variable. The following uses the `xGm` variable as an example. The start address of the memory is `0x00001240c0015000`.
 
             ```bash
@@ -180,16 +180,16 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     (msdebug) breakpoint list
     Current breakpoints:
     1: name = 'main', locations = 1, resolved = 1, hit count = 1
-      1.1: where = add.fatbin`main + 36 at main.cpp:39:12, address = 0x0000aaaaaab0f568, resolved, hit count = 1 
+      1.1: where = add.fatbin`main + 36 at main.cpp:39:12, address = 0x0000aaaaaab0f568, resolved, hit count = 1
     2: file = 'add_kernel.cpp', line = 69, exact_match = 0, locations = 1, resolved = 1, hit count = 1
-      2.1: where = device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) + 18804 [inlined] KernelAdd::Compute(int) + 5144 at add_kernel.cpp:69:9, address = 0x0000000000004974, resolved, hit count = 1 
+      2.1: where = device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) + 18804 [inlined] KernelAdd::Compute(int) + 5144 at add_kernel.cpp:69:9, address = 0x0000000000004974, resolved, hit count = 1
     (msdebug) breakpoint delete 2
     1 breakpoints deleted; 0 breakpoint locations disabled.
-    (msdebug) continue 
+    (msdebug) continue
     Process 730254 resuming
-    0 2 4 6 8 10 12 14                                                             
-    16 18 20 22 24 26 28 30 
-    Process 730254 exited with status = 0 (0x00000000) 
+    0 2 4 6 8 10 12 14
+    16 18 20 22 24 26 28 30
+    Process 730254 exited with status = 0 (0x00000000)
     ```
 
 6. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
@@ -231,10 +231,10 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
 3. In the `$\{git\_clone\_path\}/samples/operator/ascendc/0\_introduction/1\_add\_frameworklaunch/CustomOp` directory, change the value of `"Release"` to `"Debug"` in `cacheVariables` of the `CMakePresets.json` file.
 
     ```bash
-    "cacheVariables": {               
-           "CMAKE_BUILD_TYPE": {                    
-                "type": "STRING",                    
-                "value": "Debug"               
+    "cacheVariables": {
+           "CMAKE_BUILD_TYPE": {
+                "type": "STRING",
+                "value": "Debug"
       },
     ...
     }
@@ -247,18 +247,7 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation
     ```
 
-6. Import the operator dynamic loading path.
-
-    Import the path of the `.o` file output in the `build\_out` directory on the kernel after the custom operator project is compiled to environment variables.
-
-    ```bash
-    export LAUNCH_KERNEL_PATH=/{path_to_kernel}/kernel_name.o  # {path_to_kernel} indicates the path of the operator binary file *.o generated after the operator kernel is built. Replace it with the actual path.
-    ```
-
-    > [!NOTE]NOTE  
-    > Multiple `.o` files may be generated for multiple dtypes of the operator on the kernel. Import the `.o` file called in [Step 4](#step-4-operator-compilation).
-
-7. Use msDebug to load the single-operator executable file `execute\_add\_op` obtained in [5](#step-5).
+6. Use msDebug to load the single-operator executable file `execute\_add\_op` obtained in [5](#step-5).
 
     ```bash
     export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/opp/vendors/customize/op_api/lib:$LD_LIBRARY_PATH
@@ -269,13 +258,13 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     (msdebug)
     ```
 
-8. Set a breakpoint.
+7. Set a breakpoint.
 
     ```bash
     b add_custom.cpp:55
     ```
 
-9. Run the operator program and wait until the breakpoint is hit.
+8. Run the operator program and wait until the breakpoint is hit.
 
     ```bash
     (msdebug) r
@@ -292,10 +281,10 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
        56           inQueueX.FreeTensor(xLocal);
        57           inQueueY.FreeTensor(yLocal);
        58       }
-    (msdebug) 
+    (msdebug)
     ```
 
-    > [!NOTE]NOTE  
+    > [!NOTE]NOTE
     > For details about the subsequent debugging process, see "[Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage)", "[Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing)", and "[Core Switching](../user_guide/msdebug_user_guide.md#core-switching)".
 
 ## Debugging the Operators Called by a PyTorch Interface
@@ -332,10 +321,10 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
 2. In the `$\{git\_clone\_path\}/samples/operator/ascendc/0\_introduction/1\_add\_frameworklaunch/CustomOp` directory, change the value of `"Release"` to "Debug" in `cacheVariables` of the `CMakePresets.json` file.
 
     ```bash
-    "cacheVariables": {               
-           "CMAKE_BUILD_TYPE": {                    
-               "type": "STRING",                    
-               "value": "Debug"               
+    "cacheVariables": {
+           "CMAKE_BUILD_TYPE": {
+               "type": "STRING",
+               "value": "Debug"
            },
     ...
     }
@@ -348,12 +337,12 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation
     ```
 
-    > [!NOTE]NOTE  
+    > [!NOTE]NOTE
     > The sample project directory is as follows:
 >
     > ```text
     > PytorchInvocation
-    > ├── op_plugin_patch  
+    > ├── op_plugin_patch
     > ├── README.md        // Registration sample of calling the AddCustom operator project in PyTorch mode
     > ├── run_op_plugin.sh      // Required for executing the sample
     > └── test_ops_custom.py    // Required for starting the tool
@@ -389,22 +378,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     INFO: Ascend C Add Custom  in torch.compile graph SUCCESS
     ```
 
-6. Manually import the operator debugging information. The following is an example.
-
-    > [!NOTE]NOTE
-    > 
-    > - Replace `${INSTALL_DIR}` with the actual CANN installation directory. For example, if the installation is performed by the `root` user, the path is `/usr/local/Ascend/cann`.
-    > - For servers other than the <term>Atlas A3 training products/Atlas A3 inference products</term>: Run the `npu-smi info` command on the server where the Ascend AI Processor is installed to obtain the chip name. Note that the actual value is represented by `AscendChip name`. For example, if the chip name is `xxxyy`, the actual value is `Ascendxxxyy`. If `Ascendxxxyy` is the path of the code sample, set this parameter to `ascendxxxyy`.
-    > - For the <term>Atlas A3 training products/Atlas A3 inference products</term>, run the `npu-smi info -t board -i id -c chip_id` command on the server where the Ascend AI Processor is installed to obtain the chip name and NPU name. The actual value is represented by `Chip name_NPU name`. For example, if the chip name is `Ascendxxx` and the NPU name is `1234`, the actual value is `Ascendxxx_1234`. If `Ascendxxx_1234` is the path of the code sample, set this parameter to `ascendxxx_1234`.
-    >    Note that:
-    >    - `id`: device ID, which is the NPU ID obtained by running the `npu-smi info -l` command.
-    >    - `chip\_id`: chip ID, which is the same as the chip ID obtained by running the `npu-smi info -m` command.
-
-    ```bash
-    export LAUNCH_KERNEL_PATH=${INSTALL_DIR}/opp/vendors/customize/op_impl/ai_core/tbe/kernel/SOC_VERSION/add_custom/AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o
-    ```
-
-7. Start msDebug to start the Python program and enter the debugging page.
+6. Start msDebug to start the Python program and enter the debugging page.
 
     ```bash
     msdebug python3 test_ops_custom.py
@@ -414,7 +388,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     (msdebug)
     ```
 
-8. Set a breakpoint.
+7. Set a breakpoint.
 
     Set an NPU breakpoint in the kernel function based on the specified source code file and corresponding line number.
 
@@ -423,7 +397,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     Breakpoint 1: where = AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`::AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b_1(uint8_t *, uint8_t *, uint8_t *, uint8_t *, uint8_t *) + 9912 [inlined] KernelAdd::Compute(int) + 3400 at add_custom.cpp:60:9, address = 0x00000000000026b8
     ```
 
-9. Run the program and wait until the breakpoint is hit.
+8. Run the program and wait until the breakpoint is hit.
 
     ```bash
     (msdebug) r
@@ -448,8 +422,8 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     > [!NOTE]NOTE
     > For details about other debugging operations, see "[Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage)", "[Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing)", "[Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display)", and "[Core Switching](../user_guide/msdebug_user_guide.md#core-switching)".
 
-10. Delete the breakpoint. For details, see "[Setting Breakpoints] (../user_guide/msdebug_user_guide.md#setting-breakpoints)".
-11. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
+9. Delete the breakpoint. For details, see "[Setting Breakpoints] (../user_guide/msdebug_user_guide.md#setting-breakpoints)".
+10. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash
     (msdebug) q
@@ -483,7 +457,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     msdebug ./build/bin/00_basic_matmul 256 512 1024 0
     (msdebug) target create "./build/bin/00_basic_matmul"
     Current executable set to '/home/mindstudio/projects/ascendc-templates/build/bin/00_basic_matmul' (aarch64).
-    (msdebug) 
+    (msdebug)
     ```
 
 3. Sets a breakpoint.
@@ -493,7 +467,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     ```bash
     (msdebug) b basic_matmul.hpp:121
     Breakpoint 1: 2 locations.
-    (msdebug) 
+    (msdebug)
     ```
 
 4. Run the operator program and wait until the breakpoint is hit.
@@ -503,7 +477,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     ```cpp
     (msdebug) run
     Process 3344307 launched: '/home/mindstudio/projects/ascendc-templates/build/bin/00_basic_matmul' (aarch64)
-    [Launch of Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo on Device 0] 
+    [Launch of Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo on Device 0]
     Process 3344307 stopped
     [Switching to focus on Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo, CoreId 21, Type aic]
     * thread #1, name = '00_basic_matmul', stop reason = breakpoint 1.1
@@ -518,7 +492,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     (msdebug)
     ```
 
-    > [!NOTE]NOTE  
+    > [!NOTE]NOTE
     > `\_ZN7Catlass13KernelAdapterINS\_4Gemm6Kernel11BasicMatmulINS1\_5Blo` indicates the kernel name of the template library. Only the first 64 characters are displayed in the example.
 
 5. Review information.
@@ -526,7 +500,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     - Run the `ascend info cores` command to query NPU core information.
 
         ```bash
-        (msdebug) ascend info cores 
+        (msdebug) ascend info cores
           CoreId  Type  Device Stream Task Block         PC               stop reason
         *  21     aic      0     48     0     0     0x12c0c00d6c38         breakpoint 1.1
            22     aic      0     48     0     1     0x12c0c00d6c38         breakpoint 1.1
@@ -538,7 +512,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     - Run the `print` command to print the `gmA` variable information.
 
         ```bash
-        (msdebug) print gmA 
+        (msdebug) print gmA
         (AscendC::GlobalTensor<__fp16>) $0 = {
           AscendC::BaseGlobalTensor<__fp16> = {
             address_ = 0x000012c0c0013000
@@ -555,7 +529,7 @@ This section shows how to use msDebug to debug a template library operator (matm
             ```bash
             (msdebug) memory read -m GM 0x12c0c0013000 -f float16[] -s 256 -c 1
             0x12c0c0013000: {3.40234 -1.05664 2.83008 2.98438 4.11719 -3.02539 -1.64746 2.68164 -2.22266 0.539551 -0.226074 1.28906 -1.35254 0.134033 4.52344 4.16016 1.35742 2.17383 -3.58398 1.06934 -4.83594 -2.57031 -3.62695 3.04102 -3.43359 -0.990723 -3.70117 -3.91211 4.98828 -2.81836 0.129272 3.39062 1.12598 -2.03906 1.37598 0.24292 -0.0641479 4.72656 -2.07422 2.71289 0.267334 2.69922 -0.997559 3.91602 -2.16602 -1.47559 3.07812 4.19141 -4.30078 4.49219 0.26001 -4.14062 -3.07812 1.63184 3.90234 -1.51074 -4.35938 -4.80078 -0.423096 -4.36719 -2.61719 4.70703 4.02344 3.50977 -2.33398 0.397705 -1.24805 2.60156 0.125366 1.67676 0.316162 -4.60547 -0.623535 4.31641 4.30859 2.20898 -2.15625 2.38477 1.39941 -1.45996 1.87891 -3.33984 -0.599121 3.80078 3.29297 -1.69629 -2.71094 3.93359 -1.49609 1.86621 4.56641 0.88623 1.57324 3.58594 -0.604492 4.23828 -1.01562 3.14844 1.8418 4.10938 -0.175049 -2.8418 4.50391 4.20312 -3.52344 3.81055 1.41113 -0.680664 1.19629 -2.18945 2.85938 -1.92578 -0.529785 -2.73828 -3.125 -2.23828 0.564453 -0.834961 -3.30469 4.06641 -3.96875 -3.73828 -0.0455627 2.60547 4.84766 4.35156 1.84473 -1.16797}
-            (msdebug) 
+            (msdebug)
             ```
 
     - Switch to another AIC core and print the required information.
@@ -576,7 +550,7 @@ This section shows how to use msDebug to debug a template library operator (matm
         (uint32_t) $1 = 0
         ```
 
-    > [!NOTE]NOTE  
+    > [!NOTE]NOTE
     > For details about other debugging operations, see "[Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing)", "[Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-displaying)", and "[Core Switching](../user_guide/msdebug_user_guide.md#core-switching)".
 
 6. Query and delete breakpoints to resume program execution.
@@ -589,7 +563,7 @@ This section shows how to use msDebug to debug a template library operator (matm
       1.2: where = device_debugdata`_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Block9BlockMmadINS1_19MmadAtlasA2PingpongILb1EEENS_9GemmShapeILj128ELj256ELj256EEENS8_ILj128ELj256ELj64EEENS1_8GemmTypeIDhNS_6layout8RowMajorELN7AscendC9TPositionE0EEESG_SG_vNS1_4Tile8TileCopyINS_4Arch7AtlasA2ESG_SG_SG_vEENSH_8TileMmadISK_SG_SG_vEEEEvNS4_24GemmIdentityBlockSwizzleILj3ELj0EEEEEEEvNT_6ParamsEm_mix_aic + 4772 [inlined] _ZN7Catlass4Gemm6Kernel11BasicMatmulINS0_5Block9BlockMmadINS0_19MmadAtlasA2PingpongILb1EEENS_9GemmShapeILj128ELj256ELj256EEENS7_ILj128ELj256ELj64EEENS0_8GemmTypeIDhNS_6layout8RowMajorELN7AscendC9TPositionE0EEESF_SF_vNS0_4Tile8TileCopyINS_4Arch7AtlasA2ESF_SF_SF_vEENSG_8TileMmadISJ_SF_SF_vEEEEvNS3_24GemmIdentityBlockSwizzleILj3ELj0EEEEclILi1EEEvRKNSQ_6ParamsE_mix_aic + 4632 at basic_matmul.hpp:121:71, address = 0x000000000000dd54, resolved, hit count = 0
     (msdebug) breakpoint delete 1
     1 breakpoints deleted; 0 breakpoint locations disabled.
-    (msdebug) continue 
+    (msdebug) continue
     Process 3344307 resuming
     Compare success.
     Process 3344307 exited with status = 0 (0x00000000)

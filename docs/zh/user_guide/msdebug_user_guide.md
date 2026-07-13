@@ -1362,26 +1362,26 @@ Current stop state of all blocks:
 
 ### 注意事项
 
-配置acl.json文件后将不能使用msDebug的其他功能。
+若开启异常算子dump功能，配置后将不能使用msDebug的其他功能。
 
 ### 使用示例
 
-1. 准备acl.json配置文件。
-    - 工程化算子开发（单算子API调用场景）：参考《应用开发指南 \(C&C++\)》的“[初始化与去初始化](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/appdevg/acldevg/aclcppdevg_000007.html)”节点，自行创建acl.json文件，然后通过aclinit接口进行加载。
-    - AI框架算子适配（PyTorch框架场景）：在用户torch_npu的安装目录中搜索acl.json文件。
+1. 参见《应用开发指南 (C&C++)》的"acl API参考（C） \> 系统配置 \>  [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910beta3/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)"章节的配置文件示例（异常算子Dump配置），开启生成异常算子core文件的功能。
 
-2. 参见《应用开发指南 \(C&C++\)》的“acl API参考（C） \> 系统配置 \>  [aclInit](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/appdevgapi/aclcppdevg_03_0022.html)”章节的配置文件示例（异常算子Dump配置），开启生成异常算子dump文件的功能。
-    1. 在acl.json配置文件中，将dump_scene参数设置为aic_err_detail_dump。
-    2. 在acl.json配置文件中，配置dump_path参数设置导出异常算子dump文件的路径。
-    3. 也可执行如下命令，将dump_scene参数设置为aic_err_detail_dump，并配置dump_path参数设置导出异常算子dump文件的路径。
+    > [!NOTE]
+    > 以下两种方法二选一即可：
+
+    1. 执行如下命令，将dump_scene参数设置为aic_err_detail_dump，并配置dump_path参数设置导出异常算子core文件的路径。
 
         ```bash
         export ASCEND_DUMP_SCENE="aic_err_detail_dump"
         export ASCEND_DUMP_PATH="output"
         ```
 
-3. 程序崩溃时（如内存溢出、段错误等），触发生成异常算子core文件，文件名以.core结尾。
-4. 使用msDebug工具执行以下命令，加载异常算子dump文件。
+    2. 在acl.json配置文件中，将dump_scene参数设置为aic_err_detail_dump，并配置dump_path参数设置导出异常算子core文件的路径。
+
+2. 算子运行出现aic_error异常时（如内存越界访问），触发生成异常算子core文件，文件名以.core结尾。
+3. 使用msDebug工具执行以下命令，加载异常算子core文件。
 
     ```bash
     msdebug --core output2/extra-info/data-dump/0/xxx.core
@@ -1400,7 +1400,7 @@ Current stop state of all blocks:
     >
     > 在O2/O3优化下默认inline，不需要栈内存数据，仍可以回溯准确的调用栈；而在O0优化下会强制no inline，且栈内存数据不准确，通常只有0栈帧是准确的。
 
-5. 查看异常算子dump文件信息。
+4. 查看异常算子core文件信息。
 
     ```bash
     msdebug --core output2/extra-info/data-dump/0/xxx.core
@@ -1453,12 +1453,12 @@ Current stop state of all blocks:
        8            STACK                    GM/DCACHE                0xff000240000                  32768             47         AIV        NA
        9            ARGS                     GM/DCACHE               0x12c100000000                   24               NA          NA        NA
 
-    (msdebug)
+     (msdebug)
 
-    ```
+     ```
 
-6. 请参考[核切换功能介绍](#核切换功能介绍)、[检查程序状态功能介绍](#检查程序状态功能介绍)、[内存与变量打印功能介绍](#内存与变量打印功能介绍)以及[SIMT线程切换功能介绍](#simt线程切换功能介绍)章节的内存打印相关操作定位硬件异常。
-7. 调试完以后，执行`q`命令并输入Y或y结束调试。
+5. 请参考[核切换功能介绍](#核切换功能介绍)、[检查程序状态功能介绍](#检查程序状态功能介绍)、[内存与变量打印功能介绍](#内存与变量打印功能介绍)以及[SIMT线程切换功能介绍](#simt线程切换功能介绍)章节的内存打印相关操作定位硬件异常。
+6. 调试完以后，执行`q`命令并输入Y或y结束调试。
 
     ```bash
     (msdebug) q

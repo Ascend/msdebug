@@ -6,7 +6,7 @@ The operator debugging function consists of three components: exception detectio
 
 ## 2. Function List
 
-| Function          | Description     | 
+| Function          | Description     |
 |----------------|-------------------------------------------------|
 | Analyzing coredump files| Loads coredump files, prints memory, register, and coredump summary information, switches cores, and displays call stacks.|
 | Enabling debugging| Enables basic debugging functions in different operator integration scenarios.|
@@ -255,12 +255,6 @@ The interface design must meet the function requirements in the following scenar
 
 The external interface design is as follows:
 
-Enabling debugging for a specified operator:
-
-```bash
-export LAUNCH_KERNEL_PATH=/path/my_kernel.o
-```
-
 Enabling debugging for a specified device:
 
 Solution 1
@@ -483,7 +477,7 @@ Soft link verification: Do not use symbolic links or protect against risks and e
 Ownership verification: (for read commands or startup scripts) Ensure that the current input file can be owned only by the current process user (ruid) or the `root` user, and other users do not have the write permission. In this case, the target file is trusted.
 For specific service scenarios, additional verification can be performed based on the actual service logic to further ensure that the input file is trusted.
 
-**2. Error and exception handling**  
+**2. Error and exception handling**
 A robust error and exception handling mechanism ensures that the API terminates in a controlled manner under exceptional conditions and returns appropriate error information to the user.
 Upon completion of the verification, if an error is detected, an error message is displayed, and a reasonable modification suggestion is provided.
 For example, if the coredump file can be written by other users or groups, an error message is displayed:
@@ -503,7 +497,7 @@ For example, if the coredump file can be written by other users or groups, an er
 #### 4.5.1 Core Dump File Analysis Module
 
 Define the key element model for msDebug (supporting coredump file analysis) developer testing (DT) as a Layer 0 public design. This includes software testability design and layered testing strategies. It covers DT environments, test project design, general and domain-specific frameworks, and DFX testing for various layers.
-  
+
 ##### 4.5.1.1 Design Constraints
 
 Architectural design principles and constraints.
