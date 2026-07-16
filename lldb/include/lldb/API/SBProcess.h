@@ -582,6 +582,9 @@ public:
   bool IsSBStopInSimt();
 
   bool HandleDeviceSBProcessStateChanged();
+
+  bool GetSBCurrentCoreThreadDim(uint16_t &dim_x, uint16_t &dim_y,
+                                 uint16_t &dim_z);
 #endif
 
   lldb::SBScriptObject GetScriptedImplementation();

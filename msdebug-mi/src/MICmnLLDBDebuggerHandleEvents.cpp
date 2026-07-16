@@ -136,6 +136,29 @@ GetMiValueResultIsSimt(lldb::SBProcess sbProcess) {
   return miValueResult;
 }
 
+static inline CMICmnMIValueResult
+GetMiValueResultThreadDim(lldb::SBProcess sbProcess) {
+  uint16_t dim_x = 0, dim_y = 0, dim_z = 0;
+  if (sbProcess && sbProcess.GetSBCurrentCoreThreadDim(dim_x, dim_y, dim_z)) {
+    const CMIUtilString strDimX(CMIUtilString::Format("%u", dim_x));
+    const CMIUtilString strDimY(CMIUtilString::Format("%u", dim_y));
+    const CMIUtilString strDimZ(CMIUtilString::Format("%u", dim_z));
+    const CMICmnMIValueConst miValueConstX(strDimX);
+    const CMICmnMIValueConst miValueConstY(strDimY);
+    const CMICmnMIValueConst miValueConstZ(strDimZ);
+    CMICmnMIValueTuple miValueTupleThreadDim;
+    miValueTupleThreadDim.Add(CMICmnMIValueResult("x", miValueConstX));
+    miValueTupleThreadDim.Add(CMICmnMIValueResult("y", miValueConstY));
+    miValueTupleThreadDim.Add(CMICmnMIValueResult("z", miValueConstZ));
+    const CMICmnMIValueResult miValueResult("thread-dim",
+                                            miValueTupleThreadDim);
+    return miValueResult;
+  }
+  const CMICmnMIValueConst miValueConst("{}");
+  const CMICmnMIValueResult miValueResult("thread-dim", miValueConst);
+  return miValueResult;
+}
+
 #endif
 
 //++
@@ -1582,6 +1605,7 @@ bool CMICmnLLDBDebuggerHandleEvents::MiStoppedAtBreakPoint(
 #ifdef MS_DEBUGGER
     miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
     miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
+    miOutOfBandRecord.Add(GetMiValueResultThreadDim(sbProcess));
 #endif
     bOk = bOk && MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
@@ -1634,6 +1658,7 @@ bool CMICmnLLDBDebuggerHandleEvents::MiStoppedAtBreakPoint(
 #ifdef MS_DEBUGGER
     miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
     miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
+    miOutOfBandRecord.Add(GetMiValueResultThreadDim(sbProcess));
 #endif
     bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
@@ -1711,6 +1736,14 @@ bool CMICmnLLDBDebuggerHandleEvents::MiStoppedAtWatchpoint(
                                                  miValueConstStopped);
   miOutOfBandRecord.Add(miValueResultStopped);
 
+#ifdef MS_DEBUGGER
+  lldb::SBProcess sbProcess =
+      CMICmnLLDBDebugSessionInfo::Instance().GetProcess();
+  miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
+  miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
+  miOutOfBandRecord.Add(GetMiValueResultThreadDim(sbProcess));
+#endif
+
   if (!MiOutOfBandRecordToStdout(miOutOfBandRecord))
     return MIstatus::failure;
 
@@ -1743,6 +1776,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStopReasonTrace() {
 #ifdef MS_DEBUGGER
     miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
     miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
+    miOutOfBandRecord.Add(GetMiValueResultThreadDim(sbProcess));
 #endif
     bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
     bOk = bOk && CMICmnStreamStdout::WritePrompt();
@@ -1784,6 +1818,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventStopReasonTrace() {
 #ifdef MS_DEBUGGER
   miOutOfBandRecord.Add(GetMiValueResultIsDevice(sbProcess));
   miOutOfBandRecord.Add(GetMiValueResultIsSimt(sbProcess));
+  miOutOfBandRecord.Add(GetMiValueResultThreadDim(sbProcess));
 #endif
 
   bOk = MiOutOfBandRecordToStdout(miOutOfBandRecord);
