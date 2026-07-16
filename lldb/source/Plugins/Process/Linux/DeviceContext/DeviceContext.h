@@ -97,11 +97,12 @@ public:
 
 class Factory {
 public:
-  static std::shared_ptr<DeviceContext> GetDeviceContext(const std::string &soc_version, ::pid_t pid, int device_id);
+  static std::shared_ptr<DeviceContext> GetDeviceContext(const std::string &soc_version, ::pid_t pid,
+                                                         int device_id, int virtual_device_id);
 };
 
   typedef std::function<void(const DebugRecvInfo &info)> Callback;
-  DeviceContext(const ::pid_t pid, const uint32_t device_id);
+  DeviceContext(const ::pid_t pid, const uint32_t device_id, const uint32_t virtual_device_id);
   ~DeviceContext();
   virtual Status Init();
 
@@ -179,6 +180,7 @@ protected:
   int32_t m_drv_fd;
   int32_t m_pid;
   uint32_t m_device_id;
+  uint32_t m_virtual_device_id;
   Callback m_bp_callback;
   bool m_close;
   HostThread m_listen_thread;

@@ -13,7 +13,7 @@ namespace lldb_private {
 
 class Ascend950DeviceContext : public DeviceContext {
 public:
-  Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id);
+  Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id, const uint32_t virtual_device_id);
   ~Ascend950DeviceContext() = default;
   SocType GetSocType() override { return m_soc_type; }
 
@@ -46,7 +46,8 @@ private:
 
 class Ascend950DTDeviceContext : public Ascend950DeviceContext {
 public:
-  Ascend950DTDeviceContext(const ::pid_t pid, const uint32_t device_id): Ascend950DeviceContext(pid, device_id)
+  Ascend950DTDeviceContext(const ::pid_t pid, const uint32_t device_id, const uint32_t virtual_device_id)
+    : Ascend950DeviceContext(pid, device_id, virtual_device_id)
   {
     m_soc_type = SocType::ASCEND950DT;
     m_aclrt_handle = nullptr;

@@ -162,10 +162,13 @@ void AscendCommunicationServer::SetMsgHandlerHook(ClientMsgHandlerHook &&hook) {
 HandleResult DeviceHandler::Parse(const std::string& msg) {
   Status error;
   std::smatch matches;
-  if (std::regex_search(msg, matches, std::regex("device_id:(\\d+);tgid:(\\d+);soc_version:([^;]+);"))) {
+  m_device_info = DeviceInfoMsg();
+  if (std::regex_search(msg, matches,
+      std::regex("device_id:(\\d+);virtual_device_id:(\\d+);tgid:(\\d+);soc_version:([^;]+);"))) {
     m_device_info.device_id = std::stoi(matches[1]);
-    m_device_info.tgid = std::stoi(matches[2]);
-    m_device_info.soc_version = matches[3];
+    m_device_info.virtual_device_id = std::stoi(matches[2]);
+    m_device_info.tgid = std::stoi(matches[3]);
+    m_device_info.soc_version = matches[4];
   } else {
     error.SetError(INVALID_DEVICE_INFO_ERR, lldb::eErrorTypeGeneric);
   }

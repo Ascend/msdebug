@@ -118,6 +118,7 @@ static_assert(sizeof(CoreInfo) <= 64,
 // Message from runtime stub to lldb-server
 struct DeviceInfoMsg {
   int32_t device_id;
+  int32_t virtual_device_id;
   pid_t tgid;
   std::string soc_version;
 };

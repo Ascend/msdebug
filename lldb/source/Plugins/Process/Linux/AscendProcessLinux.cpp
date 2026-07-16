@@ -73,11 +73,12 @@ AscendProcessLinux::~AscendProcessLinux() {
   m_server->Close();
 }
 
-Status AscendProcessLinux::InitDeviceContext(const int device_id, const std::string &soc_version, const ::pid_t tgid) {
+Status AscendProcessLinux::InitDeviceContext(const int device_id, const int virtual_device_id,
+                                             const std::string &soc_version, const ::pid_t tgid) {
   Log *log = GetLog(POSIXLog::Process);
   Status error;
   LLDB_LOG(log, "Start create device context");
-  m_device_context = DeviceContext::Factory::GetDeviceContext(soc_version, tgid, device_id);
+  m_device_context = DeviceContext::Factory::GetDeviceContext(soc_version, tgid, device_id, virtual_device_id);
   if (!m_device_context) {
     error.SetError(ASCEND_PROCESS_ERROR_CODE::UNSUPPORTED_SOC_TYPE_ERR, lldb::eErrorTypeGeneric);
     error.SetErrorStringWithFormatv("Get device context failed: soc_version={0}\n", soc_version);
@@ -117,10 +118,12 @@ HandleResult AscendProcessLinux::HandleStubDeviceInfo(const DeviceInfoMsg& devic
   }
   if (m_client_device_id == -1) {
     LLDB_LOG(log, "client do not set device id, use the first device id: {0}", device_info_msg.device_id);
-    error = InitDeviceContext(device_info_msg.device_id, device_info_msg.soc_version, m_tgid);
+    error = InitDeviceContext(device_info_msg.device_id, device_info_msg.virtual_device_id,
+                              device_info_msg.soc_version, m_tgid);
   } else if (m_client_device_id == device_info_msg.device_id) {
     LLDB_LOG(log, "client set device id, and it is matched, use {0} to init device context", m_client_device_id);
-    error = InitDeviceContext(m_client_device_id, device_info_msg.soc_version, m_tgid);
+    error = InitDeviceContext(m_client_device_id, device_info_msg.virtual_device_id,
+                              device_info_msg.soc_version, m_tgid);
   } else {
     LLDB_LOG(log, "device id do not match, client device id: {0}, set device id: {1}", m_client_device_id,
              device_info_msg.device_id);
