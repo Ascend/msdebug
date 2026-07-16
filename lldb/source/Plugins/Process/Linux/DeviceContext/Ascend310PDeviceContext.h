@@ -12,7 +12,7 @@ namespace lldb_private {
 
 class Ascend310PDeviceContext : public DeviceContext {
 public:
-  Ascend310PDeviceContext(const ::pid_t pid, const uint32_t device_id);
+  Ascend310PDeviceContext(const ::pid_t pid, const uint32_t device_id, const uint32_t virtual_device_id);
   ~Ascend310PDeviceContext() = default;
   SocType GetSocType() override { return m_soc_type; }
   Status CheckRegisterAddr(CoreType core_type, uint64_t addr) const override;

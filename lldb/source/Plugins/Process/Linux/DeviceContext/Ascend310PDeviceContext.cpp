@@ -11,8 +11,9 @@
 using namespace lldb_private;
 using namespace lldb;
 
-Ascend310PDeviceContext::Ascend310PDeviceContext(const ::pid_t pid, const uint32_t device_id):
-  DeviceContext(pid, device_id) {
+Ascend310PDeviceContext::Ascend310PDeviceContext(const ::pid_t pid, const uint32_t device_id,
+                                                  const uint32_t virtual_device_id):
+  DeviceContext(pid, device_id, virtual_device_id) {
   m_soc_type = SocType::ASCEND310P;
   m_reg_info_up = std::make_unique<RegisterInfoPOSIX_ascend310P>(ArchSpec("hiipu64"));
 }

@@ -79,7 +79,8 @@ protected:
 private:
   ~AscendProcessLinux() override;
   void MonitorBreakpoint(const InterruptEvent &param);
-  Status InitDeviceContext(const int device_id, const std::string &soc_version, const pid_t tgid);
+  Status InitDeviceContext(const int device_id, const int virtual_device_id,
+                           const std::string &soc_version, const pid_t tgid);
   Status SetDeviceSoftwareBreakpoint(lldb::addr_t addr);
   Status SetDeviceHardwareBreakpoint(lldb::addr_t addr);
   Status SetSwBpByMemory(lldb::addr_t addr, llvm::ArrayRef<uint8_t> expected_trap,

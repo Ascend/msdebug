@@ -65,8 +65,9 @@ struct WarpInfoParam {
 
 using namespace debug_ts;
 
-Ascend950DeviceContext::Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id):
-  DeviceContext(pid, device_id) {
+Ascend950DeviceContext::Ascend950DeviceContext(const ::pid_t pid, const uint32_t device_id,
+                                                const uint32_t virtual_device_id):
+  DeviceContext(pid, device_id, virtual_device_id) {
   m_soc_type = SocType::ASCEND950;
   m_reg_info_up = std::make_unique<RegisterInfoPOSIX_ascend950>(ArchSpec("hiipu64"));
 }
@@ -675,13 +676,13 @@ Status Ascend950DTDeviceContext::Init() {
     return error;
   }
   LLDB_LOG(log, "aclInit done");
-  ret = g_aclWrapper.AclrtSetDeviceWrapper(m_device_id);
+  ret = g_aclWrapper.AclrtSetDeviceWrapper(m_virtual_device_id);
   if (ret != 0) {
-    error.SetErrorStringWithFormat("aclrtSetDevice failed ret=%d device_id=%d",
-                                   ret, m_device_id);
+    error.SetErrorStringWithFormat("aclrtSetDevice failed ret=%d virtual_device_id=%d",
+                                   ret, m_virtual_device_id);
     return error;
   }
-  LLDB_LOG(log, "aclrtSetDevice done device_id=%d", m_device_id);
+  LLDB_LOG(log, "aclrtSetDevice done virtual_device_id=%d", m_virtual_device_id);
 
   return error;
 }
@@ -714,7 +715,7 @@ size_t Ascend950DTDeviceContext::ReadGlobalMemory(addr_t addr, size_t size,
     return 0;
   }
 
-  int ret = CheckDevice(m_device_id);
+  int ret = CheckDevice(m_virtual_device_id);
   if (ret != 0) {
     LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
     return 0;
@@ -755,7 +756,7 @@ size_t Ascend950DTDeviceContext::WriteGlobalMemory(addr_t addr, size_t size,
     return 0;
   }
 
-  int ret = CheckDevice(m_device_id);
+  int ret = CheckDevice(m_virtual_device_id);
   if (ret != 0) {
     LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
     return 0;
@@ -772,7 +773,7 @@ size_t Ascend950DTDeviceContext::WriteGlobalMemory(addr_t addr, size_t size,
 void Ascend950DTDeviceContext::AddIpcMemInfo(lldb::addr_t addr, size_t size,
                                              std::vector<char> key) {
   Log *log = GetLog(LLDBLog::Process);
-  int ret = CheckDevice(m_device_id);
+  int ret = CheckDevice(m_virtual_device_id);
   if (ret != 0) {
     LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
     return;
@@ -793,7 +794,7 @@ void Ascend950DTDeviceContext::AddIpcMemInfo(lldb::addr_t addr, size_t size,
 
 void Ascend950DTDeviceContext::RemoveIpcMemInfo(lldb::addr_t addr) {
   Log *log = GetLog(LLDBLog::Process);
-  int ret = CheckDevice(m_device_id);
+  int ret = CheckDevice(m_virtual_device_id);
   if (ret != 0) {
     LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
     return;

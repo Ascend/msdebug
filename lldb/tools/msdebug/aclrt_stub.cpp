@@ -477,7 +477,9 @@ int32_t SetDevicePost(int32_t device)
     if (name != nullptr) {
         socVersion = name;
     }
-    return SendDeviceInfo(device, socVersion, tgid);
+    int32_t virtualDeviceId = 0;
+    aclrtGetDeviceImpl(&virtualDeviceId);
+    return SendDeviceInfo(device, virtualDeviceId, socVersion, tgid);
 }
 
 void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)

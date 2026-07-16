@@ -122,7 +122,7 @@ static const std::map<std::string, SocType> SOC_STRING_TO_TYPE = {
 };
 
 std::shared_ptr<DeviceContext> DeviceContext::Factory::GetDeviceContext(
-    const std::string &soc_version, ::pid_t pid, int device_id) {
+    const std::string &soc_version, ::pid_t pid, int device_id, int virtual_device_id) {
   Log *log = GetLog(LLDBLog::Process);
   const auto &it = SOC_STRING_TO_TYPE.find(soc_version);
   if (it == SOC_STRING_TO_TYPE.end()) {
@@ -133,13 +133,13 @@ std::shared_ptr<DeviceContext> DeviceContext::Factory::GetDeviceContext(
   const SocType soc_type = it->second;
   switch (soc_type) {
     case SocType::ASCEND910B:
-      return std::make_shared<Ascend910BDeviceContext>(pid, device_id);
+      return std::make_shared<Ascend910BDeviceContext>(pid, device_id, virtual_device_id);
     case SocType::ASCEND310P:
-      return std::make_shared<Ascend310PDeviceContext>(pid, device_id);
+      return std::make_shared<Ascend310PDeviceContext>(pid, device_id, virtual_device_id);
     case SocType::ASCEND950:
-      return std::make_shared<Ascend950DeviceContext>(pid, device_id);
+      return std::make_shared<Ascend950DeviceContext>(pid, device_id, virtual_device_id);
     case SocType::ASCEND950DT:
-      return std::make_shared<Ascend950DTDeviceContext>(pid, device_id);
+      return std::make_shared<Ascend950DTDeviceContext>(pid, device_id, virtual_device_id);
     default:
       LLDB_LOG(log, "unsupported soc type: {0}", (int)soc_type);
       return nullptr;
@@ -205,9 +205,10 @@ struct TaskKillParam {
   uint32_t reserve;
 };
 
-DeviceContext::DeviceContext(const ::pid_t pid, const uint32_t device_id) {
+DeviceContext::DeviceContext(const ::pid_t pid, const uint32_t device_id, const uint32_t virtual_device_id) {
   m_pid = pid;
   m_device_id = device_id;
+  m_virtual_device_id = virtual_device_id;
 }
 
 Status DeviceContext::Init()

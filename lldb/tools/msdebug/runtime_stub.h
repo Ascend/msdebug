@@ -71,7 +71,7 @@ private:
 
 int32_t SendInfoAndWaitForReply(const std::string &buf);
 int32_t SendStreamId(uint32_t stream_id);
-int32_t SendDeviceInfo(int32_t device, const std::string &socVersion, pid_t tgid);
+int32_t SendDeviceInfo(int32_t device, int32_t virtual_device_id, const std::string &socVersion, pid_t tgid);
 int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelHash,
                        const std::vector<char> &elf, uint64_t pcAddr, int32_t streamId);
 int32_t SendIpcMemInfo(uint64_t addr, uint64_t size,

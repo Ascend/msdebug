@@ -39,7 +39,7 @@ using namespace ::testing;
 
 class FakeDeviceContext : public DeviceContext {
 public:
-    FakeDeviceContext() : DeviceContext(0, 0) {
+    FakeDeviceContext() : DeviceContext(0, 0, 0) {
         m_drv_fd = 3;
     }
 
@@ -139,7 +139,7 @@ TEST_F(AscendProcessLinuxTest, HandleStubMessage) {
         pid, terminal_fd, gdb_server,
         arch, manager, tids);
 
-    std::string deviceMsg = "device_id:0;tgid:0;soc_version:test;";
+    std::string deviceMsg = "device_id:0;virtual_device_id:0;tgid:0;soc_version:test;";
     Status status = process->m_parser.ParseMessage(deviceMsg);
     ASSERT_TRUE(status.Success() || status.GetError() != 0);
 }
@@ -169,7 +169,7 @@ TEST_F(AscendProcessLinuxTest, SetBreakpoint) {
         pid, terminal_fd, gdb_server,
         arch, manager, tids);
 
-    std::string deviceMsg = "device_id:0;tgid:0;soc_version:test;";
+    std::string deviceMsg = "device_id:0;virtual_device_id:0;tgid:0;soc_version:test;";
     process->m_parser.ParseMessage(deviceMsg);
 
     std::string kernelMsg = "kernel_name:test;kernel_hash:0;pc_base_addr:47;";

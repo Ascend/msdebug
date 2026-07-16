@@ -240,10 +240,16 @@ inline string GetSocName()
     return socVersion;
 }
 
-int32_t SendDeviceInfo(int32_t device, const std::string &socVersion, pid_t tgid)
+int32_t SendDeviceInfo(int32_t device, int32_t virtual_device_id, const std::string &socVersion, pid_t tgid)
 {
+    RT_STUB_LOG_INFO("SendDeviceInfo physical device_id=%d, virtual_device_id=%d\n", device, virtual_device_id);
+
     std::string buf = "$device_id:";
     buf += std::to_string(device);
+    buf += ";";
+
+    buf += "virtual_device_id:";
+    buf += std::to_string(virtual_device_id);
     buf += ";";
 
     buf += "tgid:";
@@ -263,7 +269,9 @@ static int32_t SetDevicePost(int32_t device)
 {
     pid_t tgid = GetTgid();
     string socVersion = GetSocName();
-    return SendDeviceInfo(device, socVersion, tgid);
+    int32_t virtualDeviceId = 0;
+    GetDeviceId(&virtualDeviceId);
+    return SendDeviceInfo(device, virtualDeviceId, socVersion, tgid);
 }
 
 static rtError_t GetStreamID(rtStream_t stream, int32_t &streamId)
