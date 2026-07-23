@@ -11,10 +11,10 @@
 
 ### 相关产品版本配套说明
 
-| msDebug | makeself | libedit | ncurses
+| msDebug | makeself | libedit | ncurses |
 |----------|-----------------|----------|-------|
-| 26.0.0 | release-2.5.0及以上 | openEuler-24.03-LTS-SP1-release | 6.6
-| 8.3.0 | release-2.5.0及以上 | openEuler-24.03-LTS-SP1-release | openEuler-24.03-LTS-SP1-release
+| 26.0.0 | release-2.5.0及以上 | openEuler-24.03-LTS-SP1-release | 6.6 |
+| 8.3.0 | release-2.5.0及以上 | openEuler-24.03-LTS-SP1-release | openEuler-24.03-LTS-SP1-release |
 
 ## 版本兼容性说明
 

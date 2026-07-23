@@ -46,7 +46,9 @@ msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧
 #### 2.3.1 开启内核调试开关
 
 > [!CAUTION]
+> 
 > **注意：msDebug 需要 root 权限**
+> 
 > msDebug 需要内核调试开关 /proc/debug_switch 开启才能正常工作，但出于安全考虑默认关闭，且需要 root 权限才能打开；
 > 这在很多环境（如共享开发机、容器）中可能无法满足，这时请联系系统管理员开启，或在拥有特权的容器中体验此部分。
 
@@ -100,9 +102,11 @@ b add_custom.cpp:34
 ```
 
 > [!CAUTION]
+> 
 > **若在直接申请的容器环境中操作，需特别留意 `/proc/debug_switch = 1` 可能为虚假状态**
-> 若您在云服务商提供的容器环境中操作，即使在容器内成功将 /proc/debug_switch 设置并查询为 1，该状态也可能是虚假的。因出于安全考虑，
-> 底层宿主机通常会通过写时复制（CoW）、影子文件或覆盖挂载（overlay mount）等机制对 /proc 目录进行隔离，导致设置未实际生效。
+> 
+> 若您在云服务商提供的容器环境中操作，即使在容器内成功将 /proc/debug_switch 设置并查询为 1，该状态也可能是虚假的。因出于安全考虑，底层宿主机通常会通过写时复制（CoW）、影子文件或覆盖挂载（overlay mount）等机制对 /proc 目录进行隔离，导致设置未实际生效。
+> 
 > 在此情况下，执行上一节所述的断点设置将触发警告；而按照后续章节运行 `run` 命令时，则会报出如下错误：
 >
 > ```text
@@ -115,7 +119,7 @@ b add_custom.cpp:34
 
 输入 run 启动程序，等待命中断点：
 
-```shell
+```text
 run
 ```
 
@@ -159,7 +163,7 @@ var
 
 ##### 2.3.3.5 查看寄存器的值
 
-```shell
+```text
 register read -a
 ```
 
@@ -180,7 +184,7 @@ register read -a
 
 ##### 2.3.3.6 查询Device信息
 
-```shell
+```text
 ascend info devices
 ```
 
@@ -194,7 +198,7 @@ ascend info devices
 
 ##### 2.3.3.7 查询算子所运行的aicore相关信息
 
-```shell
+```text
 ascend info cores
 ```
 

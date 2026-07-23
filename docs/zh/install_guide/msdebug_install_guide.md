@@ -67,7 +67,7 @@
 
 > [!NOTE]  说明
 >
-> 生成run包依赖pigz库，一般系统自带，```pigz --version```如果没有显示版本，可自行下载。
+> 生成run包依赖pigz库，一般系统自带，`pigz --version`如果没有显示版本，可自行下载。
 
 #### 2.3.3 安装
 
@@ -97,7 +97,7 @@ mindstudio-debugger package install success!
 >
 > - 如果环境中配置过`ASCEND_HOME_PATH`环境变量，则会安装到`${ASCEND_HOME_PATH}`目录下；否则会默认安装到`${HOME}/Ascend`目录下。
 >
-> - 如果要指定路径安装，则需添加```--install-path```，例如```./mindstudio-debugger_<version>_<arch>.run  --install-path=./test --run```，则将此run包安装到当前目录下的test目录下。
+> - 如果要指定路径安装，则需添加`--install-path`，例如`./mindstudio-debugger_<version>_<arch>.run  --install-path=./test --run`，则将此run包安装到当前目录下的test目录下。
 >
 > - 若系统中已安装该工具的旧版本，安装过程中会提示是否替换；输入 "y" 可执行覆盖安装。
 
@@ -118,7 +118,7 @@ msdebug --help
 1. 下载脚本。
 
    ```bash
-   curl -O https://inst.obs.cn-north-4.myhuaweicloud.com/26.0.0/ms_install.py
+   curl -O https://inst.obs.cn-north-4.myhuaweicloud.com/26.1.0/ms_install.py
    ```
 
    > [!NOTE]
@@ -136,7 +136,7 @@ msdebug --help
 
    卸载成功打印如下信息：
 
-   ```ColdFusion
+   ```text
    Successfully uninstalled 1 tool ({tools_name})
    ```
 

@@ -71,7 +71,7 @@ Kernel函数中workspace入参的空间大小在Tiling函数中被设置为0，�
 #include "tiling/platform/platform_ascendc.h"
 auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
 size_t systemWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-size_t*currentWorkspace = context->GetWorkspaceSizes(1); // 只使用1块Workspace
+size_t* currentWorkspace = context->GetWorkspaceSizes(1); // 只使用1块Workspace
 currentWorkspace[0]= systemWorkspaceSize;
 ```
 
@@ -98,7 +98,7 @@ currentWorkspace[0]= systemWorkspaceSize;
 
 ```bash
 ...
-(msdebug) settings set target.disable-aslr false
+(msdebug) settings set target.disable-aslr true
 ...
 ```
 
