@@ -26,6 +26,7 @@
     2. 执行以下命令完成算子编译。
 
         > [!NOTE]
+        > 
         > 非首次场景，可以使用make clean && make命令替代make命令。
 
         ```bash
@@ -102,6 +103,7 @@
         - 打印位于UB内存上的LocalTensor中存放的数据。
 
             > [!NOTE]
+            > 
             > UB内存打印起始地址需参考LocalTensor变量展示的**address_**字段中的bufferAddr参数。此处以变量**xLocal**为例，其内存起始地址为**0**。
 
             ```bash
@@ -124,6 +126,7 @@
         - 打印位于GM内存上的GlobalTensor中存放的数据。
 
             > [!NOTE]
+            > 
             > GM内存打印的起始地址需参考GlobalTensor变量展示的**address_**字段。此处以变量**xGm**为例，其内存起始地址为**0x00001240c0015000**。
 
             ```bash
@@ -285,6 +288,7 @@
     ```
 
     > [!NOTE]
+    > 
     > 后续调试过程可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 ## 调试PyTorch接口调用的算子
@@ -302,12 +306,12 @@
     > - 此样例工程仅支持Python3.9，若要在其他Python版本上运行，需要修改${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation目录下run_op_plugin.sh文件中的Python版本。
     > - 此样例工程不支持<term>Atlas A3 训练系列产品</term>。
     > - 下载代码样例时，需执行以下命令指定分支版本。
->
+    >
     >    ```bash
     >    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
     >    ```
 
-- 已参考《[Ascend Extension for PyTorch 软件安装指南](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)》，完成PyTorch框架和torch_npu插件的安装。
+- 已参考《[TorchNPU软件安装](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/installation_guide/installation_description.md)》，完成PyTorch框架和torch_npu插件的安装。
 - 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
@@ -338,8 +342,9 @@
     ```
 
     > [!NOTE]
+    > 
     > PyTorch接入工程的样例工程目录如下：
->
+    >
     > ```text
     > PytorchInvocation
     > ├── op_plugin_patch
@@ -420,6 +425,7 @@
     ```
 
     > [!NOTE]
+    > 
     > 其他调试操作可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 9. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
@@ -445,7 +451,7 @@
 
 1. 基于[前期准备](#前期准备)中的样例工程编译算子，获取可执行文件00_basic_matmul。
 
-    执行以下命令完成算子编译，编译完成后，在build/bin目录下生成可执行文件00_basic_matmul。
+    执行以下命令完成算子编译，编译完成后，在output/bin目录下生成可执行文件00_basic_matmul。
 
     ```bash
     bash ./scripts/build.sh 00_basic_matmul --debug --msdebug
@@ -454,9 +460,9 @@
 2. 启动msDebug工具拉起算子程序，进入调试界面。
 
     ```bash
-    msdebug ./build/bin/00_basic_matmul 256 512 1024 0
-    (msdebug) target create "./build/bin/00_basic_matmul"
-    Current executable set to '/home/mindstudio/projects/ascendc-templates/build/bin/00_basic_matmul' (aarch64).
+    msdebug ./output/bin/00_basic_matmul 256 512 1024 0
+    (msdebug) target create "./output/bin/00_basic_matmul"
+    Current executable set to '/home/mindstudio/projects/ascendc-templates/output/bin/00_basic_matmul' (aarch64).
     (msdebug)
     ```
 
@@ -476,7 +482,7 @@
 
     ```cpp
     (msdebug) run
-    Process 3344307 launched: '/home/mindstudio/projects/ascendc-templates/build/bin/00_basic_matmul' (aarch64)
+    Process 3344307 launched: '/home/mindstudio/projects/ascendc-templates/output/bin/00_basic_matmul' (aarch64)
     [Launch of Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo on Device 0]
     Process 3344307 stopped
     [Switching to focus on Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo, CoreId 21, Type aic]
@@ -551,6 +557,7 @@
         ```
 
     > [!NOTE]
+    > 
     > 其他调试操作可参考[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 6. 查询并删除断点，恢复程序运行。
