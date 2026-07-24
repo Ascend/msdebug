@@ -1997,7 +1997,8 @@ const vector<vector<ErrRegMask>> *RegisterInfoPOSIXCore_ascend950::GetAicErrorRe
   // sc_error_t0_0
   table.push_back({});
   // su_error_t0_0
-  addMask(lldb_su_err_info_t0_0, GenMask(0, 31));
+  // dcache error cannot find pc
+  addMask(lldb_su_err_info_t0_0, GenMask(0, 7) | GenMask(11, 31));
   // mte_error_t0_0
   addMask(lldb_mte_err_info_t0_0, GenMask(0, 31));
   // mte_error_t1_0

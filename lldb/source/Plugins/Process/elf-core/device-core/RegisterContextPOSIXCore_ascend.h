@@ -51,7 +51,7 @@ public:
 private:
   void FixPC(uint64_t &pc);
 
-  void FixPCByErrorInfoReg(const std::vector<ErrInfoReg> &err_info_regs,
+  bool FixPCByErrorInfoReg(const std::vector<ErrInfoReg> &err_info_regs,
                            uint64_t &pc);
 
   bool CheckAicErrorRegisterIsValid(size_t num_registers,
