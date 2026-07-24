@@ -240,7 +240,7 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     }
     ```
 
-4. Compile and deploy the operator by referring to [Operator Compilation and Deployment](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html). <a id="step-4-operator-compilation"></a>
+4. Compile and deploy the operator by referring to [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.0.0/docs/en/user_guide/msopgen_user_guide.md). <a id="step-4-operator-compilation"></a>
 5. Go to the directory where the msOpGen script `install.sh` is located, compile the single-operator calling application by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md), and obtain the executable file `execute\_add\_op`. <a id="step-5"></a>
 
     ```bash
@@ -318,7 +318,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     >    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
     >    ```
 
-- Install the PyTorch framework and torch_npu plugin by referring to [Ascend Extension for PyTorch Software Installation Guide](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html).
+- Install the PyTorch framework and torch_npu plugin by referring to [Ascend Extension for PyTorch Software Installation Guide](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/en/installation_guide/installation_description.md).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
@@ -341,7 +341,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     }
     ```
 
-3. Compile and deploy the operator by referring to [Operator Compilation and Deployment](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html).
+3. Compile and deploy the operator by referring to [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.0.0/docs/en/user_guide/msopgen_user_guide.md).
 4. Go to the sample directory and download the sample code in CLI mode. Use PyTorch to call the AddCustom operator project and complete the compilation by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md).
 
     ```bash

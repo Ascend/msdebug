@@ -10,15 +10,15 @@ The following operator call scenarios are supported:
 
 - Kernel launch operator development: kernel launch
 
-    For details about the kernel launch scenario, see section "[Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board)".
+    For details about the kernel launch scenario, see section "[Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/programug/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board)".
 
 - Project-based operator development: single-operator API calling
 
-    For details about the single-operator API execution scenario, see "Project-based Operator Development" > "[Single-Operator API Execution](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator)".
+    For details about the single-operator API execution scenario, see "Project-based Operator Development" > "[Single-Operator API Execution](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/programug/Ascendcopdevg/atlas_ascendc_10_0070.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator)".
 
 - AI framework operator adaptation: PyTorch framework
 
-    For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*. For details about the operation, see "[Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface)".
+    For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.0.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*. For details about the operation, see "[Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface)".
 
 **Additional Information**
 
@@ -52,7 +52,7 @@ msDebug also provides the following extension program. For details, see [**Table
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --full
         ```
 
-    - Method 2: Specify the `--debug` option during driver installation. For details, see "[Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_0005.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)" in *CANN Software Installation Guide*.
+    - Method 2: Specify the `--debug` option during driver installation. For details, see "[Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum)" in *CANN Software Installation Guide*.
 
         ```bash
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --debug
@@ -74,7 +74,7 @@ The following products are supported:
 
 > [!NOTE]NOTE
 > 
->- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
+>- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/en/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
 >- For details about the supported functions, see the documentation of the corresponding function module.
 
 ## Precautions
@@ -337,7 +337,7 @@ Command Options Usage:
 
 > [!NOTE]NOTE
 > 
-> - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop\_reason` is `CUBE\_ERROR`, `CCU\_ERROR`, `MTE\_ERROR`, `VEC\_ERROR`, and `FIXP\_ERROR`.
+> - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop_reason` is `CUBE_ERROR`, `CCU_ERROR`, `MTE_ERROR`, `VEC_ERROR`, and `FIXP_ERROR`.
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
 >    ```bash
@@ -373,7 +373,7 @@ The msDebug tool can be started in either of the following ways.
 
         > [!NOTE]NOTE
         > 
-        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> "[Kernel Launch](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*.
+        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> "[Kernel Launch](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/programug/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*.
         > - If the executable file has other input parameters, pass them as follows:
         >
         >    ```bash
@@ -396,7 +396,7 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]NOTE  
-        > For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*.
+        > For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.0.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*.
 
 **Exiting Debugging**
 
@@ -421,7 +421,7 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 > [!NOTE]NOTE
 > 
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
-> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > "[HCCL Kernel APIs](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_0869.html)" in *Ascend C Operator Development API Reference*.
+> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > "[HCCL Kernel APIs](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/API/ascendcopapi/atlasascendc_api_07_0869.html)" in *Ascend C Operator Development API Reference*.
 
 ```tex
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
@@ -491,7 +491,7 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
 
 **Setting a Line Breakpoint**
 
-1. Add a breakpoint in line 114 of the kernel function implementation file `matmul\_leakyrelu`. If the following information is displayed, the breakpoint is successfully added:
+1. Add a breakpoint in line 114 of the kernel function implementation file `matmul_leakyrelu`. If the following information is displayed, the breakpoint is successfully added:
 
     ```bash
     (msdebug) b matmul_leakyrelu_kernel.cpp:114
@@ -597,7 +597,7 @@ Based on the variable type and usage, a variable can be stored in a register or 
 
 ### Precautions
 
-Currently, the msDebug tool cannot directly print the value of a template parameter by variable name. You need to print the value of the template parameter using the `p *Template_parameter_object*`. The value of the template parameter is displayed after printing. For example, `COMPUTE\_LENGTH` is a template parameter, and `this` is the object pointer to which the template parameter belongs. If you want to print the value of the parameter, run the `p this` command where the parameter is used. An example is provided as follows:
+Currently, the msDebug tool cannot directly print the value of a template parameter by variable name. You need to print the value of the template parameter using the `p *Template_parameter_object*`. The value of the template parameter is displayed after printing. For example, `COMPUTE_LENGTH` is a template parameter, and `this` is the object pointer to which the template parameter belongs. If you want to print the value of the parameter, run the `p this` command where the parameter is used. An example is provided as follows:
 
 ```bash
    22   template<class ArchTag_, class ElementAccumulator_, class ElementOut_, uint32_t COMPUTE_LENGTH>
@@ -615,7 +615,7 @@ Currently, the msDebug tool cannot directly print the value of a template parame
 
 **Printing Variables**
 
-After a breakpoint is hit, you can run the `p variable\_name` command to print the value of a specified variable. For example:
+After a breakpoint is hit, you can run the `p variable_name` command to print the value of a specified variable. For example:
 
 ```bash
 (msdebug) p alpha
@@ -665,13 +665,13 @@ The actual values of `GlobalTensor` variables are stored in the GM. Run the foll
 > [!NOTE]NOTE
 > 
 > - If you want to print other custom addresses, ensure the validity of the custom addresses. Otherwise, errors may occur during operator running.
-> - If you want to print the memory starting from a custom address, you can add an offset based on the `address\_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
+> - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
 
 **Printing LocalTensor**
 
 `LocalTensor` is used to store the data in the local memory (internal storage) of the AI Core.
 
-Run the following command to print the `LocalTensor` variable. `reluOutLocal` is used as an example. For the memory address of `reluOutLocal`, refer to the `bufferAddr` parameter in the `address\_` field. In this example, the address is `0`, and the length is `131072`.
+Run the following command to print the `LocalTensor` variable. `reluOutLocal` is used as an example. For the memory address of `reluOutLocal`, refer to the `bufferAddr` parameter in the `address_` field. In this example, the address is `0`, and the length is `131072`.
 
 ```bash
 (msdebug) p reluOutLocal
@@ -699,7 +699,7 @@ The actual content of the tensor is stored in the UB memory. You can run the fol
 > [!NOTE]NOTE
 >
 > - In this sample, the actual content of the tensor variables is stored in the UB. However, the local tensor may be stored in the UB, L1, L0A, or L0B. You need to determine store location based on the code, and select the correct memory type for the `-m` option of the printing command.
-> - If you want to print the memory starting from a custom address, you can add an offset based on the `address\_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
+> - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
 
 **Printing All Local Variables**
 
@@ -1024,7 +1024,7 @@ After using msDebug to call an operator, you can read register values of the dev
       SCALAR_EVENT_TABLE = 0x0
     ```
 
-- After `register read $\{variable name\}` is entered, the register value on the current device is returned. Separate multiple registers with spaces.
+- After `register read ${variable name}` is entered, the register value on the current device is returned. Separate multiple registers with spaces.
 
     - The register value is returned when the variable name is available on the current device.
     - `Invalid register name 'variable name'` is returned when the variable name is not available on the current device.
@@ -1046,7 +1046,7 @@ Query information about the device where the operator runs.
 
 **ascend info devices**
 
-Run the following command to query the information about the device where the operator is running. The line where `\*` is located indicates the target device.
+Run the following command to query the information about the device where the operator is running. The line where `*` is located indicates the target device.
 
 ```bash
 (msdebug) ascend info devices
@@ -1248,12 +1248,12 @@ After the `acl.json` file is configured, other functions of msDebug cannot be us
 ### Example
 
 1. Prepare the `acl.json` configuration file.
-    - Project-based operator development (single-operator API calling scenario): Create the `acl.json` file by referring to "[Initialization and Deinitialization](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/appdevg/acldevg/aclcppdevg_000007.html)" in *Application Development Guide \(C&C++\)* and load the file using the `aclinit` API.
+    - Project-based operator development (single-operator API calling scenario): Create the `acl.json` file by referring to "[Initialization and Deinitialization](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/programug/acldevg/aclpythondevg_0007.html)" in *Application Development Guide \(C&C++\)* and load the file using the `aclinit` API.
     - AI framework operator adaptation (PyTorch framework scenario): Search for the `acl.json` file in the installation directory of `torch_npu`.
 
-2. Enable the function of generating dump files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> "[aclInit](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/appdevgapi/aclcppdevg_03_0022.html)" in *Application Development Guide \(C&C++\)*.
-    1. In the `acl.json` configuration file, set `dump\_scene` to `aic\_err\_detail\_dump`.
-    2. In the `acl.json` configuration file, set `dump\_path` to the path for exporting the dump file of the abnormal operator.
+2. Enable the function of generating dump files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> "[aclInit](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/API/runtimeapi/aclcppdevg_03_0022.html)" in *Application Development Guide \(C&C++\)*.
+    1. In the `acl.json` configuration file, set `dump_scene` to `aic_err_detail_dump`.
+    2. In the `acl.json` configuration file, set `dump_path` to the path for exporting the dump file of the abnormal operator.
 
 3. If the program crashes (for example, memory overflow or segmentation fault), a core file of the abnormal operator is generated. The file name ends with .core.
 4. Run the following command with the msDebug tool to load the dump file of the abnormal operator:

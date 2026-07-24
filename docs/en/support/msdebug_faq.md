@@ -65,7 +65,7 @@ The size of the workspace input parameter in the kernel function is set to `0` i
 
 **Solution**
 
-Set the workspace size from 0 to the reserved memory size by referring to section "Operator Implementation" \> "Project-based Operator Development" \> "[Host-side Tiling Implementation](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_00021.html)" in *Ascend C Operator Development Guide*. During API compute, some workspace memory is required as the cache. Therefore, the operator tiling function needs to reserve workspace memory for the API. The reserved memory size can be obtained by calling `GetLibApiWorkSpaceSize`. See the following code:
+Set the workspace size from 0 to the reserved memory size by referring to section "Operator Implementation" \> "Project-based Operator Development" \> "[Host-side Tiling Implementation](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/programug/Ascendcopdevg/atlas_ascendc_10_00021.html)" in *Ascend C Operator Development Guide*. During API compute, some workspace memory is required as the cache. Therefore, the operator tiling function needs to reserve workspace memory for the API. The reserved memory size can be obtained by calling `GetLibApiWorkSpaceSize`. See the following code:
 
 ```cpp
 #include "tiling/platform/platform_ascendc.h"
