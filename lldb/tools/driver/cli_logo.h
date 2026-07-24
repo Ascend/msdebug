@@ -5,11 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifdef MS_DEBUGGER
 #ifndef DRIVER_CLI_LOGO_H
 #define DRIVER_CLI_LOGO_H
+#ifdef MS_DEBUGGER
 
 void PrintLogo();
 
-#endif // DRIVER_CLI_LOGO_H
 #endif // MS_DEBUGGER
+#endif // DRIVER_CLI_LOGO_H

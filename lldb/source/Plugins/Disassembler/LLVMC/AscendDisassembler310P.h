@@ -1,10 +1,9 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  */
-#ifdef MS_DEBUGGER
-
 #ifndef liblldb_AscendDisassembler310P_H_
 #define liblldb_AscendDisassembler310P_H_
+#ifdef MS_DEBUGGER
 
 #include "AscendDisassemblerHelper.h"
 
@@ -17,5 +16,5 @@ public:
 };
 } // namespace lldb_private
 
-#endif // #ifndef liblldb_AscendDisassembler310P_H_
 #endif
+#endif // #ifndef liblldb_AscendDisassembler310P_H_

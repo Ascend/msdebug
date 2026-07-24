@@ -1,10 +1,9 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
-#ifdef MS_DEBUGGER
-
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_ELFCOREDEVICEUTILITIES_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_ELFCOREDEVICEUTILITIES_H
+#ifdef MS_DEBUGGER
 
 #include "lldb/Utility/MessageDefines.h"
 
@@ -58,6 +57,7 @@ struct GlobalMemInfo {
   uint32_t section_index; // 对应哪个.ascend.global section
   GlobalDataType type; // 内存是input/output/workspace/stack等类型
   uint16_t reserve;
+  // NOLINTBEGIN(clang-diagnostic-nested-anon-types)
   union {
     struct {
       CoreIDType coreId;
@@ -68,6 +68,7 @@ struct GlobalMemInfo {
       uint64_t dim_size[25];
     } shape;                    // input、output
   };
+  // NOLINTEND(clang-diagnostic-nested-anon-types)
 };
 
 struct LocalMemInfo {
@@ -273,5 +274,5 @@ inline std::string CenterText(const uint64_t num, size_t width, bool hex, bool v
 } // namespace device_core
 } // namespace lldb_private
 
-#endif //LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_ELFCOREDEVICEUTILITIES_H
 #endif
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_ELFCOREDEVICEUTILITIES_H

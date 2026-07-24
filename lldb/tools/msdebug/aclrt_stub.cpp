@@ -4,6 +4,10 @@
 
 #ifdef MS_DEBUGGER
 
+#include "HijackedLayerManager.h"
+#include "acl.h"
+#include "runtime_stub.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
@@ -13,10 +17,6 @@
 #include <mutex>
 #include <unistd.h>
 #include <unordered_set>
-
-#include "acl.h"
-#include "HijackedLayerManager.h"
-#include "runtime_stub.h"
 
 using namespace std;
 
@@ -560,24 +560,25 @@ aclrtBinary aclrtCreateBinaryImpl(const void *data, size_t dataLen)
     return ret;
 }
 
-aclError aclrtBinaryLoadImpl(aclrtBinary const binary, aclrtBinHandle *binHandle)
-{
-    auto &bin = GetDevBinaryMap()[binary];
-    string hash{};
-    if (bin.data) {
-        // calculate before register, may be changed after register
-        hash = GetSha256FromKernel(static_cast<const uint8_t *>(bin.data), bin.length);
+aclError aclrtBinaryLoadImpl(aclrtBinary binary, aclrtBinHandle *binHandle) {
+  auto &bin = GetDevBinaryMap()[binary];
+  string hash{};
+  if (bin.data) {
+    // calculate before register, may be changed after register
+    hash =
+        GetSha256FromKernel(static_cast<const uint8_t *>(bin.data), bin.length);
+  }
+  using FuncType = decltype(&aclrtBinaryLoadImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
+  auto ret = func(binary, binHandle);
+  if (ret == ACL_SUCCESS && *binHandle) {
+    string msg;
+    if (!BinaryRegisterPost(&bin, *binHandle, hash, msg)) {
+      RT_STUB_LOG_WARNING("%s postprocess failed: %s\n", __FUNCTION__,
+                          msg.c_str());
     }
-    using FuncType = decltype(&aclrtBinaryLoadImpl);
-    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    auto ret = func(binary, binHandle);
-    if (ret == ACL_SUCCESS && *binHandle) {
-        string msg;
-        if (!BinaryRegisterPost(&bin, *binHandle, hash, msg)) {
-            RT_STUB_LOG_WARNING("%s postprocess failed: %s\n", __FUNCTION__, msg.c_str());
-        }
-    }
-    return ret;
+  }
+  return ret;
 }
 
 aclError aclrtBinaryLoadFromDataImpl(const void *data, size_t length,
@@ -599,17 +600,17 @@ aclError aclrtBinaryLoadFromDataImpl(const void *data, size_t length,
     return ret;
 }
 
-aclError aclrtBinaryGetFunctionImpl(aclrtBinHandle const binHandle,
-        const char *kernelName, aclrtFuncHandle *funcHandle)
-{
-    using FuncType = decltype(&aclrtBinaryGetFunctionImpl);
-    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-    auto ret = func(binHandle, kernelName, funcHandle);
-    if (ret == ACL_SUCCESS && *funcHandle) {
-        GetStubFuncPtrNameMap()[*funcHandle] = kernelName;
-        MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
-    }
-    return ret;
+aclError aclrtBinaryGetFunctionImpl(aclrtBinHandle binHandle,
+                                    const char *kernelName,
+                                    aclrtFuncHandle *funcHandle) {
+  using FuncType = decltype(&aclrtBinaryGetFunctionImpl);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
+  auto ret = func(binHandle, kernelName, funcHandle);
+  if (ret == ACL_SUCCESS && *funcHandle) {
+    GetStubFuncPtrNameMap()[*funcHandle] = kernelName;
+    MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
+  }
+  return ret;
 }
 
 aclError aclrtBinaryGetFunctionByEntryImpl(aclrtBinHandle binHandle, uint64_t funcEntry, aclrtFuncHandle *funcHandle)

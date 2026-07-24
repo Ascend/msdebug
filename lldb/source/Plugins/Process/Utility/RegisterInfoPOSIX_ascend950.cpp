@@ -3,8 +3,8 @@
  */
 #ifdef MS_DEBUGGER
 #include "RegisterInfoPOSIX_ascend950.h"
-#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StreamString.h"
 using namespace lldb_private;
 using namespace lldb;
@@ -290,6 +290,7 @@ enum LLDB_ASCEND_RENUM {
   lldb_s94_ascend,
   lldb_s95_ascend,
   // 64bit
+  // NOLINTBEGIN(misc-confusable-identifiers)
   lldb_tpesl0_ascend,
   lldb_tpesl1_ascend,
   lldb_tpesl2_ascend,
@@ -306,13 +307,16 @@ enum LLDB_ASCEND_RENUM {
   lldb_tpesl13_ascend,
   lldb_tpesl14_ascend,
   lldb_tpesl15_ascend,
+  // NOLINTEND(misc-confusable-identifiers)
   // 128bit
+  // NOLINTBEGIN(misc-confusable-identifiers)
   lldb_tpesll0_ascend,
   lldb_tpesll1_ascend,
   lldb_tpesll2_ascend,
   lldb_tpesll3_ascend,
   lldb_tpesll4_ascend,
   lldb_tpesll5_ascend,
+  // NOLINTEND(misc-confusable-identifiers)
   lldb_tpesll6_ascend,
   lldb_tpesll7_ascend,
   lldb_sreg_last = lldb_tpesll7_ascend,
@@ -338,7 +342,7 @@ enum LLDB_ASCEND_RENUM {
   lldb_vms4_sr_ascend,
   lldb_sqzn_ascend,
   lldb_vpc_ascend,
-  lldb_vl_ascend,
+  lldb_vl_ascend, // NOLINT(misc-confusable-identifiers)
   lldb_agu_am_const_0_ascend,
   lldb_agu_am_const_1_ascend,
   lldb_agu_am_const_2_ascend,

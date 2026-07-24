@@ -48,7 +48,23 @@ repos:
         entry: git-clang-format
         args: [--binary, clang-format, -f]
         exclude: \.(build|test|third-party)
-
+   # --------------- C++ 静态检查（本地 clang-tidy）------------------
+  - repo: local
+    hooks:
+      - id: clang-tidy
+        name: clang-tidy (本地venv)
+        entry: clang-tidy
+        language: system
+        pass_filenames: true
+        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx)$
+        args: [
+          "--quiet",
+          "--config-file=lldb/.clang-tidy",
+          "-p=.clang-tidy-build",
+          "--checks=-llvm-header-guard,-llvm-else-after-return,-llvm-qualified-auto,-misc-unconventional-assign-operator,-clang-diagnostic-error",
+          "--extra-arg=-Wno-unknown-warning-option",
+          "--extra-arg=-Wno-unknown-argument",
+        ]
   # -------------------------- Gitleaks 本地离线二进制扫描 --------------------------
   - repo: local
     hooks:

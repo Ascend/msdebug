@@ -5,15 +5,15 @@
 #ifdef MS_DEBUGGER
 #include "AscendProcessLinux.h"
 
-#include <fcntl.h>
-
 #include "AscendThreadLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/RegisterValue.h"
+
+#include <fcntl.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -227,7 +227,6 @@ HandleResult AscendProcessLinux::HandleStubIpcMemInfo(
     }
 
     auto device_id = it->second.first;
-    auto tgid = it->second.second;
     if (!m_device_context->IsDeviceIdMatched(device_id)) {
       LLDB_LOG(log, "device id {0} from client {1} is not matched", device_id,
                m_client_socket);
@@ -274,7 +273,7 @@ void AscendProcessLinux::RegisterParsers() {
 
 void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg) {
   Log *log = GetLog(POSIXLog::Process);
-  constexpr int display_length = 1024;
+  constexpr size_t display_length = 1024;
   llvm::StringRef display_msg(msg.data(), msg.length());
   if (display_msg.size() > display_length) {
     display_msg = display_msg.slice(0, display_length);
@@ -341,12 +340,10 @@ Status AscendProcessLinux::SetBreakpoint(lldb::addr_t addr, uint32_t size,
   if (arch_type == llvm::Triple::hiipu64) {
     if (hardware) {
       return SetDeviceHardwareBreakpoint(addr);
-    } else {
-      return SetDeviceSoftwareBreakpoint(addr);
     }
-  } else {
-    return NativeProcessLinux::SetBreakpoint(addr, size, hardware);
+    return SetDeviceSoftwareBreakpoint(addr);
   }
+  return NativeProcessLinux::SetBreakpoint(addr, size, hardware);
 }
 
 Status AscendProcessLinux::RemoveBreakpoint(
@@ -354,9 +351,8 @@ Status AscendProcessLinux::RemoveBreakpoint(
   if (arch_type == llvm::Triple::hiipu64) {
     if (hardware) {
       return RemoveDeviceHardwareBreakpoint(addr);
-    } else {
-      return RemoveDeviceSoftwareBreakpoint(addr);
     }
+    return RemoveDeviceSoftwareBreakpoint(addr);
   }
   return NativeProcessLinux::RemoveBreakpoint(addr);
 }
@@ -1003,7 +999,7 @@ Status AscendProcessLinux::ReadDeviceRegisterValue(const RegisterInfo *reg_info,
   }
   Status error;
   if (reg_info->kinds[lldb::eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
-    if (m_pos_info.pc != -1 &&
+    if (m_pos_info.pc != static_cast<uint64_t>(-1) &&
         m_pos_info.first_stop_core_type == m_pos_info.core_type &&
         m_pos_info.first_stop_core_id == m_pos_info.core_id) {
       value.SetUInt64(m_pos_info.pc);
@@ -1044,8 +1040,9 @@ Status AscendProcessLinux::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, s
                __FUNCTION__, static_cast<int32_t>(param.address_class));
       status.SetErrorString("Core type is unknown, read memory from ascend device failed.");
       return status;
-    } else if ((m_pos_info.core_type == CoreType::UNKNOWN_CORE_TYPE) &&
-               (param.address_class == DeviceAddressClass::GM)) {
+    }
+    if ((m_pos_info.core_type == CoreType::UNKNOWN_CORE_TYPE) &&
+        (param.address_class == DeviceAddressClass::GM)) {
       bytes_read = m_device_context->ReadGlobalMemory(addr, size, buf);
       if (bytes_read != size) {
         status.SetErrorString("ReadGlobalMemory failed.");

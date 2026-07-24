@@ -1,9 +1,9 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  */
-#ifdef MS_DEBUGGER
 #ifndef MESSAGE_DEFINES_H
 #define MESSAGE_DEFINES_H
+#ifdef MS_DEBUGGER
 
 #include "lldb/lldb-types.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -133,11 +133,11 @@ struct KernelInfoMsg {
 
 struct IpcMemInfoMsg {
   static constexpr int32_t KEY_LEN = 65;
-  lldb::addr_t addr;
-  uint64_t size;
-  int32_t free; // close ipc mem when free is 1
+  lldb::addr_t addr = 0U;
+  uint64_t size = 0;
+  int32_t free = 0; // close ipc mem when free is 1
   char key[KEY_LEN];
-  IpcMemInfoMsg() : addr(0U), size(0), free(0) {
+  IpcMemInfoMsg() {
     std::memset(key, 0, sizeof(key));
   }
 };
@@ -296,4 +296,4 @@ inline std::string GetPosName(InterruptPosType type) {
 } // namespace lldb_private
 
 #endif
-#endif
+#endif // MESSAGE_DEFINES_H

@@ -1463,27 +1463,24 @@ bool SBProcess::IsSBStopInDevice() {
   ProcessSP process_sp(GetSP());
   if (process_sp && process_sp->IsStopInDevice()) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 bool SBProcess::IsSBStopInSimt() {
   ProcessSP process_sp(GetSP());
   if (process_sp && process_sp->IsStopInSimtKernel()) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 bool SBProcess::HandleDeviceSBProcessStateChanged() {
   ProcessSP process_sp(GetSP());
   if (process_sp && Process::HandleDeviceProcessStateChanged(process_sp)) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 bool SBProcess::GetSBCurrentCoreThreadDim(uint16_t &dim_x, uint16_t &dim_y,

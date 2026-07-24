@@ -6316,7 +6316,6 @@ void ProcessGDBRemote::DidExec() {
 }
 
 #ifdef MS_DEBUGGER
-static constexpr uint32_t DURATION_SEC = 5;
 Status ProcessGDBRemote::GetDeviceBinaryInfo(DeviceBinaryInfo &device_binary_info) {
   constexpr auto timeout = std::chrono::seconds(20);
   Status error;

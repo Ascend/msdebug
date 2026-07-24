@@ -3,6 +3,7 @@
  */
 #ifdef MS_DEBUGGER
 #include "AscendCommunicationServer.h"
+
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/posix/AscendDomainSocket.h"
 #include "lldb/Utility/Log.h"

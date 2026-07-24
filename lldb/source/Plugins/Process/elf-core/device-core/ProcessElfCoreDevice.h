@@ -1,9 +1,9 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
-#ifdef MS_DEBUGGER
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_DEVICE_PROCESSELFCOREDEVICE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_DEVICE_PROCESSELFCOREDEVICE_H
+#ifdef MS_DEBUGGER
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend.h"
 #include "lldb/Core/Section.h"
@@ -36,6 +36,7 @@ public:
 
   size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size, Status &error) override;
 
+  using ProcessElfCore::DoReadMemory;
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       const MemoryReaderParamClient &param, Status &error) override;
   bool CanDebug(lldb::TargetSP target_sp,
@@ -103,7 +104,7 @@ private:
   std::string m_kernel_name{""};
   std::shared_ptr<ModuleSpec> m_device_module_spec{};
 };
-}
+} // namespace lldb_private
 
-#endif //LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_DEVICE_PROCESSELFCOREDEVICE_H
 #endif
+#endif //LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_DEVICE_PROCESSELFCOREDEVICE_H

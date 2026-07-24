@@ -72,4 +72,4 @@ pythonenv*
 /lldb/docs/python_api/
 .codemate/
 cmake-build-debug
-.codemate
+.codemate.clang-tidy-build/

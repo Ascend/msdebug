@@ -2,14 +2,14 @@
 * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 */
 
-#ifdef MS_DEBUGGER
-
 #ifndef RT_STUB_LOG_H
 #define RT_STUB_LOG_H
+#ifdef MS_DEBUGGER
+
+#include "Singleton.h"
 
 #include <cstdlib>
 #include <string>
-#include "Singleton.h"
 
 enum MSDEBUG_ERROR_CODE {
   /* 初始化错误 */
@@ -212,5 +212,5 @@ inline void PrintErrorCode(MSDEBUG_ERROR_CODE code)
 }
 
 
-#endif // RT_STUB_LOG_H
 #endif
+#endif // RT_STUB_LOG_H

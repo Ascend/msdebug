@@ -5,23 +5,23 @@
 #ifdef MS_DEBUGGER
 #include "CommandObjectAscend.h"
 
-#include <memory>
-#include <sstream>
-#include <iostream>
-#include <iomanip>
-
+#include "Plugins/Process/elf-core/device-core/ElfCoreDeviceUtilities.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/AscendVerification.h"
-#include "lldb/Core/Debugger.h"
-#include "lldb/Utility//MessageDefines.h"
-#include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/Thread.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
-#include "Plugins/Process/elf-core/device-core/ElfCoreDeviceUtilities.h"
+#include "lldb/Target/Thread.h"
+#include "lldb/Utility//MessageDefines.h"
+#include "lldb/Utility/AscendVerification.h"
+#include "lldb/Utility/Status.h"
+
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <sstream>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -518,7 +518,7 @@ public:
 
   class OptionGroupAscendInfoBlocks : public OptionGroup {
   public:
-    OptionGroupAscendInfoBlocks() {}
+    OptionGroupAscendInfoBlocks() = default;
 
     ~OptionGroupAscendInfoBlocks() override = default;
 
@@ -1026,7 +1026,8 @@ protected:
     if (process == nullptr) {
       result.AppendError("Failed to get process info");
       return;
-    } else if (command.GetArgumentCount() != 1) {
+    }
+    if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
           "'%s' takes exactly one aic index argument:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
@@ -1102,7 +1103,8 @@ protected:
     if (process == nullptr) {
       result.AppendError("Failed to get process info");
       return;
-    } else if (command.GetArgumentCount() != 1) {
+    }
+    if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
           "'%s' takes exactly one aiv index argument:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
@@ -1201,7 +1203,8 @@ protected:
     if (target == nullptr) {
       result.AppendError("Failed to get target info");
       return;
-    } else if (command.GetArgumentCount() != 1) {
+    }
+    if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
           "'%s' takes exactly one aic index argument:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
@@ -1384,7 +1387,8 @@ protected:
     if (process == nullptr) {
       result.AppendError("Failed to get process info");
       return;
-    } else if (command.GetArgumentCount() != 1 && command.GetArgumentCount() != 3) {
+    }
+    if (command.GetArgumentCount() != 1 && command.GetArgumentCount() != 3) {
       result.AppendErrorWithFormat(
           "'%s' takes exactly one thread index argument:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());

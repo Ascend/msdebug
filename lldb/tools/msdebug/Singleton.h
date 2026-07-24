@@ -3,6 +3,7 @@
 #ifndef __SINGLETON_H__
 #define __SINGLETON_H__
 
+#include <utility>
 
 template <typename T, bool threadLocal, typename... Args>
 class Singleton {

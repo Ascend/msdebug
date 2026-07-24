@@ -5,17 +5,18 @@
 #ifdef MS_DEBUGGER
 
 #include "ProcessElfCoreDevice.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend910B.h"
-#include "Plugins/Process/elf-core/device-core/RegisterContextPOSIXCore_ascend.h"
+
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Process/Utility/AuxVector.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend910B.h"
 #include "Plugins/Process/elf-core/ThreadElfCore.h"
+#include "Plugins/Process/elf-core/device-core/RegisterContextPOSIXCore_ascend.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContextUnwind.h"
-#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "lldb/Utility/LLDBLog.h"
 
 using namespace lldb_private;
 using namespace lldb;

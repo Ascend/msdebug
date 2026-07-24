@@ -5,20 +5,22 @@
 #ifdef MS_DEBUGGER
 
 #include "runtime_stub.h"
+
+#include "AscendCommunicationClient.h"
+#include "HijackedLayerManager.h"
+#include "acl.h"
+#include "lldb/Utility/AscendVerification.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
+#include <fstream>
 #include <map>
-#include <unordered_set>
 #include <mutex>
 #include <string>
 #include <sys/stat.h>
-#include <fstream>
 #include <unistd.h>
-#include "acl.h"
-#include "AscendCommunicationClient.h"
-#include "HijackedLayerManager.h"
-#include "lldb/Utility/AscendVerification.h"
+#include <unordered_set>
 
 using namespace std;
 
@@ -458,9 +460,8 @@ int32_t SendIpcMemFreeInfo(uint64_t addr)
     if (it == addrSet.end()) {
         RT_STUB_LOG_ERROR("addr 0x%lx cannot be found in map\n", addr);
         return -1;
-    } else {
-        key = it->key;
     }
+    key = it->key;
 
   aclrtIpcMemCloseImpl(key.data());
 
@@ -882,9 +883,8 @@ int32_t ConvertToVisibleDeviceId(int32_t devId)
         ret, convertedId);
     if (ret != 0) {
         return devId;
-    } else {
-        return convertedId;
     }
+    return convertedId;
 }
 
 /* RUNTIME INSTRUMENTATION FUNCTION */
