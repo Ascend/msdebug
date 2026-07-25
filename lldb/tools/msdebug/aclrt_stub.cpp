@@ -34,12 +34,6 @@ static std::map<const void *, std::string> &GetStubFuncPtrNameMap()
     return inst;
 }
 
-static std::map<const void *, std::pair<const void *, std::string>> &GetSymbolToBinMap()
-{
-    static std::map<const void *, std::pair<const void *, std::string>> inst{};
-    return inst;
-}
-
 static std::map<const aclrtBinary, rtDevBinary_t> &GetDevBinaryMap()
 {
     static std::map<const aclrtBinary, rtDevBinary_t> inst{};
@@ -106,11 +100,14 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
           {"aclrtMemGetAddressRangeImpl",
            {"aclrtMemGetAddressRangeImpl",
             ACLRT_MEM_GET_ADDRESS_RANGE_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtGetUserDevIdByLogicDevIdImpl",
-           {"aclrtGetUserDevIdByLogicDevIdImpl",
-            ACLRT_GET_USER_DEVID_BY_LOGIC_DEVID_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtGetFuncBySymbolImpl",
-           {"aclrtGetFuncBySymbolImpl",
+          {"aclrtGetPhyDevIdByLogicDevIdImpl",
+           {"aclrtGetPhyDevIdByLogicDevIdImpl",
+            ACLRT_GET_PHY_DEVID_BY_LOGIC_DEVID_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtFunctionGetBinaryImpl",
+           {"aclrtFunctionGetBinaryImpl",
+            ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtGetFunctionNameImpl",
+           {"aclrtGetFunctionNameImpl",
             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
           {"aclrtSynchronizeStreamWithTimeoutImpl",
            {"aclrtSynchronizeStreamWithTimeoutImpl",
@@ -204,11 +201,11 @@ aclError aclrtSynchronizeStreamImpl(aclrtStream stream)
     return ret;
 }
 
-aclError aclrtGetUserDevIdByLogicDevIdImpl(const int32_t logicDevId,
-                                           int32_t *const userDevid) {
-  using FuncType = decltype(&aclrtGetUserDevIdByLogicDevIdImpl);
+aclError aclrtGetPhyDevIdByLogicDevIdImpl(const int32_t logicDevId,
+                                          int32_t *const phyDevId) {
+  using FuncType = decltype(&aclrtGetPhyDevIdByLogicDevIdImpl);
   auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-  auto ret = func(logicDevId, userDevid);
+  auto ret = func(logicDevId, phyDevId);
   if (ret != ACL_SUCCESS) {
     RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
     return ret;
@@ -305,10 +302,23 @@ std::string GetKernelNameFromStubFunc(const void *stubFunc)
 {
     const auto &stubFuncNameMap = GetStubFuncPtrNameMap();
     auto it = stubFuncNameMap.find(stubFunc);
-    if (it == stubFuncNameMap.end()) {
-        RT_STUB_LOG_INFO("stubFunc is not found in map\n");
-    } else {
-        return it->second;
+    if (it != stubFuncNameMap.end()) {
+      return it->second;
+    }
+    RT_STUB_LOG_INFO(
+        "stubFunc is not found in map, try aclrtGetFunctionNameImpl\n");
+    using FuncType = aclError (*)(aclrtFuncHandle, uint32_t, char *);
+    auto func = (FuncType)GetStubFuncPtr("aclrtGetFunctionNameImpl", false);
+    if (func != nullptr) {
+      std::string name(4096, '\0');
+      if (func(const_cast<aclrtFuncHandle>(stubFunc),
+               static_cast<uint32_t>(name.size()),
+               name.data()) == ACL_SUCCESS) {
+        std::string kernelName(name.c_str());
+        if (!kernelName.empty()) {
+          return kernelName;
+        }
+      }
     }
     return "anonymous";
 }
@@ -354,6 +364,22 @@ const char *aclrtGetSocNameImpl()
     return func();
 }
 
+aclrtBinHandle GetBinHandleByFuncHandle(aclrtFuncHandle funcHandle) {
+  using FuncType = aclError (*)(aclrtFuncHandle, aclrtBinHandle *);
+  auto func = (FuncType)GetStubFuncPtr("aclrtFunctionGetBinaryImpl", false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Get aclrtFunctionGetBinaryImpl stub failed\n");
+    return nullptr;
+  }
+  aclrtBinHandle binHandle = nullptr;
+  auto ret = func(funcHandle, &binHandle);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("aclrtFunctionGetBinaryImpl failed. ret=%d\n", ret);
+    return nullptr;
+  }
+  return binHandle;
+}
+
 uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle)
 {
     using FuncType = decltype(&aclrtGetFunctionAddrImpl);
@@ -378,9 +404,14 @@ uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle)
     }
 
     std::string targetKernelName = GetKernelNameFromStubFunc(funcHandle);
-    const void *handle = MapManager::Instance().GetHandle(funcHandle);
+    auto binHandle = GetBinHandleByFuncHandle(funcHandle);
+    if (binHandle == nullptr) {
+      RT_STUB_LOG_ERROR("GetBinHandleByFuncHandle failed for funcHandle=%p\n",
+                        static_cast<void *>(funcHandle));
+      return 0;
+    }
 
-    const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
+    const auto &kernelInfo = MapManager::Instance().GetKernelInfo(binHandle);
     pcStartAddr = GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
     static std::string soc_version = aclrtGetSocNameImpl();
     // 950
@@ -499,7 +530,12 @@ void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)
 
     ProcessAddrAsIpcMem(pcStartAddr);
 
-    const auto *binHandle = MapManager::Instance().GetHandle(funcHandle);
+    const auto binHandle = GetBinHandleByFuncHandle(funcHandle);
+    if (binHandle == nullptr) {
+      RT_STUB_LOG_ERROR("GetBinHandleByFuncHandle failed for funcHandle=%p\n",
+                        static_cast<void *>(funcHandle));
+      return;
+    }
     const auto &kernelInfo = MapManager::Instance().GetKernelInfo(binHandle);
     int32_t streamId{};
     auto ret = aclrtStreamGetIdImpl(stream, &streamId);
@@ -522,7 +558,7 @@ int32_t ConvertToVisibleDeviceIdIfPossible(int32_t devId)
     } catch (...) {
       RT_STUB_LOG_INFO("Try to convert visible device id failed, try to use "
                        "aclrt api again.");
-      auto ret = aclrtGetUserDevIdByLogicDevIdImpl(devId, &convertedId);
+      auto ret = aclrtGetPhyDevIdByLogicDevIdImpl(devId, &convertedId);
       if (ret != ACL_SUCCESS) {
         RT_STUB_LOG_INFO("Try to convert visible device id failed, do not "
                          "set ASCEND_RT_VISIBLE_DEVICES env");
@@ -608,7 +644,6 @@ aclError aclrtBinaryGetFunctionImpl(aclrtBinHandle binHandle,
   auto ret = func(binHandle, kernelName, funcHandle);
   if (ret == ACL_SUCCESS && *funcHandle) {
     GetStubFuncPtrNameMap()[*funcHandle] = kernelName;
-    MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
   }
   return ret;
 }
@@ -621,35 +656,8 @@ aclError aclrtBinaryGetFunctionByEntryImpl(aclrtBinHandle binHandle, uint64_t fu
     if (ret == ACL_SUCCESS && *funcHandle) {
         std::string kernelName = GetKernelNameByTilingKey(static_cast<const void *>(binHandle), funcEntry);
         GetStubFuncPtrNameMap()[*funcHandle] = kernelName;
-        MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
     }
     return ret;
-}
-
-aclError aclrtGetFuncBySymbolImpl(const void *symbol,
-                                  aclrtFuncHandle *funcHandle) {
-  using FuncType = decltype(&aclrtGetFuncBySymbolImpl);
-  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-  auto ret = func(symbol, funcHandle);
-  if (ret == ACL_SUCCESS && *funcHandle) {
-    auto info = GetSymbolToBinMap()[symbol];
-    auto *binHandle = info.first;
-    if (binHandle) {
-        GetStubFuncPtrNameMap()[*funcHandle] = info.second;
-        MapManager::Instance().AddFuncHandleMap(*funcHandle, binHandle);
-    }
-  }
-  return ret;
-}
-
-// only rt
-rtError_t rtRegisterFuncSymbol(void *binHandle, const void *symbol, const char *kernelName, void *reserve) {
-  RT_STUB_LOG_INFO("Enter rtRegisterFuncSymbol\n");
-  auto ret = rtRegisterFuncSymbolOrigin(binHandle, symbol, kernelName, reserve);
-  if (ret == ACL_SUCCESS && binHandle && kernelName) {
-    GetSymbolToBinMap()[symbol] = {binHandle, kernelName};
-  }
-  return ret;
 }
 
 aclError aclrtLaunchKernelWithConfigImpl(aclrtFuncHandle funcHandle,
