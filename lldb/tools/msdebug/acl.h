@@ -136,6 +136,7 @@ VISIBILITY_EXPORT aclError aclrtSetDeviceImpl(int32_t deviceId);
 
 VISIBILITY_EXPORT aclError aclrtGetFunctionAddrImpl(aclrtFuncHandle funcHandle, void **aicAddr, void **aivAddr);
 VISIBILITY_EXPORT aclError aclrtSynchronizeStreamWithTimeoutImpl(aclrtStream stream, int32_t timeout);
+VISIBILITY_EXPORT aclError aclrtSynchronizeDeviceWithTimeout(int32_t timeout);
 
 VISIBILITY_EXPORT aclError aclrtLaunchKernelWithHostArgsImpl(
     aclrtFuncHandle funcHandle, uint32_t blockDim, aclrtStream stream,

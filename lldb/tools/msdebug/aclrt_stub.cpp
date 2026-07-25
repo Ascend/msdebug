@@ -109,6 +109,9 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
           {"aclrtGetFunctionNameImpl",
            {"aclrtGetFunctionNameImpl",
             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtSynchronizeDeviceWithTimeoutImpl",
+           {"aclrtSynchronizeDeviceWithTimeoutImpl",
+            ACLRT_SYNCHRONIZE_DEVICE_WITH_TIMEOUT_NOT_FOUND_ERR, nullptr}},
           {"aclrtSynchronizeStreamWithTimeoutImpl",
            {"aclrtSynchronizeStreamWithTimeoutImpl",
             ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}},
@@ -741,6 +744,20 @@ aclError aclrtSynchronizeStreamWithTimeoutImpl(aclrtStream stream, int32_t timeo
         RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
     }
     return ret;
+}
+
+aclError aclrtSynchronizeDeviceWithTimeoutImpl(int32_t timeout) {
+  LayerGuard guard(HijackedLayerManager::Instance(), __FUNCTION__);
+  using FuncType = decltype(&aclrtSynchronizeDeviceWithTimeoutImpl);
+  RT_STUB_LOG_INFO("%s timeout=%d, pid=%u\n", __FUNCTION__, timeout, getpid());
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
+  // 为避免停在核函数中时间过长，出现流同步超时告警，因此检测到配置超时时间时替换为永不超时
+  constexpr int32_t TIMEOUT_FOR_DEBUG = -1;
+  auto ret = func(TIMEOUT_FOR_DEBUG);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
+  }
+  return ret;
 }
 
 aclError aclrtCreateContextImpl(aclrtContext *context, int32_t deviceId)

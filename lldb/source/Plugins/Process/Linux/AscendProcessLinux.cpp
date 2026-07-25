@@ -283,7 +283,9 @@ void AscendProcessLinux::HandleMsg(Socket *client_socket, const std::string &msg
     LLDB_LOG(log, "receive this device id for the first time, message is: {0}, original length is {1}",
              display_msg, msg.length());
   } else {
-    LLDB_LOG(log, "receive message for device id: {0}, pid: {1}, message is: {2}",
+    LLDB_LOG(log,
+             "receive message for device id: {0}, pid: {1}, message is: {2}, "
+             "size={3}",
              it->second.first, it->second.second, display_msg, msg.length());
   }
   // 让这个处理函数变成串行, 因为很多地方用到了m_client_socket，并行逻辑会乱
