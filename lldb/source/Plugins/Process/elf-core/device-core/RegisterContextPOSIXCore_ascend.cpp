@@ -40,12 +40,12 @@ RegisterContextPOSIXCore_ascend::RegisterContextPOSIXCore_ascend(
       m_register_info(std::move(register_info)) {}
 
 // Extract mask0 bits from reg_value, and replace mask1 bits in pc with those bits.
-inline void ReplacePCBit(uint32_t reg_value, uint64_t mask0, uint64_t mask1,
+inline bool ReplacePCBit(uint32_t reg_value, uint64_t mask0, uint64_t mask1,
                          uint64_t &pc) {
   Log *log = GetLog(LLDBLog::Thread);
   if (__builtin_popcountll(mask0) != __builtin_popcountll(mask1)) {
     LLDB_LOG(log, "Internel error: invalid mask, stop replacing, please check err_info_reg map table define.");
-    return;
+    return false;
   }
   uint64_t pc0 = reg_value & mask0;
   uint64_t l0 = __builtin_ctzll(mask0);
@@ -56,6 +56,7 @@ inline void ReplacePCBit(uint32_t reg_value, uint64_t mask0, uint64_t mask1,
     pc0 <<= (l1 - l0);
   }
   pc = (pc & ~(1ULL * mask1)) | pc0;
+  return pc0 != 0;
 }
 
 std::vector<ErrInfoReg>
@@ -85,9 +86,10 @@ RegisterContextPOSIXCore_ascend::GetValidRegInfos(const ErrRegMask &err_map) {
   return err_map.su_err_info_regs;
 }
 
-void RegisterContextPOSIXCore_ascend::FixPCByErrorInfoReg(
+bool RegisterContextPOSIXCore_ascend::FixPCByErrorInfoReg(
     const vector<ErrInfoReg> &err_info_regs, uint64_t &pc) {
   Log *log = GetLog(LLDBLog::Thread);
+  bool has_non_zero_pc = false;
   // hit one kind of xx_err_info register
   for (const auto &info_reg_mask : err_info_regs) {
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex(info_reg_mask.reg_num);
@@ -99,9 +101,12 @@ void RegisterContextPOSIXCore_ascend::FixPCByErrorInfoReg(
     for (const auto &p: info_reg_mask.pc_mask_map) {
       LLDB_LOG(log, "Start replace pc bit with err_info_value={0:x}, mask0={1:x}, mask1={2:x}, pc={3:x}",
                err_info_u32_value, p.first, p.second, pc);
-      ReplacePCBit(err_info_u32_value, p.first, p.second, pc);
+      if (ReplacePCBit(err_info_u32_value, p.first, p.second, pc)) {
+        has_non_zero_pc = true;
+      }
     }
   }
+  return has_non_zero_pc;
 }
 
 bool RegisterContextPOSIXCore_ascend::CheckAicErrorRegisterIsValid(
@@ -159,6 +164,11 @@ string RegisterContextPOSIXCore_ascend::GetStopErrorRegister() {
               "or no AIC_ERROR_X register value, stop fixing pc.");
       return "";
     }
+    uint64_t random_pc{};
+    bool valid = FixPCByErrorInfoReg(GetValidRegInfos(err_reg_mask), random_pc);
+    if (!valid) {
+      return "";
+    }
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex(err_reg_mask.err_info_regs[0].reg_num);
     return reg_info->name;
   }
@@ -203,9 +213,12 @@ void RegisterContextPOSIXCore_ascend::FixPC(uint64_t &pc) {
       return;
     }
     uint64_t new_pc = pc;
-    FixPCByErrorInfoReg(GetValidRegInfos(err_reg_mask), new_pc);
-    LLDB_LOG(log, "Got new_pc={0:x}, old_pc={1:x}", new_pc, pc);
-    pc = new_pc;
+    bool valid = FixPCByErrorInfoReg(GetValidRegInfos(err_reg_mask), new_pc);
+    LLDB_LOG(log, "Got new_pc={0:x}, old_pc={1:x}, is_new_pc_valid={2}", new_pc,
+             pc, valid);
+    if (valid) {
+      pc = new_pc;
+    }
   }
 }
 
