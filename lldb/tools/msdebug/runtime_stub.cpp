@@ -61,6 +61,16 @@ static void *g_handle = nullptr;
 static void *g_drvHandle = nullptr;
 static void GetDeviceId(int32_t* device);
 
+// 声明在aclrt_stub.cpp中定义的共享函数，供本文件使用
+extern std::map<std::pair<uint64_t, uint32_t>, unsigned int> &
+GetHalMemAdviseMap();
+extern MemAdviseRestoreInfo &GetMemAdviseRestoreInfo();
+extern drvError_t halMemAdviseOrigin(DVdeviceptr ptr, size_t count,
+                                     unsigned int advise, DVdevice device);
+extern void SetMemAdviseIfNecessary(uint64_t base_ptr, size_t psize,
+                                    int32_t deviceId);
+extern void RestoreMemAdvise();
+
 static std::map<const void *, std::string>& GetStubFuncToNameMap()
 {
     static std::map<const void *, std::string> inst{};
@@ -312,6 +322,7 @@ int32_t SendStreamId(uint32_t streamId)
 static void LaunchKernelPost(rtStream_t stream)
 {
     rtStreamSynchronize(stream);
+    RestoreMemAdvise();
 }
 
 /*
@@ -744,50 +755,32 @@ static rtError_t rtMemGetAddressRange(void *ptr, void **pbase, size_t *psize)
     return ret;
 }
 
-static drvError_t halMemAdvise(DVdeviceptr ptr, size_t count, unsigned int advise, DVdevice device)
-{
-    RT_STUB_LOG_INFO("Enter %s, ptr=%#llx, count=%lu, advise=%u\n", __FUNCTION__, ptr, count, advise);
-    using FuncType = decltype(&halMemAdvise);
-    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
-    if (func == nullptr) {
-        return 1;
-    }
-    return func(ptr, count, advise, device);
-}
-
-
 static void SetMemoryWritable(uint64_t pcStartAddr)
 {
-    static std::string soc_version = GetSocName();
-    // 950
-    if (!StartsWith(soc_version, "Ascend950")) {
-      return;
-    }
-    void *ptr = reinterpret_cast<void *>(pcStartAddr);
-    uint64_t *base_ptr{};
-    uint64_t psize{};
-    int ret = rtMemGetAddressRange(ptr, (void**)&base_ptr, &psize);
-    if (ret != ACL_SUCCESS) {
-        RT_STUB_LOG_WARNING("rtMemGetAddressRange get addr size failed, "
-                "If the memory used by your process is in a read-only state, "
-                "it may lead to failure in setting breakpoints.\n");
-        return;
-    }
-    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize=%lu\n",
-                     pcStartAddr, (uint64_t)base_ptr, psize);
-    int32_t deviceId{0};
-    GetDeviceId(&deviceId);
-    deviceId = ConvertToVisibleDeviceId(deviceId);
-    drvError_t hal_ret = halMemAdvise(pcStartAddr, psize, 3, deviceId);
-    if (hal_ret != 0) {
-      RT_STUB_LOG_WARNING(
-          "halMemAdvise failed, ret=%u, device_id=%u, "
-          "If the memory used by your process is in a read-only state, "
-          "it may lead to failure in setting breakpoints.\n",
-          hal_ret, deviceId);
-      return;
-    }
+  // 重置内存属性恢复信息，防止上一次launch的残留数据影响本次
+  GetMemAdviseRestoreInfo() = {};
+  static std::string soc_version = GetSocName();
+  // 950
+  if (!StartsWith(soc_version, "Ascend950")) {
     return;
+  }
+  void *ptr = reinterpret_cast<void *>(pcStartAddr);
+  uint64_t *base_ptr{};
+  uint64_t psize{};
+  int ret = rtMemGetAddressRange(ptr, (void **)&base_ptr, &psize);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_WARNING(
+        "rtMemGetAddressRange get addr size failed, "
+        "If the memory used by your process is in a read-only state, "
+        "it may lead to failure in setting breakpoints.\n");
+    return;
+  }
+  RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize=%lu\n",
+                   pcStartAddr, (uint64_t)base_ptr, psize);
+  int32_t deviceId{0};
+  GetDeviceId(&deviceId);
+  deviceId = ConvertToVisibleDeviceId(deviceId);
+  SetMemAdviseIfNecessary((uint64_t)base_ptr, psize, deviceId);
 }
 
 static uint64_t GetPcStartAddrDynamic(void *hdl, const uint64_t tilingKey)
