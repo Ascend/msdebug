@@ -45,13 +45,6 @@ msDebug工具支持调试所有的昇腾算子，包含Ascend C算子（Vector�
 |**调试信息展示**|查询算子运行的设备信息。|
 |**解析Core dump文件**|通过对异常算子dump文件的解析，即使在没有主动压测的情况下也能收集到足够的数据用于问题分析。|
 
-## 🌌 智能检索
-
-为提升文档查阅效率，我们提供多种高效检索方式：  
-🔹 [AI 问答（DeepWiki）](https://deepwiki.com/mindstudio-docs/master)：自然语言问答，快速把握项目架构与模块关系。  
-🔹 [AI 问答（ZRead）](https://zread.ai/mindstudio-docs/master)：中文问答体验更优，精准定位功能用法与细节。  
-🔹 [精确搜索（ReadTheDocs）](https://mindstudio-operator-tools-docs.readthedocs.io/zh-cn/latest/)：关键词全文检索，直达接口、参数与报错等信息。
-
 ## 🚀 快速入门
 
 详细操作步骤请参见《[msDebug 快速入门](docs/zh/quick_start/msdebug_quick_start.md)》。
@@ -71,6 +64,13 @@ msDebug工具支持调试所有的昇腾算子，包含Ascend C算子（Vector�
 ## ❓ FAQ
 
 常见问题及解决方案，请参见《[msDebug FAQ](docs/zh/support/msdebug_faq.md)》。
+
+## 🌌 智能检索
+
+为提升文档查阅效率，我们提供多种高效检索方式：  
+🔹 [AI 问答（DeepWiki）](https://deepwiki.com/mindstudio-docs/master)：自然语言问答，快速把握项目架构与模块关系。  
+🔹 [AI 问答（ZRead）](https://zread.ai/mindstudio-docs/master)：中文问答体验更优，精准定位功能用法与细节。  
+🔹 [精确搜索（ReadTheDocs）](https://mindstudio-operator-tools-docs.readthedocs.io/zh-cn/latest/)：关键词全文检索，直达接口、参数与报错等信息。
 
 ## 🛠️ 贡献指南
 
@@ -93,10 +93,10 @@ msDebug工具支持调试所有的昇腾算子，包含Ascend C算子（Vector�
 
 ## 🙏 致谢
 
-本工具由华为公司的下列部门联合贡献：
-🔹 昇腾计算MindStudio开发部
-🔹 昇腾计算生态使能部
-🔹 华为云昇腾云服务
-🔹 2012编译器实验室
-🔹 2012马尔科夫实验室
+本工具由华为公司的下列部门联合贡献：  
+🔹 昇腾计算MindStudio开发部  
+🔹 昇腾计算生态使能部  
+🔹 华为云昇腾云服务  
+🔹 2012编译器实验室  
+🔹 2012马尔科夫实验室  
 感谢来自社区的每一个 PR，欢迎贡献！
