@@ -22,6 +22,16 @@ struct StubFuncInfo {
     void *funcPtr;
 };
 
+// 保存kernel launch前修改的内存属性信息，供LaunchKernelPost恢复使用
+// 定义在共享头文件中，供aclrt_stub.cpp和runtime_stub.cpp共同使用
+struct MemAdviseRestoreInfo {
+  uint64_t ptr = 0;
+  size_t size = 0;
+  uint32_t device = 0;
+  unsigned int originalAdvise = 0;
+  bool needsRestore = false; // 是否需要在LaunchKernelPost中恢复
+};
+
 struct rtDevBinary_t {
     uint32_t magic;    // magic number
     uint32_t version;  // version of binary
