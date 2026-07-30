@@ -17,6 +17,7 @@ set(LIBEDIT_INSTALL_DIR "${PROJECT_BUILD_DIR}/libedit" CACHE PATH "Libedit insta
 ExternalProject_Add(libedit_project
     DOWNLOAD_COMMAND tar -xzf ${LIBEDIT_TAR_GZ} -C <BINARY_DIR>
     CONFIGURE_COMMAND cd <BINARY_DIR>/libedit-20230828-3.1 && ./configure
+        CC=${LIBEDIT_CC}
         LDFLAGS=${LIBEDIT_LDFLAGS}
         CPPFLAGS=${LIBEDIT_CPPFLAGS}
         --prefix=${LIBEDIT_INSTALL_DIR}
