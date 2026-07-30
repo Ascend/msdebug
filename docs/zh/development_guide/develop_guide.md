@@ -12,7 +12,7 @@
 
 ### 1.2 环境准备
 
-按照《[MindStudio工具开发环境安装指导](https://gitcode.com/Ascend/msot/blob/master/docs/zh/common/dev_env_setup.md)》完成开发环境的搭建。
+按照《[msDebug 安装指南 — 源码安装](../install_guide/msdebug_install_guide.md#231-环境准备)》章节完成编译和测试环境的搭建。
 
 > **说明：** 环境镜像的构建方法及配套软件版本由 MindStudio 统一镜像制作指南维护，本仓库不重复定义。
 

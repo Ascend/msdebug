@@ -1,4 +1,4 @@
-# MindStudio Debugger 安装指南
+# msDebug 安装指南
 
 <br>
 
