@@ -10,15 +10,15 @@ MindStudio Debugger（算子调试工具，msDebug）是一款面向昇腾设备
 
 - Kernel直调算子开发：Kernel直调。
 
-    Kernel直调的场景，详细信息可参考《Ascend C算子开发指南》中“[基于样例工程完成Kernel直调](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)”章节。具体操作请参见[上板调试Vector算子](../best_practices/msdebug_basic_cases.md#上板调试vector算子)。
+    Kernel直调的场景，详细信息可参考《Ascend C算子开发指南》中“[基于样例工程完成Kernel直调](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md)”章节。具体操作请参见[上板调试Vector算子](../best_practices/msdebug_basic_cases.md#上板调试vector算子)。
 
 - 工程化算子开发：单算子API调用。
 
-    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \>  [单算子API调用](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)”章节。具体操作请参见[调用Ascend CL单算子](../best_practices/msdebug_basic_cases.md#调用ascend-cl单算子)。
+    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \>  [单算子API调用](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/Aclnn%E7%AE%97%E5%AD%90%E5%B7%A5%E7%A8%8B%E5%8C%96%E5%BC%80%E5%8F%91/%E5%8D%95%E7%AE%97%E5%AD%90API%E8%B0%83%E7%94%A8.md)”章节。具体操作请参见[调用Ascend CL单算子](../best_practices/msdebug_basic_cases.md#调用ascend-cl单算子)。
 
 - AI框架算子适配：PyTorch框架。
 
-    通过PyTorch框架进行单算子调用的场景，详细信息可参考《[TorchNPU配套软件库](https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.1.0/zh/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md)》中OpPlugin插件。具体操作请参见[调试PyTorch接口调用的算子](../best_practices/msdebug_basic_cases.md#调试pytorch接口调用的算子)。
+    通过PyTorch框架进行单算子调用的场景，详细信息可参考《[TorchNPU配套软件库](https://www.hiascend.com/document/detail/zh/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/zh/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md)》中OpPlugin插件。具体操作请参见[调试PyTorch接口调用的算子](../best_practices/msdebug_basic_cases.md#调试pytorch接口调用的算子)。
 
 **补充说明**
 
@@ -52,7 +52,7 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --full
         ```
 
-    - 方法二：驱动安装时指定`--debug`参数，具体安装操作请参见《CANN 软件安装指南》中的“[安装NPU驱动固件](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_0005.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)”章节。
+    - 方法二：驱动安装时指定`--debug`参数，具体安装操作请参见《CANN 软件安装指南》中的“[安装NPU驱动固件](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum)”章节。
 
         ```bash
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --debug
@@ -413,7 +413,7 @@ msDebug工具支持以下两种启动方式：
 
         > [!NOTE]
         >
-        > - 基于Ascend C算子的Kernel侧框架执行一键式编译运行，可生成NPU侧可执行文件application，具体操作可参考《Ascend C算子开发指南》中的“Kernel直调算子开发 \>  [Kernel直调](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)”章节。
+        > - 基于Ascend C算子的Kernel侧框架执行一键式编译运行，可生成NPU侧可执行文件application，具体操作可参考《Ascend C算子开发指南》中的“Kernel直调算子开发 \>  [Kernel直调](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md)”章节。
         > - 若可执行文件有其他入参，则按照如下形式传入入参：
         >
         >    ```bash
@@ -437,7 +437,7 @@ msDebug工具支持以下两种启动方式：
 
         > [!NOTE]
         > 
-        > 通过PyTorch框架进行单算子调用的场景，详细信息可参考《[TorchNPU配套软件库](https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.1.0/zh/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md)》中OpPlugin插件。
+        > 通过PyTorch框架进行单算子调用的场景，详细信息可参考《[TorchNPU配套软件库](https://www.hiascend.com/document/detail/zh/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/zh/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md)》中OpPlugin插件。
 
 **调试退出**
 
@@ -463,7 +463,7 @@ msDebug工具支持以下两种启动方式：
 > [!NOTE]
 >
 > - 如果不指定，则仅对用户程序运行时首次设置的Device ID进行调试。
-> - Hccl接口不支持单步调试功能，具体接口明细请参见《Ascend C算子开发接口》中的“高阶API \> Hccl \>  [Hccl Kernel侧接口](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_0869.html)”章节。
+> - Hccl接口不支持单步调试功能，具体接口明细请参见《Ascend C算子开发接口》中的“高阶API \> Hccl \>  [Hccl Kernel侧接口](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/ascendcopapi/docs/api/SIMD-API/%E9%AB%98%E9%98%B6API/HCCL%E9%80%9A%E4%BF%A1%E7%B1%BB/HCCL-Kernel%E4%BE%A7%E6%8E%A5%E5%8F%A3/HCCL%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md)”章节。
 
 ```tex
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
@@ -1371,7 +1371,7 @@ Current stop state of all blocks:
 
 ### 使用示例
 
-1. 参见《应用开发指南 (C&C++)》的"acl API参考（C） \> 系统配置 \>  [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910beta3/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)"章节的配置文件示例（异常算子Dump配置），开启生成异常算子core文件的功能。
+1. 参见《应用开发指南 (C&C++)》的"acl API参考（C） \> 系统配置 \>  [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)"章节的配置文件示例（异常算子Dump配置），开启生成异常算子core文件的功能。
 
     > [!NOTE]
     > 

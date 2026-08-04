@@ -8,7 +8,7 @@
 
 **前期准备**
 
-- 单击[链接](https://gitcode.com/Ascend/mstt/tree/master/sample)获取样例工程，为进行算子调试做准备。
+- 单击[链接](https://gitcode.com/Ascend/mstt/blob/br_26.0.0_beta1/sample/README.md)获取样例工程，为进行算子调试做准备。
 - 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
@@ -243,7 +243,7 @@
     }
     ```
 
-4. 参考[算子编译部署](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html)完成算子的编译部署。<a id="步骤4算子编译"></a>
+4. 参考[算子编译部署](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md)章节完成算子的编译部署。<a id="步骤4算子编译"></a>
 5. 切换到msOpGen脚本install.sh所在目录，并参考[README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md)编译单算子调用应用并得到可执行文件**execute_add_op**。<a id="步骤5"></a>
 
     ```bash
@@ -311,7 +311,7 @@
     >    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
     >    ```
 
-- 已参考《[TorchNPU软件安装](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/installation_guide/installation_description.md)》，完成PyTorch框架和torch_npu插件的安装。
+- 已参考《[TorchNPU软件安装](https://www.hiascend.com/document/detail/zh/Pytorch/910/installguide/swinstall/docs/zh/installation_guide/installation_description.md)》，完成PyTorch框架和torch_npu插件的安装。
 - 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
@@ -334,7 +334,7 @@
     }
     ```
 
-3. 参考[算子编译部署](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html)，完成算子的编译部署。
+3. 参考[算子编译部署](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md)章节，完成算子的编译部署。
 4. 进入到样例目录，以命令行方式下载样例代码。参考[README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md)使用PyTorch调用方式调用AddCustom算子工程，并按照指导完成编译。
 
     ```bash
