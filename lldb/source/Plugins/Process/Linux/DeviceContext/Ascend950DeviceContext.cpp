@@ -340,20 +340,31 @@ public:
 
   bool Translate(uint64_t phys_addr, uint64_t &virt_addr,
                  uint64_t &offset) const {
+    Log *log = GetLog(LLDBLog::Process);
+    LLDB_LOGF(log, "searching element.phys_start >= 0x%lx", phys_addr);
     MemoryMapping key{phys_addr, 0, 0, {}};
-    auto it = m_mappings.lower_bound(key);
-    if (it != m_mappings.begin()) {
-      --it;
-      const auto &m = *it;
-      uint64_t phys_end = m.phys_start + m.size;
-
-      if (phys_addr >= m.phys_start && phys_addr < phys_end) {
-        offset = phys_addr - m.phys_start;
-        virt_addr = m.virt_start + offset;
-        return true;
-      }
+    auto it = m_mappings.upper_bound(key);
+    if (it == m_mappings.begin()) {
+      LLDB_LOGF(log, "cannot find element that is <= phys_addr=0x%lx",
+                phys_addr);
+      return false;
     }
-    return false;
+    --it;
+    const auto &m = *it;
+    uint64_t phys_end = m.phys_start + m.size;
+    LLDB_LOGF(log, "found element phys_start=0x%lx phys_end=0x%lx",
+              m.phys_start, phys_end);
+
+    if (phys_addr >= m.phys_start && phys_addr < phys_end) {
+      offset = phys_addr - m.phys_start;
+      virt_addr = m.virt_start + offset;
+      return true;
+    } else {
+      LLDB_LOGF(log,
+                "target addr 0x%lx is not in the range of the found element",
+                phys_addr);
+      return false;
+    }
   }
 
   // 移除映射
@@ -788,8 +799,8 @@ void Ascend950DTDeviceContext::AddIpcMemInfo(lldb::addr_t addr, size_t size,
     LLDB_LOG(log, "AddMapping failed");
     return;
   }
-  LLDB_LOG(log, "AddIpcMemInfo done addr=0x%lx sharedAddr=0x%lx size=%lu", addr,
-           sharedAddr, size);
+  LLDB_LOGF(log, "AddIpcMemInfo done addr=0x%lx sharedAddr=0x%lx size=%lu",
+            (uint64_t)addr, (uint64_t)sharedAddr, size);
 }
 
 void Ascend950DTDeviceContext::RemoveIpcMemInfo(lldb::addr_t addr) {
@@ -817,7 +828,7 @@ void Ascend950DTDeviceContext::RemoveIpcMemInfo(lldb::addr_t addr) {
   // remove addr from map
   g_ipc_mapper.RemoveMapping(addr);
 
-  LLDB_LOG(log, "RemoveIpcMemInfo done addr=0x%lx ", addr);
+  LLDB_LOGF(log, "RemoveIpcMemInfo done addr=0x%lx ", addr);
 }
 
 #endif // ifdef MS_DEBUGGER
