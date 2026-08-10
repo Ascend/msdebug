@@ -27,7 +27,7 @@ repos:
       - id: codespell
         args: [
             "-L",
-            "CANN,cann,NNAL,nnal,ASCEND,ascend,EnQue,CopyIn,ArchType,AND,ND,tbe,copyin,alog",
+            "CANN,cann,NNAL,nnal,ASCEND,ascend,EnQue,CopyIn,ArchType,AND,ND,tbe,copyin,alog,DEPENDEES",
             "--skip",
             "*.py,*.cpp,*.hpp,*.c,*.h",
           ]
@@ -53,14 +53,15 @@ repos:
     hooks:
       - id: clang-tidy
         name: clang-tidy (本地venv)
-        entry: clang-tidy
+        entry: pre-commit/clang-tidy-wrapper.sh
         language: system
         pass_filenames: true
         files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx)$
         args: [
           "--quiet",
           "--config-file=lldb/.clang-tidy",
-          "-p=.clang-tidy-build",
+          "-p",
+          "build",
           "--checks=-llvm-header-guard,-llvm-else-after-return,-llvm-qualified-auto,-misc-unconventional-assign-operator,-clang-diagnostic-error",
           "--extra-arg=-Wno-unknown-warning-option",
           "--extra-arg=-Wno-unknown-argument",
@@ -70,7 +71,7 @@ repos:
     hooks:
       - id: gitleaks-offline-scan
         name: Gitleaks Secret Scan(Local Binary)
-        entry: ./gitleaks
+        entry: gitleaks
         language: system
         pass_filenames: true
         args:

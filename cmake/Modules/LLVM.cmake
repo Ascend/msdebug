@@ -89,3 +89,13 @@ ExternalProject_Add(llvm_project
     BUILD_ALWAYS TRUE
     DEPENDS libedit_project
 )
+
+# 将内层 compile_commands.json 链接到 build/ 目录，供 clangd 等 IDE 工具使用
+ExternalProject_Add_Step(llvm_project symlink_compile_commands
+    COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BUILD_DIR}/compile_commands.json
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${LLVM_BINARY_DIR}/compile_commands.json
+        ${PROJECT_BUILD_DIR}/compile_commands.json
+    DEPENDEES build
+    COMMENT "Symlink compile_commands.json to build/ for clangd IDE support"
+)
