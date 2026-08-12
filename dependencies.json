@@ -1,6 +1,18 @@
 {
   "version": "1.0",
-  "artifact_spec": {},
+  "artifact_spec": {
+    "msdebug-prebuilt-llvm-lldb-x86_64": {
+      "url": "",
+      "sha256": "",
+      "path": "prebuilt/x86_64",
+      "note": "需在 x86_64 机器上执行 python build.py prebuild --tar 后发布并填写"
+    },
+    "msdebug-prebuilt-llvm-lldb-aarch64": {
+      "url": "https://gitcode.com/wiyr0/msdebug/releases/download/prebuilt-v26.0.1/msdebug-prebuilt-llvm-26.0.0-aarch64.tar.gz",
+      "sha256": "16010210b31862b79c2e2e8557ccec9814b10567b4e3b6d5e18bec5874f7c604",
+      "path": "prebuilt/aarch64"
+    }
+  },
   "dependency_sets": {
     "prod": {
       "submodules": [
@@ -8,7 +20,9 @@
         "third-party/libedit",
         "third-party/ncurses"
       ],
-      "artifacts": []
+      "artifacts": [
+        "msdebug-prebuilt-llvm-lldb-aarch64"
+      ]
     },
     "test": {
       "submodules": [
@@ -20,4 +34,3 @@
     }
   }
 }
-
