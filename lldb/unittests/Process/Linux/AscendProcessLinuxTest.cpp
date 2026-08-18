@@ -86,6 +86,15 @@ public:
                              uint8_t redirect_ifu = 0) const override {
         return Status();
     }
+
+    Status GetWarpsInfo(std::vector<WarpInfo> &warps_info,
+                        const InterruptPosInfo &pos_info) const override {
+      warps_info = m_warps_info;
+      return m_warps_status;
+    }
+
+    std::vector<WarpInfo> m_warps_info;
+    Status m_warps_status;
 };
 
 class AscendProcessLinuxTest : public testing::Test {
@@ -187,6 +196,261 @@ TEST_F(AscendProcessLinuxTest, SetBreakpoint) {
     uint32_t size = 8;
     EXPECT_THAT_ERROR(process->SetBreakpoint(addr, size, llvm::Triple::ArchType::hiipu64, false).
                         ToError(), llvm::Succeeded());
+}
+
+TEST(InterruptPosInfoTest, IsFirstStopPosition_FirstStop_ReturnsTrue) {
+  InterruptPosInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 1;
+  info.first_stop_core_type = CoreType::AIV;
+  info.first_stop_core_id = 1;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+  info.thread_pos = {1, 2, 3};
+  info.first_stop_thread_pos = {1, 2, 3};
+  EXPECT_TRUE(info.IsFirstStopPosition());
+}
+
+TEST(InterruptPosInfoTest, IsFirstStopPosition_DifferentCore_ReturnsFalse) {
+  InterruptPosInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 1;
+  info.first_stop_core_type = CoreType::AIV;
+  info.first_stop_core_id = 2;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+  EXPECT_FALSE(info.IsFirstStopPosition());
+}
+
+TEST(InterruptPosInfoTest, IsFirstStopPosition_DifferentCoreType_ReturnsFalse) {
+  InterruptPosInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 1;
+  info.first_stop_core_type = CoreType::AIC;
+  info.first_stop_core_id = 1;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+  EXPECT_FALSE(info.IsFirstStopPosition());
+}
+
+TEST(InterruptPosInfoTest,
+     IsFirstStopPosition_SimtDifferentThread_ReturnsFalse) {
+  InterruptPosInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 1;
+  info.first_stop_core_type = CoreType::AIV;
+  info.first_stop_core_id = 1;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  info.thread_pos = {1, 2, 3};
+  info.first_stop_thread_pos = {4, 5, 6};
+  EXPECT_FALSE(info.IsFirstStopPosition());
+}
+
+TEST(InterruptPosInfoTest, IsFirstStopPosition_SimtSameThread_ReturnsTrue) {
+  InterruptPosInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 1;
+  info.first_stop_core_type = CoreType::AIV;
+  info.first_stop_core_id = 1;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  info.thread_pos = {1, 2, 3};
+  info.first_stop_thread_pos = {1, 2, 3};
+  EXPECT_TRUE(info.IsFirstStopPosition());
+}
+
+TEST(InterruptPosInfoTest, InvalidPc_EqualsUint64Max) {
+  EXPECT_EQ(InterruptPosInfo::INVALID_PC, UINT64_MAX);
+}
+
+TEST(InterruptPosInfoTest, GetWarpId_ThreadId5_ReturnsWarp0) {
+  InterruptPosInfo info;
+  info.thread_info.thread_id = 5;
+  EXPECT_EQ(info.GetWarpId(), 0u);
+}
+
+TEST(InterruptPosInfoTest, GetWarpId_ThreadId32_ReturnsWarp1) {
+  InterruptPosInfo info;
+  info.thread_info.thread_id = 32;
+  EXPECT_EQ(info.GetWarpId(), 1u);
+}
+
+namespace {
+
+std::unique_ptr<AscendProcessLinux>
+CreateProcess(MainLoop &mainloop, NativeProcessLinux::Manager &manager,
+              GDBRemoteCommunicationServerLLGS &gdb_server,
+              std::shared_ptr<FakeDeviceContext> &device_ctx) {
+  int terminal_fd = 3;
+  ::pid_t pid = 11111;
+  ArchSpec arch = ArchSpec("hiipu64");
+  llvm::ArrayRef<::pid_t> tids;
+  auto process = std::make_unique<AscendProcessLinux>(
+      pid, terminal_fd, gdb_server, arch, manager, tids);
+  device_ctx = std::make_shared<FakeDeviceContext>();
+  process->m_device_context = device_ctx;
+  return process;
+}
+
+} // namespace
+
+TEST_F(AscendProcessLinuxTest, FixSimtPC_SimtCoreMatchingWarp_UpdatesPC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  WarpInfo warp{};
+  warp.warp_id = 0;
+  warp.simt_pc = 0x1000;
+  device_ctx->m_warps_info = {warp};
+
+  process->m_pos_info.thread_info.thread_id = 5; // warp_id = 0
+
+  CoreInfo core_info{};
+  core_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  core_info.pc = 0;
+
+  process->FixSimtPC(core_info);
+
+  EXPECT_EQ(core_info.pc, 0x1000ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtPC_NonSimtCore_DoesNotUpdatePC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  CoreInfo core_info{};
+  core_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+  core_info.pc = 0x200;
+
+  process->FixSimtPC(core_info);
+
+  EXPECT_EQ(core_info.pc, 0x200ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtPC_GetWarpsInfoFailed_DoesNotUpdatePC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_warps_status = Status("query warps info failed");
+
+  CoreInfo core_info{};
+  core_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  core_info.pc = 0x200;
+
+  process->FixSimtPC(core_info);
+
+  EXPECT_EQ(core_info.pc, 0x200ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtPC_NoMatchingWarp_DoesNotUpdatePC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  WarpInfo warp{};
+  warp.warp_id = 1;
+  warp.simt_pc = 0x3000;
+  device_ctx->m_warps_info = {warp};
+
+  process->m_pos_info.thread_info.thread_id = 5; // warp_id = 0
+
+  CoreInfo core_info{};
+  core_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  core_info.pc = 0x200;
+
+  process->FixSimtPC(core_info);
+
+  EXPECT_EQ(core_info.pc, 0x200ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, GetStoppedCorePC_NonSimtCore_ReturnsPC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  CoreInfo core_info{};
+  core_info.core_id = 0;
+  core_info.core_type = CoreType::AIV;
+  core_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+  core_info.pc = 0x200;
+  process->m_cores_info = {core_info};
+
+  process->m_pos_info.core_id = 0;
+  process->m_pos_info.core_type = CoreType::AIV;
+
+  lldb::addr_t pc = 0;
+  Status error = process->GetStoppedCorePC(pc);
+
+  EXPECT_TRUE(error.Success());
+  EXPECT_EQ(pc, 0x200ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, GetStoppedCorePC_SimtCore_ReturnsUpdatedPC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  WarpInfo warp{};
+  warp.warp_id = 0;
+  warp.simt_pc = 0x1000;
+  device_ctx->m_warps_info = {warp};
+
+  CoreInfo core_info{};
+  core_info.core_id = 0;
+  core_info.core_type = CoreType::AIV;
+  core_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  core_info.pc = 0;
+  process->m_cores_info = {core_info};
+
+  process->m_pos_info.core_id = 0;
+  process->m_pos_info.core_type = CoreType::AIV;
+  process->m_pos_info.thread_info.thread_id = 5; // warp_id = 0
+
+  lldb::addr_t pc = 0;
+  Status error = process->GetStoppedCorePC(pc);
+
+  EXPECT_TRUE(error.Success());
+  EXPECT_EQ(pc, 0x1000ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, GetStoppedCorePC_NoMatchingCore_Fails) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  CoreInfo core_info{};
+  core_info.core_id = 0;
+  core_info.core_type = CoreType::AIC;
+  core_info.pc = 0x200;
+  process->m_cores_info = {core_info};
+
+  process->m_pos_info.core_id = 5;
+  process->m_pos_info.core_type = CoreType::AIV;
+
+  lldb::addr_t pc = 0;
+  Status error = process->GetStoppedCorePC(pc);
+
+  EXPECT_TRUE(error.Fail());
 }
 
 #endif

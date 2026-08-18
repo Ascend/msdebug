@@ -1145,29 +1145,39 @@ protected:
     stop_info.core_type = matched_core_info.core_type;
     stop_info.pos_type = matched_core_info.pos_type;
     if (stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
-      // swtch to any active thread
-      std::vector<WarpInfo> warps_info;
-      error = process->GetWarpsInfo(warps_info);
-      if (error.Fail()) {
-        result.AppendErrorWithFormatv("Failed to get warps info: {0}", error);
-        return;
-      }
+      ThreadDim thread_dim = {matched_core_info.thread_dim_x,
+                              matched_core_info.thread_dim_y,
+                              matched_core_info.thread_dim_z};
       uint32_t linear_idx = 0;
-      for (size_t i = 0; i < warps_info.size(); i++) {
-        if (warps_info[i].exec_mask > 0) {
-          linear_idx += __builtin_ctz(warps_info[i].exec_mask);
-          break;
+      // restore the previous focused thread of this aiv core
+      ThreadPos saved_pos{};
+      bool restored = process->GetAivThreadFocus(index_id, saved_pos) &&
+                      saved_pos.x < thread_dim.x && saved_pos.y < thread_dim.y &&
+                      saved_pos.z < thread_dim.z;
+      if (restored) {
+        linear_idx = ComputeLinearIdx(saved_pos, thread_dim);
+      } else {
+        // switch to any active thread
+        std::vector<WarpInfo> warps_info;
+        error = process->GetWarpsInfo(warps_info);
+        if (error.Fail()) {
+          result.AppendErrorWithFormatv("Failed to get warps info: {0}", error);
+          return;
         }
-        linear_idx += 32;
+        for (size_t i = 0; i < warps_info.size(); i++) {
+          if (warps_info[i].exec_mask > 0) {
+            linear_idx += __builtin_ctz(warps_info[i].exec_mask);
+            break;
+          }
+          linear_idx += 32;
+        }
+        // not found any active thread, use first
+        if (linear_idx == 32 * warps_info.size()) {
+          linear_idx = 0;
+        }
       }
-      // not found any active thread, use first
-      if (linear_idx == 32 * warps_info.size()) {
-        linear_idx = 0;
-      }
-      stop_info.thread_pos =
-          LinearIdxToThreadPos(linear_idx, {matched_core_info.thread_dim_x,
-                                            matched_core_info.thread_dim_y,
-                                            matched_core_info.thread_dim_z});
+      stop_info.thread_pos = LinearIdxToThreadPos(linear_idx, thread_dim);
+      process->SetThreadOnFocus(linear_idx);
     }
     // set thread_pos
     process->SetDeviceStopInfoCached(stop_info);

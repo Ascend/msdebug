@@ -110,6 +110,9 @@ struct ThreadPos {
   uint16_t x;
   uint16_t y;
   uint16_t z;
+  bool operator==(const ThreadPos &rhs) const {
+    return x == rhs.x && y == rhs.y && z == rhs.z;
+  }
 };
 
 static_assert(sizeof(CoreInfo) <= 64,
@@ -183,6 +186,7 @@ struct MemoryTypeInfo {
 
 //
 struct InterruptPosInfo {
+  static constexpr uint64_t INVALID_PC = UINT64_MAX;
   CoreType core_type;
   bool single_core_run;
   bool single_warp_run;
@@ -193,6 +197,7 @@ struct InterruptPosInfo {
   ThreadInfo thread_info;
   uint32_t first_stop_core_id;
   CoreType first_stop_core_type;
+  ThreadPos first_stop_thread_pos;
 
   void Update(const InterruptEvent &event) {
     first_stop_core_id = core_id = event.core_id;
@@ -208,6 +213,7 @@ struct InterruptPosInfo {
       thread_pos.z = thread_info.thread_id / thread_info.thread_dim_x /
                      thread_info.thread_dim_y;
     }
+    first_stop_thread_pos = thread_pos;
   }
 
   void Reset() {
@@ -215,7 +221,7 @@ struct InterruptPosInfo {
     core_type = CoreType::UNKNOWN_CORE_TYPE;
     pos_type = InterruptPosType::SU_INTERRUPT;
     thread_pos = ThreadPos{};
-    pc = -1;
+    pc = INVALID_PC;
     // 默认设置所有warp同步调试
     single_warp_run = false;
     thread_info = ThreadInfo{};
@@ -227,6 +233,12 @@ struct InterruptPosInfo {
 
   uint16_t GetWarpId() const {
     return thread_info.thread_id / 32U;
+  }
+
+  bool IsFirstStopPosition() const {
+    return first_stop_core_type == core_type && first_stop_core_id == core_id &&
+           (pos_type != InterruptPosType::VEC_INTERRUPT_SIMT ||
+            thread_pos == first_stop_thread_pos);
   }
 };
 

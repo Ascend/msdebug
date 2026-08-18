@@ -53,7 +53,8 @@ public:
 
   Status GetDeviceInfo(DeviceInfo &info) override;
   Status GetCoresInfo(std::vector<CoreInfo> &info) override;
-  Status GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache = false) override;
+  Status GetCoreInfo(uint32_t idx, CoreInfo &info,
+                     bool flush_cache = false) override;
   Status GetWarpsInfo(std::vector<WarpInfo> &warps_info) override;
   Status GetStoppedCorePC(lldb::addr_t &pc) override;
   Status GetKernelInfo(KernelInfo &info) override;
@@ -104,12 +105,14 @@ private:
   HandleResult HandleStubIpcMemInfo(const IpcMemInfoMsg& ipc_mem_info_msg);
 
   void FixSimdPC(uint64_t &pc);
+  void FixSimtPC(CoreInfo &core_info);
 
 private:
   std::shared_ptr<AscendCommunicationServer> m_server;
   const Socket *m_client_socket = nullptr;
   int m_socket_fd;
   InterruptPosInfo m_pos_info{};
+  CoreStatus m_stop_reason{};
   std::shared_ptr<DeviceContext> m_device_context;
   std::vector<CoreInfo> m_cores_info;
   std::vector<std::function<Status(void)>> m_lazy_calls;

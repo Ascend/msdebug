@@ -708,9 +708,28 @@ void AscendProcessLinux::FixSimdPC(uint64_t &pc) {
   if (m_latest_vf_start_pc) {
     pc &= low18bit;
     if ((pc & low18bit) < (m_latest_vf_start_pc & low18bit)) {
-      pc |= (m_latest_vf_start_pc & (~low18bit)) + (1u << 18);
+      pc |= (m_latest_vf_start_pc & (~low18bit)) + (1U << 18);
     } else {
       pc |= m_latest_vf_start_pc & (~low18bit);
+    }
+  }
+}
+
+void AscendProcessLinux::FixSimtPC(CoreInfo &core_info) {
+  if (core_info.pos_type != InterruptPosType::VEC_INTERRUPT_SIMT) {
+    return;
+  }
+  std::vector<WarpInfo> warps_info{};
+  Status error = GetWarpsInfo(warps_info);
+  if (error.Fail()) {
+    Log *log = GetLog(LLDBLog::Process);
+    LLDB_LOG(log, "Get warps info failed when fix core pc: {0}", error);
+    return;
+  }
+  for (const auto &warp : warps_info) {
+    if (warp.warp_id == m_pos_info.GetWarpId()) {
+      core_info.pc = warp.simt_pc;
+      break;
     }
   }
 }
@@ -721,6 +740,7 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
   if (info.cmd_type == CmdType::INTERRUPT_EVENT) {
     const InterruptEvent *param = (const InterruptEvent*)info.recv_msg;
     InterruptEvent event = *param;
+    m_stop_reason = event.status;
     if (param->pos_type == InterruptPosType::VEC_INTERRUPT_SIMD) {
       LLDB_LOG(log, "latest vf start pc={0:x}", m_latest_vf_start_pc);
       FixSimdPC(event.pc);
@@ -834,7 +854,7 @@ void AscendProcessLinux::ResumeDevice() {
     return;
   }
   m_device_context->Resume(m_pos_info);
-  m_pos_info.pc = -1;
+  m_pos_info.pc = InterruptPosInfo::INVALID_PC;
 }
 
 Status AscendProcessLinux::SingleStep() {
@@ -934,7 +954,8 @@ Status AscendProcessLinux::GetCoresInfo(std::vector<CoreInfo> &info) {
   return error;
 }
 
-Status AscendProcessLinux::GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache) {
+Status AscendProcessLinux::GetCoreInfo(uint32_t idx, CoreInfo &info,
+                                       bool flush_cache) {
   Status error;
   if (m_cores_info.empty() || flush_cache) {
     error = GetCoresInfo(m_cores_info);
@@ -946,6 +967,11 @@ Status AscendProcessLinux::GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool
     error.SetErrorStringWithFormatv("out of index: idx={0}, size={1}",
                                     idx, m_cores_info.size());
     return error;
+  }
+  // if switch thread, we need update core pc
+  if (m_cores_info[idx].core_id == m_pos_info.core_id &&
+      m_cores_info[idx].core_type == m_pos_info.core_type) {
+    FixSimtPC(m_cores_info[idx]);
   }
   info = m_cores_info[idx];
   return error;
@@ -966,9 +992,11 @@ Status AscendProcessLinux::GetStoppedCorePC(addr_t &pc) {
       return error;
     }
   }
-
-  for (const auto &core_info: m_cores_info) {
-    if (core_info.core_id == m_pos_info.core_id && core_info.core_type == m_pos_info.core_type) {
+  for (auto &core_info : m_cores_info) {
+    if (core_info.core_id == m_pos_info.core_id &&
+        core_info.core_type == m_pos_info.core_type) {
+      // if switch thread, we need update core pc
+      FixSimtPC(core_info);
       pc = core_info.pc;
       return error;
     }
@@ -996,14 +1024,13 @@ Status AscendProcessLinux::ReadDeviceRegisterValue(const RegisterInfo *reg_info,
     return Status("device context is null!");
   }
   // pc is -1, not stop in device
-  if (m_pos_info.pc == UINT64_MAX) {
+  if (m_pos_info.pc == InterruptPosInfo::INVALID_PC) {
     return Status("Current not stop in device");
   }
   Status error;
   if (reg_info->kinds[lldb::eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC) {
-    if (m_pos_info.pc != static_cast<uint64_t>(-1) &&
-        m_pos_info.first_stop_core_type == m_pos_info.core_type &&
-        m_pos_info.first_stop_core_id == m_pos_info.core_id) {
+
+    if (m_pos_info.IsFirstStopPosition()) {
       value.SetUInt64(m_pos_info.pc);
       return error;
     }

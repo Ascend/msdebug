@@ -501,6 +501,7 @@ public:
   static bool HandleDeviceProcessStateChanged(const lldb::ProcessSP &process_sp);
   virtual void SetDeviceCoredumpEnable(bool flag);
   virtual bool DeviceCoredumpEnable() const;
+  bool GetAivThreadFocus(uint32_t core_id, ThreadPos &pos) const;
 
   // We need to update stop info reason after thread created,
   // then we can read register value to get specific aicore error.
@@ -2829,6 +2830,7 @@ void PruneThreadPlans();
   bool m_single_core_mode {false};
   std::map<std::string, std::string> m_device_core_stop_reason;
   bool m_device_coredump {false};
+  std::map<uint32_t, ThreadPos> m_aiv_thread_focus;
 #endif
 
 protected:

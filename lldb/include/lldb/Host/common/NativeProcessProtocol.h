@@ -116,7 +116,10 @@ public:
   virtual void SetThreadOnFocus(const uint32_t &linear_idx) = 0;
   virtual Status GetDeviceInfo(DeviceInfo &device_info) = 0;
   virtual Status GetCoresInfo(std::vector<CoreInfo> &info) = 0;
-  virtual Status GetCoreInfo(const uint32_t &idx, CoreInfo &info, bool flush_cache = false) { return Status(); }
+  virtual Status GetCoreInfo(uint32_t idx, CoreInfo &info,
+                             bool flush_cache = false) {
+    return Status();
+  }
   virtual Status GetWarpsInfo(std::vector<WarpInfo> &info) = 0;
   virtual Status GetStoppedCorePC(lldb::addr_t &pc) { return Status(); }
   virtual Status GetKernelInfo(KernelInfo &info) = 0;

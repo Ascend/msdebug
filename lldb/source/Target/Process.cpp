@@ -6581,6 +6581,12 @@ void Process::GetDeviceStopInfoCached(DeviceStopInfo &info) const
 
 void Process::SetDeviceStopInfoCached(const DeviceStopInfo &info) {
   m_device_stop_info = info;
+  // Remember the last focused thread of each aiv core, so that switching back
+  // to a previous aiv core can restore its thread focus within the same stop.
+  if (info.core_type == CoreType::AIV &&
+      info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+    m_aiv_thread_focus[info.core_id] = info.thread_pos;
+  }
   ProcessStatus::Instance().SetStatus(IsStopInDevice());
 }
 
@@ -6674,6 +6680,11 @@ bool Process::HandleDeviceProcessStateChanged(const ProcessSP &process_sp) {
     process_sp->SetDeviceSingleCoreRunFlag(false);
   }
   process_sp->RefreshStopReason(thread_sp);
+  if (!process_sp->m_single_core_mode) {
+    // A new multi-core stop starts a new cycle, the previous aiv thread focus
+    // history is no longer valid.
+    process_sp->m_aiv_thread_focus.clear();
+  }
   if (process_sp->m_single_core_mode) {
     process_sp->SetDeviceSingleCoreRunFlag(false);
   }
@@ -6686,6 +6697,15 @@ void Process::SetDeviceCoredumpEnable(bool flag) {
 
 bool Process::DeviceCoredumpEnable() const {
   return m_device_coredump;
+}
+
+bool Process::GetAivThreadFocus(uint32_t core_id, ThreadPos &pos) const {
+  auto iter = m_aiv_thread_focus.find(core_id);
+  if (iter == m_aiv_thread_focus.end()) {
+    return false;
+  }
+  pos = iter->second;
+  return true;
 }
 
 const SummaryInfo& Process::GetSummaryInfo() {

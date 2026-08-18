@@ -304,4 +304,76 @@ TEST_F(ProcessElfCoreDeviceInstanceTest, GetAuxvData_EmptyState_BasePcIsZero) {
   EXPECT_GT(auxv.GetByteSize(), 0u);
 }
 
+TEST_F(ProcessElfCoreDeviceInstanceTest,
+       SetDeviceStopInfoCached_AivSimt_RemembersThreadFocus) {
+  Process *process = m_process_sp.get();
+  DeviceStopInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 3;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  info.thread_pos = {1, 2, 3};
+  process->SetDeviceStopInfoCached(info);
+
+  ThreadPos pos;
+  EXPECT_TRUE(process->GetAivThreadFocus(3, pos));
+  EXPECT_EQ(pos.x, 1u);
+  EXPECT_EQ(pos.y, 2u);
+  EXPECT_EQ(pos.z, 3u);
+}
+
+TEST_F(ProcessElfCoreDeviceInstanceTest,
+       SetDeviceStopInfoCached_NonSimt_DoesNotRemember) {
+  Process *process = m_process_sp.get();
+  DeviceStopInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 3;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+  info.thread_pos = {1, 2, 3};
+  process->SetDeviceStopInfoCached(info);
+
+  ThreadPos pos;
+  EXPECT_FALSE(process->GetAivThreadFocus(3, pos));
+}
+
+TEST_F(ProcessElfCoreDeviceInstanceTest,
+       SetDeviceStopInfoCached_AicCore_DoesNotRemember) {
+  Process *process = m_process_sp.get();
+  DeviceStopInfo info;
+  info.core_type = CoreType::AIC;
+  info.core_id = 3;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  info.thread_pos = {1, 2, 3};
+  process->SetDeviceStopInfoCached(info);
+
+  ThreadPos pos;
+  EXPECT_FALSE(process->GetAivThreadFocus(3, pos));
+}
+
+TEST_F(ProcessElfCoreDeviceInstanceTest,
+       GetAivThreadFocus_NotRemembered_ReturnsFalse) {
+  Process *process = m_process_sp.get();
+  ThreadPos pos;
+  EXPECT_FALSE(process->GetAivThreadFocus(99, pos));
+}
+
+TEST_F(ProcessElfCoreDeviceInstanceTest,
+       SetDeviceStopInfoCached_SameCoreAgain_OverwritesFocus) {
+  Process *process = m_process_sp.get();
+  DeviceStopInfo info;
+  info.core_type = CoreType::AIV;
+  info.core_id = 3;
+  info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  info.thread_pos = {1, 2, 3};
+  process->SetDeviceStopInfoCached(info);
+
+  info.thread_pos = {4, 5, 6};
+  process->SetDeviceStopInfoCached(info);
+
+  ThreadPos pos;
+  EXPECT_TRUE(process->GetAivThreadFocus(3, pos));
+  EXPECT_EQ(pos.x, 4u);
+  EXPECT_EQ(pos.y, 5u);
+  EXPECT_EQ(pos.z, 6u);
+}
+
 #endif
