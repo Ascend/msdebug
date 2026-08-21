@@ -6,8 +6,10 @@
 
 #include "HijackedLayerManager.h"
 #include "acl.h"
+#include "elf_symbol_check.h"
 #include "runtime_stub.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
@@ -15,6 +17,7 @@
 #include <iomanip>
 #include <map>
 #include <mutex>
+#include <string>
 #include <unistd.h>
 #include <unordered_set>
 
@@ -114,9 +117,9 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
           {"aclrtMemGetAddressRangeImpl",
            {"aclrtMemGetAddressRangeImpl",
             ACLRT_MEM_GET_ADDRESS_RANGE_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtGetPhyDevIdByLogicDevIdImpl",
-           {"aclrtGetPhyDevIdByLogicDevIdImpl",
-            ACLRT_GET_PHY_DEVID_BY_LOGIC_DEVID_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtGetLogicDevIdByUserDevIdImpl",
+           {"aclrtGetLogicDevIdByUserDevIdImpl",
+            ACLRT_GET_LOGIC_DEVID_BY_USER_DEVID_IMPL_NOT_FOUND_ERR, nullptr}},
           {"aclrtFunctionGetBinaryImpl",
            {"aclrtFunctionGetBinaryImpl",
             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
@@ -218,11 +221,11 @@ aclError aclrtSynchronizeStreamImpl(aclrtStream stream)
     return ret;
 }
 
-aclError aclrtGetPhyDevIdByLogicDevIdImpl(const int32_t logicDevId,
-                                          int32_t *const phyDevId) {
-  using FuncType = decltype(&aclrtGetPhyDevIdByLogicDevIdImpl);
+aclError aclrtGetLogicDevIdByUserDevIdImpl(const int32_t userDevid,
+                                           int32_t *const logicDevId) {
+  using FuncType = decltype(&aclrtGetLogicDevIdByUserDevIdImpl);
   auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
-  auto ret = func(logicDevId, phyDevId);
+  auto ret = func(userDevid, logicDevId);
   if (ret != ACL_SUCCESS) {
     RT_STUB_LOG_ERROR("%s failed. ret=%d\n", __FUNCTION__, ret);
     return ret;
@@ -236,8 +239,10 @@ void OpenAclrtLib() {
     if (toolkitPath == nullptr) {
       ThrowErrorCode(ASCEND_TOOLKIT_HOME_NOT_FOUND_ERR);
     }
+    std::string soName = GetAclRuntimeLibName(toolkitPath);
+    RT_STUB_LOG_INFO("will open so name %s\n", soName.c_str());
     std::string runtimeLibPath(toolkitPath);
-    runtimeLibPath += "/lib64/libacl_rt_impl.so";
+    runtimeLibPath += "/lib64/lib" + soName + ".so";
     g_handle = dlopen(runtimeLibPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if (g_handle == nullptr) {
       std::string oldAclImplPath(toolkitPath);
@@ -581,7 +586,7 @@ int32_t ConvertToVisibleDeviceIdIfPossible(int32_t devId)
     } catch (...) {
       RT_STUB_LOG_INFO("Try to convert visible device id failed, try to use "
                        "aclrt api again.");
-      auto ret = aclrtGetPhyDevIdByLogicDevIdImpl(devId, &convertedId);
+      auto ret = aclrtGetLogicDevIdByUserDevIdImpl(devId, &convertedId);
       if (ret != ACL_SUCCESS) {
         RT_STUB_LOG_INFO("Try to convert visible device id failed, do not "
                          "set ASCEND_RT_VISIBLE_DEVICES env");
