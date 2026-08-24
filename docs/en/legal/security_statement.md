@@ -14,11 +14,11 @@ echo 2 > /proc/sys/kernel/randomize_va_space
 
 2. If a tool depends on CANN, install the CANN package under the same non-privileged user. After running the `source` command, do not modify the environment variables in `set_env.sh`.
 
-3. Before using any tools, set umask to `0027` or stricter to ensure generated files meet minimum security requirements.
+3. Before using any tools, set `umask` to 0027 or stricter to ensure generated files meet minimum security requirements.
 
-4. This tool is for development. No restrictions are placed on the owner and permissions for installation, nor on the owner and permissions for the file objects that the tool processes. You need to assign appropriate owners and permissions based on the application scenario and ensure that the file content processed by the tool is secure and trustworthy.
- 	 
-5. When you provide input to the tool, ensure that the content is secure and trustworthy and avoid symbolic links. Convert any file to a real absolute path before you input it into the tool.
+4. This tool is a development-phase tool. It imposes no restrictions on the installation owner or permissions, nor on the owner or permissions of the file objects it processes. You need to assign appropriate owners and permissions based on the usage scenario and ensure that the content of the files processed by the tool is secure and trustworthy.
+
+5. When providing input to the tool, ensure that the content is secure and trustworthy. Avoid symbolic links, and convert any file to a real absolute path before providing it to the tool.
 
 ## File Permission Control
 
@@ -26,33 +26,33 @@ echo 2 > /proc/sys/kernel/randomize_va_space
 
  2. Proper permission control is essential during installation and use. For details, see the following table.
 
-## File Permission Reference 
+    **File permissions**
 
-| Type                              | Maximum Linux Permission|
-| ---------------------------------- | ------------------- |
-| Home directory                        | 750 (rwxr-x---)   |
-| Program files (including scripts and library files)    | 550 (r-xr-x---)   |
-| Program file directory                      | 550 (r-xr-x---)   |
-| Configuration file                          | 640 (rw-r-----)   |
-| Configuration file directory                      | 750 (rwxr-x---)   |
-| Log files (recorded or archived)    | 440 (r--r-----)   |
-| Log files (being recorded)                | 640 (rw-r-----)   |
-| Log file directory                      | 750 (rwxr-x---)   |
-| Debug files                         | 640 (rw-r-----)   |
-| Debug file directory                     | 750 (rwxr-x---)   |
-| Temporary file directory                      | 750 (rwxr-x---)   |
-| Maintenance and upgrade file directory                  | 770 (rwxrwx---)   |
-| Service data files                     | 640 (rw-r-----)  |
-| Service data file directory                  | 750 (rwxr-x---)   |
-| Key components, private keys, certificates, and ciphertext file directory| 700 (rwx------)   |
-| Key components, private keys, certificates, and ciphertext files    | 600 (rw-------)   |
-| APIs and scripts for encryption and decryption            | 500 (r-x------)   |
+    | Type                              | Maximum Linux Permission |
+    | ---------------------------------- | ------------------- |
+    | Home directory                        | 750 (rwxr-x---)   |
+    | Program files (including scripts and library files)    | 550 (r-xr-x---)   |
+    | Program file directory                      | 550 (r-xr-x---)   |
+    | Configuration file                          | 640 (rw-r-----)   |
+    | Configuration file directory                      | 750 (rwxr-x---)   |
+    | Log files (recorded or archived)    | 440 (r--r-----)   |
+    | Log files (being recorded)                | 640 (rw-r-----)   |
+    | Log file directory                      | 750 (rwxr-x---)   |
+    | Debug files                         | 640 (rw-r-----)   |
+    | Debug file directory                     | 750 (rwxr-x---)   |
+    | Temporary file directory                      | 750 (rwxr-x---)   |
+    | Maintenance and upgrade file directory                  | 770 (rwxrwx---)   |
+    | Service data files                     | 640 (rw-r-----)  |
+    | Service data file directory                  | 750 (rwxr-x---)   |
+    | Key components, private keys, certificates, and ciphertext file directory| 700 (rwx------)   |
+    | Key components, private keys, certificates, and ciphertext files    | 600 (rw-------)   |
+    | APIs and scripts for encryption and decryption            | 500 (r-x------)   |
 
 ## Vulnerability Security Statement
 
 For details, see [MindStudio Vulnerability Handling Mechanism Description] (./vulnerability_handling_procedure.md).
 
-## Data security
+## Data Security
 
 During tool use, some functions related to code lines may access customer operator code. If the operator code must remain confidential and cannot be leaked, delete the corresponding deliverables in a timely manner after use to prevent information leakage.
 
@@ -66,6 +66,8 @@ This project supports building from source. During the build process, the system
 
 2. During tool use, no security validation is performed on the user-input programs. You need to ensure the security of the programs.
 
+3. During operation, the tool loads `.so` files from `LD_LIBRARY_PATH`. Before using the tool, ensure that the content of the `LD_LIBRARY_PATH` environment variable is secure and trustworthy, that the paths it points to do not involve symbolic links, and that the permissions and owners meet security expectations and cannot be tampered with by third parties. Otherwise, there is a risk of arbitrary code injection.
+
 ## Public Network Addresses
 
 The tool does not involve the use of public IP addresses.
@@ -78,7 +80,7 @@ This project is developed using C++. The provided external APIs are disclosed in
 
 While unsafe functions are not forcibly disabled, you are advised to use their safe variants that explicitly take a buffer length parameter, for example, `memset_s` and `memcpy_s`.
 
-## Communication security hardening
+## Communication Security Hardening
 
 This tool does not involve remote communication. However, you are advised to run it in a secure network environment, for example, behind a firewall or within a local area network (LAN). Be mindful of potential communication security risks when using third-party software.
 

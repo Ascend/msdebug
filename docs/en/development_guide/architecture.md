@@ -30,7 +30,7 @@ The operator debugging function consists of three components: exception detectio
 | Key Element| Design Objective |
 | -------- |---------------------------------------------------------------------------------------------------|
 | Implementation model| Modifications shall be based on the existing LLDB codebase. In accordance with the original workflow, implementation for Ascend devices shall be supplemented and added accordingly. The register tables and memory types vary with chips. Therefore, the register operation and maintenance code and memory read code for new chip types shall be easy to extend.|
-| Interaction model| The command-line instructions and options entered by users shall be correctly processed to implement the corresponding debugging functions, and normal information or error messages shall be displayed.  |
+| Interaction model| The CLI instructions and options entered by users shall be correctly processed to implement the corresponding debugging functions, and normal information or error messages shall be displayed.  |
 
 ## 4. Development View
 
@@ -325,9 +325,9 @@ protected:
 | e_machine     | Architecture to which the file applies. EM_ASCEND=0x1029.|
 | e_version     | Version of the target file. Core file version number, which facilitates subsequent compatibility. The first version is 0x01.|
 | e_entry     | Virtual address of the program entry.|
-| e_flags     | Specific flags. The flag name complies with the "EF_machine_flag" format. For the Intel architecture, no flag is defined, so `e_flags` should be `0`.|
+| e_flags     | Specific flags. The flag name complies with the "EF_machine_flag" format. For the Intel architecture, no flag is defined. Therefore, `e_flags` should be 0.|
 | e_ehsize     | Size of the ELF header, in bytes.|
-| e_phoff    | Offset of the start of the program header table in the file. The coredump file does not have a program header table, so this value should be `0`.|
+| e_phoff    | Offset of the start of the program header table in the file. The coredump file does not have a program header table. Therefore, this value should be 0.|
 | e_shoff      | Offset of the start of the section header table in the file.|
 | e_shentsize     | Size of each entry in the section header table, in bytes.  |
 | e_shnum  | Total number of entries in the section header table.   |
@@ -338,12 +338,12 @@ protected:
 
 | Field          | Description                                              |
 |--------------|--------------------------------------------------|
-| sh_name      | Name of this section, which is an index number pointing to a location in the string table section. The location stores a string ending with '\0'. |
+| sh_name      | Name of this section, which is an index number pointing to a location in the string table section. The location stores a string ending with `'\0'`. |
 | sh_offset    | Location of this section. The value is the position of the first byte of the section in the file, that is, the offset relative to the beginning of the file, in bytes. |
 | sh_size      | Size of the section, in bytes.                                    |
 | sh_addralign | This member specifies how the contents of this section are aligned in bytes, that is, the address of this section should be aligned to how many bytes. 16-byte alignment.    |
-| sh_entsize   | `.ascend.regs`: `sizeof(RegInfo)=16`; else, `0`.          |
-| sh_link      | Index of the `.auxinfo.global section` in the section header table.|
+| sh_entsize   | `.ascend.regs`: `sizeof(RegInfo)=16`. For other sections, the value is 0.          |
+| sh_link      | Index of the `.auxinfo.global` section in the section header table.|
 | sh_info      | Index in the GlobalMemInfo structure array.                          |
 
 4.sh_name
@@ -359,13 +359,14 @@ protected:
 | .ascend.host_kernel_object | Stores the kernel object data cached on the host.|
 | .ascend.file_kernel_object | Stores the kernel object file data.|
 | .ascend.file_kernel_json | Stores the kernel JSON file data.|
+| .ascend.kernel_info | Stores the kernel info file data.|
 
 5.".ascend.devtbl"
 
 | Field            | Description                                             |
 |----------------|-------------------------------------------------|
 | DevdrvChipType chip_type | Device type. Currently, `CHIP_CLOUD_V2` and `CHIP_CLOUD_V4` are supported.|
-| uint64_t aic_bitmap0  | AI Cores used by the current kernel. If the bit is set to `1`, the AI Core is used.|
+| uint64_t aic_bitmap0  | AI Cores used by the current kernel. If the bit is set to 1, the AI Core is used.|
 | uint64_t aic_bitmap1   |  |
 | uint64_t aiv_bitmap0 |  |
 | uint64_t aiv_bitmap1 |  |
@@ -408,20 +409,20 @@ enum DevdrvChipType : uint32_t {
 This section is an array of the GlobalMemInfo structure.
 
 struct GlobalMemInfo {
-    uint64_t addr; // Virtual address.
-    uint64_t size; // Memory size.
-    uint32_t section_index; // Corresponding .ascend.global section.
-    GlobalDataType type; // The memory is of the input/output/workspace/stack type.
+    uint64_t addr; // Virtual address
+    uint64_t size; // Memory size
+    uint32_t section_index; // Corresponding .ascend.global section
+    GlobalDataType type; // The memory is of the input/output/workspace/stack type
     uint16_t reserve;
     union {
         struct {
             uint16_t coreId;
-        } coreInfo;                // The stack memory is distinguished by core.
+        } coreInfo;                // The stack memory is distinguished by core
         struct {
             uint32_t dim; // tensor shape
             uint32_t reserve;
             uint64_t dim_size[25];
-        } shape;                    // Input or output.
+        } shape;                    // Input or output
     };
 };
 
@@ -463,13 +464,13 @@ Data model design is not involved.
 
 ##### 4.4.2.1 Identification of High-Risk APIs
 
-| High-risk API| Description               | Function Analysis         | Code Directory             | Language| Remarks|
+| High-Risk API| Description               | Function Analysis         | Code Directory             | Language| Remarks|
 |--------|---------------------|--------------------| ------------------------- |------| ---- |
 | --core | Reads data from the input coredump file.| External input file verification and soft link attacks| CommandObjectTarget.cpp | C++  |      |
 
 #### 4.4.3 Implementation of Security Defenses
 
-**1. Security hardening for high-risk APIs**
+**1. Security Hardening for High-Risk APIs**
 
 For external file input, perform comprehensive ownership verification:
 file existence verification, file read/write permission verification, and file quantity and size verification.
@@ -477,7 +478,7 @@ Soft link verification: Do not use symbolic links or protect against risks and e
 Ownership verification: (for read commands or startup scripts) Ensure that the current input file can be owned only by the current process user (ruid) or the `root` user, and other users do not have the write permission. In this case, the target file is trusted.
 For specific service scenarios, additional verification can be performed based on the actual service logic to further ensure that the input file is trusted.
 
-**2. Error and exception handling**
+**2. Error and Exception Handling**  
 A robust error and exception handling mechanism ensures that the API terminates in a controlled manner under exceptional conditions and returns appropriate error information to the user.
 Upon completion of the verification, if an error is detected, an error message is displayed, and a reasonable modification suggestion is provided.
 For example, if the coredump file can be written by other users or groups, an error message is displayed:
@@ -496,7 +497,8 @@ For example, if the coredump file can be written by other users or groups, an er
 
 #### 4.5.1 Core Dump File Analysis Module
 
-Define the key element model for msDebug (supporting coredump file analysis) developer testing (DT) as a Layer 0 public design. This includes software testability design and layered testing strategies. It covers DT environments, test project design, general and domain-specific frameworks, and DFX testing for various layers.
+Define the key element model for msDebug (supporting coredump file analysis) developer testing (DT) as a Layer 0 public design. This includes software testability design and layered testing strategies. It covers DT environments, test project design, general and domain-specific frameworks,
+and DFX testing for various layers.
 
 ##### 4.5.1.1 Design Constraints
 
@@ -528,7 +530,7 @@ ST: Tests whether each complete function works correctly.
 
     ST directory structure:
 
-    ```bash
+    ```text
     lldb
     ├── test
     │    ├── API
@@ -541,7 +543,7 @@ ST: Tests whether each complete function works correctly.
 
     UT directory structure:
 
-    ```bash
+    ```text
     lldb
     └── unittests
         └── Process
@@ -566,9 +568,9 @@ For new external input files, the following security protection measures must be
 
 Comply with architecture design constraints.
 
-##### 4.5.2.3 Designability Design
+##### 4.5.2.3 Testability Design
 
-The LLVM framework provides the llvm-lit tool to facilitate the verification of command-line interaction commands. This tool is used to perform the ST of the msDebug tool.
+The LLVM framework provides the llvm-lit tool to facilitate the verification of CLI interaction commands. This tool is used to perform the ST of the msDebug tool.
 The test case design is as follows.
 
 |  Test Scenario                                                                      |  Test Scheme                                                                                         |  Expected Result               |
@@ -582,7 +584,7 @@ The test case design is as follows.
 |  Driver initialization debug enablement failure                                                    |  After using an older driver package, use a C++ project to compile a binary file and print and debug breakpoints and variables.                          |  An exception is thrown after running, and debugging is terminated. |
 |  Operator runtime information retrieval failure                                                        |  Use a C++ project to compile a binary file and print and debug breakpoints and variables. Use `pcStartAddr` to obtain the function. Construction fails.           |  An exception is thrown after running, and debugging is terminated. |
 |  Debugging using an occupied device                                                  |  Use a C++ project to compile a binary file and print and debug breakpoints and variables. Do not exit. Restart the process and print and debug breakpoints and variables again.    |  An exception is thrown after running, and debugging is terminated. |
-|  Dependent CANN environment variables not found                                                      |  Manually clear the value of the environment variable `\$ASCEND\_TOOLKIT\_HOME`, use a C++ project to compile a binary file, and print and debug breakpoints and variables. |  An exception is thrown after running, and debugging is terminated. |
+|  Dependent CANN environment variables not found                                                      |  Manually clear the value of the environment variable `$ASCEND_TOOLKIT_HOME`, use a C++ project to compile a binary file, and print and debug breakpoints and variables. |  An exception is thrown after running, and debugging is terminated. |
 |  Starting multiple operators encapsulated by aclnn using the Python PyTorch framework, with the operator files stored separately, and specifying a specific operator for debugging |  Starting the aclnn operator using Python PyTorch, manually importing operator debugging information, and performing breakpoint and variable printing debugging                    |  Breakpoint and variable printing are normal. |
 |  Starting the operator encapsulated by aclnn using the Python PyTorch framework, with the operator packaged in a dynamic library, and specifying a specific operator for debugging   |  Starting the aclnn operator using Python PyTorch, manually importing operator debugging information, and performing breakpoint and variable printing debugging                    |  Breakpoint and variable printing are normal. |
 
@@ -647,7 +649,7 @@ The test case design is as follows.
        ├── test_case_add_framework_aclnn.sh
        ├── test_case_add_kernel_invocation_neo.sh
        ├── test_case_add_kernel_invocation.sh
-       ├── test_case_flash_attention_score_singe_tiling.sh
+       ├── test_case_flash_attention_score_single_tiling.sh
        ├── test_case_matmul_framework_aclnn.sh
        ├── test_case_matmul_kernel_invocation_neo.sh
        ├── test_case_matmul_kernel_invocation.sh
@@ -675,9 +677,9 @@ The commands entered by users are passed to different command parsing classes, a
 The following figure shows the interaction process of enabling debugging for a specified operator. The binary segment and runtime information of the operator kernel object are obtained, and the debugging function is enabled before the operator kernel is executed.
 Debugging can be performed on a specified operator. The following concepts need to be defined:
 
-(1) Unique ID of the operator kernel;
-(2) Determining the operator kernel to be enabled;
-(3) Timing for enabling debugging of a specific operator kernel;
+(1) Unique ID of the operator kernel.
+(2) Determining the operator kernel to be enabled.
+(3) Timing for enabling debugging of a specific operator kernel.
 
 First, use an encryption algorithm (such as SHA256) to perform hash calculation on the operator kernel object file to obtain a unique hash value to identify the operator kernel. The reason for not using the file system path of the operator kernel file as the identifier is that it cannot be ensured that the name is different from that of other operator kernel objects.
 

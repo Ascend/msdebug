@@ -7,32 +7,37 @@
 msDebug is an operator debugging tool designed for Ascend devices. It is used to debug operator programs executed on the NPU and provides key debugging capabilities for operator developers, including reading the memory and registers of Ascend devices, and pausing and resuming program running status.
 This document demonstrates the core functions of msDebug based on the simple addition operator developed in the introductory tutorial. It helps beginners intuitively experience the efficiency and convenience the tool brings to the operator development process.
 
-### 1.1 Recommendations
-
-This document assumes that you have completed all operations in <a href="https://gitcode.com/Ascend/msot/blob/master/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Ascend Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
-
-### 1.2 Environment Setup
-
-Strictly follow the <a href="https://gitcode.com/Ascend/msot/blob/master/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a> to complete the environment installation and workspace configuration.
-Even if you have a similar environment, perform the steps in the guide again to ensure that all dependent components and environment variables are complete and consistent.
+This document assumes that you have completed all operations in <a href="https://gitcode.com/Ascend/msot/blob/26.1.0/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
 
 ## 2. Operation
 
-### 2.1 [Environment] Pre-checking the Runtime Environment
+### 2.1 [Environment] Mandatory Environment Preparation (Mandatory Prerequisite ⚠️)
 
-#### 2.1.1 Verifying Installation of Python Dependencies
+🛑 **This section is a mandatory prerequisite. Skipping it will cause many subsequent operations to fail.**  
+This tutorial **supports only** standardized CANN container environments. It is not compatible with bare-metal machines, virtual machines, or other non-standard container deployments.
 
-Run the following command. If `All is OK` is displayed, the required Python packages and their versions meet the specifications:
+#### 2.1.1 Installing a CANN Container Environment
 
-```shell
-python3 -c "import numpy, sympy, scipy, attrs, psutil, decorator; from packaging import version; assert version.parse(numpy.__version__) <= version.parse('1.26.4'); print('All is OK')"
+✅ **Strictly follow the guide below to complete the environment installation:**  
+👉 **<a href="https://gitcode.com/Ascend/msot/blob/26.1.0/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a>**
+
+> ⏱️ **Estimated time in an environment with external network access: about 3 minutes**  
+> After the installation, you will get a standardized container environment with all operator tools, sample code, and dependent libraries preinstalled.
+
+#### 2.1.2 Running the Environment Self-Check Script (Must Pass!)
+
+Before the hands-on experience below, **copy the entire script below and paste it into the terminal to run it**. Continue only when all output shows [PASS]:
+
+```bash
+# 1. Check the container environment
+[ -f /.dockerenv ] && [ -n "$ASCEND_HOME_PATH" ] && [ -n "$ATB_HOME_PATH" ] && echo -e "\033[32m[PASS] CANN 容器环境 OK \033[0m" || echo -e "\033[31m[FAIL] 非标容器或未进入容器！\033[0m"
+# 2. Check the sample code repository
+[ -d ~/ot_demo/msot/example/quick_start ] && echo -e "\033[32m[PASS] 示例代码仓 OK\033[0m" || echo -e "\033[31m[FAIL] 代码仓缺失\033[0m"
 ```
-
-If an error occurs, refer to [Section 1.2](#12-environment-setup) for correct installation.
 
 ### 2.2 [Prerequisite] Completing Operator Project Preparation
 
-Follow the instructions in <a href="https://gitcode.com/Ascend/msot/blob/master/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Ascend Operator Development Toolchain Quick Start</a> to complete sections 2.1 and 2.3.
+Follow section 2.3 in <a href="https://gitcode.com/Ascend/msot/blob/26.1.0/docs/en/quick_start/op_tool_quick_start.md#23-development-building-the-operator-project-msopgen" target="_blank">Operator Development Toolchain Quick Start</a> to complete the operator project preparation.
 
 ### 2.3 [Debugging] Debugging Operator Code Using Breakpoints (msDebug)
 
@@ -40,10 +45,12 @@ If the operator function is abnormal, you can use msDebug to debug the operator 
 
 #### 2.3.1 Enabling Kernel Debugging
 
->[!CAUTION]CAUTION
->**msDebug requires the root permission.**
->msDebug can work properly only when the kernel debugging switch `/proc/debug_switch` is enabled. However, for security purposes, the switch is disabled by default and can be enabled only by the `root` user.
->This may not be possible in many environments (such as shared development machines and containers). In this case, contact the system administrator to enable the function or experience it in a privileged container.
+> [!CAUTION]
+> 
+> **msDebug requires the root permission.**
+> 
+> msDebug can work properly only when the kernel debugging switch `/proc/debug_switch` is enabled. However, for security purposes, the switch is disabled by default and can be enabled only by the `root` user.
+> This may not be possible in many environments (such as shared development machines and containers). In this case, contact the system administrator to enable the function or experience it in a privileged container.
 
 Check whether the kernel debugging switch `debug_switch` is enabled.
 
@@ -51,17 +58,17 @@ Check whether the kernel debugging switch `debug_switch` is enabled.
 cat /proc/debug_switch
 ```
 
-If the output value is not `1`, run the following command with the `root` permission:
+If the output value is not 1, run the following command with the `root` permission:
 
 ```shell
 echo 1 > /proc/debug_switch
 ```
 
-If the value cannot be set to `1`, the msDebug function is unavailable. In this case, skip this section.
+If the value cannot be set to 1, the msDebug function is unavailable. In this case, skip this section.
 
 #### 2.3.2 Modifying Compilation Options and Redeploying the Operator
 
-**1. Modify the compilation options.**
+**1. Modifying the compilation options.**
 Insert a line of configuration to the first line of the `CMakeLists.txt` file on the kernel to enable debugging information and disable compilation optimization.
 
 ```shell
@@ -70,7 +77,7 @@ cd ~/ot_demo/workspace/src/AddCustom
 sed -i "1i\\add_ops_compile_options(ALL OPTIONS -g -O0)" op_kernel/CMakeLists.txt
 ```
 
-**2. Re-compile and deploy the operator.**
+**2. Re-compiling and deploying the operator.**
 
 ```shell
 bash ./build.sh
@@ -94,10 +101,11 @@ After the (msdebug) prompt is displayed, set a breakpoint at line 34 in `add_cus
 b add_custom.cpp:34
 ```
 
->[!CAUTION]CAUTION
->**If you perform operations in the directly applied container environment, pay attention to the fact that the `/proc/debug_switch = 1` may be in a false state.**
-> If you perform operations in the container environment provided by the cloud service provider, even if the `/proc/debug_switch` is successfully set to 1 and queried in the container, the status may be false. For security purposes,
-> the underlying host machine usually isolates the `/proc` directory through mechanisms such as copy-on-write (CoW), shadow files, or overlay mount. As a result, the settings do not take effect.
+> [!CAUTION]
+> 
+> **If you perform operations in the directly applied container environment, pay attention to the fact that the `/proc/debug_switch = 1` may be in a false state.**
+> If you perform operations in the container environment provided by the cloud service provider, even if the `/proc/debug_switch` is successfully set to 1 and queried in the container, the status may be false. For security purposes, the underlying host machine usually isolates the `/proc` directory through mechanisms such as copy-on-write (CoW), shadow files, or overlay mount. As a result, the settings do not take effect.
+> 
 > In this case, setting breakpoints as described in the previous section will trigger a warning. When you run the `run` command according to the following sections, the following error message is displayed:
 >
 > ```text
@@ -110,7 +118,7 @@ b add_custom.cpp:34
 
 Enter `run` to start the program and wait for the breakpoint to be hit.
 
-```shell
+```text
 run
 ```
 
@@ -154,7 +162,7 @@ Output example:
 
 ##### 2.3.3.5 Viewing the Register Value
 
-```shell
+```text
 register read -a
 ```
 
@@ -175,7 +183,7 @@ Output example:
 
 ##### 2.3.3.6 Querying Device Information
 
-```shell
+```text
 ascend info devices
 ```
 
@@ -189,7 +197,7 @@ Output example:
 
 ##### 2.3.3.7 Querying AI Core Information of an Operator
 
-```shell
+```text
 ascend info cores
 ```
 

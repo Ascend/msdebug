@@ -14,17 +14,17 @@ The step-by-step debugging function does not support tensor passing by value.
 
 This problem occurs when the printed object a is of the Tensor type and the value is passed as the input parameter of the function.
 
-```bash
+```cpp
 void Foo(const LocalTensor<float> a); // The variable a fails to be printed.
 ```
 
-To print the variable, modify the code so that object *a* is passed by reference as the input parameter of the function.
+To print the variable, modify the code so that object `a` is passed by reference as the input parameter of the function.
 
-```bash
+```cpp
 void Foo(const LocalTensor<float> &a); // The variable a can be printed normally.
 ```
 
-## msDebug Fails to Be Debugged in the Container Environment and HDK Driver Package Needs to Be Installed
+## msDebug Fails to Debug in the Container Environment and Prompts You to Install the HDK Driver Package
 
 **Symptom**
 
@@ -41,7 +41,7 @@ The HDK driver package is not installed using the `--debug` option, or the drive
     If the command output is the same, the debugging driver has been installed. Otherwise, run the `--debug` command to install the matching HDK driver package.
 
     ```bash
-    [mindstudio@localhost ~]$ ls /dev/drv_debug     # Check whether the /dev/drv_debug device node exists.
+    [mindstudio@localhost ~]$ ls /dev/drv_debug     # Check whether the /dev/drv_debug device node exists
     /dev/drv_debug
     ```
 
@@ -53,7 +53,7 @@ The HDK driver package is not installed using the `--debug` option, or the drive
     > [!NOTE]NOTE  
     > You are advised to add the `--privileged --device=/dev/drv_debug` option to the container startup command to ensure that the device node on which debugging depends is mapped and the container environment can access the node.
 
-## Operator Execution Fails When the continue Command Is Run After the msDebug Breakpoint in the Kernel Function Is Hit
+## Operator Execution Fails When the `continue` Command Is Run After the msDebug Breakpoint in the Kernel Function Is Hit
 
 **Symptom**
 
@@ -61,21 +61,21 @@ The message `Synchronize stream failed. error code is 507035` is displayed. The 
 
 **Possible Causes**
 
-The size of the workspace input parameter in the kernel function is set to `0` in the tiling function. After the single-operator API is called, the workspace input parameter becomes an invalid address. Although the workspace input parameter is not used in the kernel function, the debugger dereferences the workspace pointer when displaying the kernel input parameter. As a result, the operator fails to run.
+The size of the workspace input parameter in the kernel function is set to 0 in the tiling function. After the single-operator API is called, the workspace input parameter becomes an invalid address. Although the workspace input parameter is not used in the kernel function, the debugger dereferences the workspace pointer when displaying the kernel input parameter. As a result, the operator fails to run.
 
 **Solution**
 
-Set the workspace size from 0 to the reserved memory size by referring to section "Operator Implementation" \> "Project-based Operator Development" \> "[Host-side Tiling Implementation](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_00021.html)" in *Ascend C Operator Development Guide*. During API compute, some workspace memory is required as the cache. Therefore, the operator tiling function needs to reserve workspace memory for the API. The reserved memory size can be obtained by calling `GetLibApiWorkSpaceSize`. See the following code:
+Set the workspace size from 0 to the reserved memory size by referring to section "Operator Implementation" \> "Project-based Operator Development" \> [Host-side Tiling Implementation](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/ProgrammingGuide/AdvancedProgramming/AclnnOperatorProjectBasedDevelopment/HostSideTilingImplementation/BasicProcess.md) in *Ascend C Operator Development Guide*. During API compute, some workspace memory is required as the cache. Therefore, the operator tiling function needs to reserve workspace memory for the API. The reserved memory size can be obtained by calling `GetLibApiWorkSpaceSize`. See the following code:
 
 ```cpp
 #include "tiling/platform/platform_ascendc.h"
 auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
 size_t systemWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-size_t*currentWorkspace = context->GetWorkspaceSizes(1); // Only one workspace is used.
+size_t* currentWorkspace = context->GetWorkspaceSizes(1); // Only one workspace is used.
 currentWorkspace[0]= systemWorkspaceSize;
 ```
 
-## `'A' Packet Returned an Error: 8` Is Displayed After msDebug Runs the run Command in Docker
+## `'A' Packet Returned an Error: 8` Is Displayed After msDebug Runs the `run` Command in Docker
 
 **Symptom**
 
@@ -98,7 +98,7 @@ Run the following commands to avoid this problem:
 
 ```bash
 ...
-(msdebug) settings set target.disable-aslr false
+(msdebug) settings set target.disable-aslr true
 ...
 ```
 
@@ -112,26 +112,27 @@ The following error message is displayed during `O0` compilation:
 ld.lld: error: undefined symbol: g_opSystemRunCfg
 ```
 
-**Solution**  
-The `- DL2_CACHE_HINT` compilation option needs to be removed.
+**Solution**
 
-## Hit Breakpoint Code Position Does Not Match Expectation
+The `-DL2_CACHE_HINT` compilation option needs to be removed.
+
+## The Code Location Where the Breakpoint Is Hit Does Not Match the Expected Location
 
 **Symptom**
 
-The actual hit breakpoint line does not match the set line number.
+The line number of the set breakpoint is inconsistent with the code line actually hit.
 
 **Possible Causes**
 
-- Cause 1: Files with the same name exist on both the host and kernel sides. The breakpoint on the host-side file is hit first when the program starts. If there is no breakpoint at that line on the host side, the debugger searches downward for the nearest available line.
-- Cause 2: The target line in the kernel file does not contain breakpoint information. The debugger searches downward for the nearest available line. This is an expected behavior of the tool, usually caused by compiler optimization on that line, or the kernel not being compiled with `-O0`.
+- Cause 1: Files with the same name exist on both the host side and the Kernel side. When the program starts, the breakpoint in the host-side file is hit first. If the line on the host side has no breakpoint, the debugger searches downward for the nearest available line.
+- Cause 2: The target line in the Kernel file has no breakpoint information. Therefore, the debugger searches downward for the nearest available line by default. This is the expected behavior of the tool, usually because the compiler has optimized the line, or the Kernel is not compiled with `-O0`.
 
 **Solution**
 
-- Cause 1: If the output does not contain `[Switching to focus...]` but contains `stop reason = breakpoint x`, the host-side breakpoint is hit. Run `c` to continue execution and the kernel-side breakpoint will be hit. Host-side breakpoint addresses usually start with `0x7ff`, while kernel-side breakpoint addresses usually start with `device_debugdata`.
-- Cause 2: Ensure that the kernel is compiled with the `-g -O0` option to prevent compiler optimization from removing breakpoint information.
+- Cause 1: If neither `[Switching to focus...]` nor `stop reason = breakpoint x` is displayed in the command output, the breakpoint hit is a host-side breakpoint. Run `c` to continue, and the Kernel-side breakpoint will be hit. Host-side breakpoint addresses usually start with 0x7ff, and Kernel-side breakpoint addresses usually start with `device_debugdata`.
+- Cause 2: Ensure that the Kernel is compiled with the `-g -O0` option to prevent the compiler from optimizing away breakpoint information.
 
-The following is an example of cause 1. After setting a breakpoint at line 28, line 49 on the host side (`libascendc_ops.so`) is hit first:
+The following is an example of cause 1. After a breakpoint is set at line 28, the breakpoint at line 49 on the host side (`libascendc_ops.so`) is hit first:
 
 ```bash
 (msdebug) b add_custom_kernel.asc:28
@@ -152,7 +153,7 @@ Process 1436447 stopped
    50   } // namespace ascendc_ops
 ```
 
-Run `c` to continue execution and hit the kernel-side breakpoint:
+Run `c` to continue, and the Kernel-side breakpoint is hit:
 
 ```bash
 (msdebug) c

@@ -10,15 +10,15 @@ The following operator call scenarios are supported:
 
 - Kernel launch operator development: kernel launch
 
-    For details about the kernel launch scenario, see section "[Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Debugging a Vector Operator on the Board](../best_practices/basic_cases.md#debugging-a-vector-operator-on-the-board)".
+    For details about the kernel launch scenario, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board).
 
 - Project-based operator development: single-operator API calling
 
-    For details about the single-operator API execution scenario, see "Project-based Operator Development" > "[Single-Operator API Execution](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/Ascendcopdevg/atlas_ascendc_10_0070.html)" in *Ascend C Operator Development Guide*. For details about the operation, see "[Calling AscendCL Single-Operator](../best_practices/basic_cases.md#calling-ascendcl-single-operator)".
+    For details about the single-operator API execution scenario, see "Project-based Operator Development" > [Single-Operator API Execution](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/Aclnn%E7%AE%97%E5%AD%90%E5%B7%A5%E7%A8%8B%E5%8C%96%E5%BC%80%E5%8F%91/%E5%8D%95%E7%AE%97%E5%AD%90API%E8%B0%83%E7%94%A8.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator).
 
 - AI framework operator adaptation: PyTorch framework
 
-    For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*. For details about the operation, see "[Debugging the Operators Called by a PyTorch Interface](../best_practices/basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface)".
+    For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md). For details about the operation, see [Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface).
 
 **Additional Information**
 
@@ -52,7 +52,7 @@ msDebug also provides the following extension program. For details, see [**Table
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --full
         ```
 
-    - Method 2: Specify the `--debug` option during driver installation. For details, see "[Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_0005.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)" in *CANN Software Installation Guide*.
+    - Method 2: Specify the `--debug` option during driver installation. For details, see [Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum) in *CANN Software Installation Guide*.
 
         ```bash
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --debug
@@ -71,10 +71,12 @@ The following products are supported:
 
 - Atlas A3 training products/Atlas A3 inference products
 - Atlas A2 training products/Atlas A2 inference products
+- Atlas inference products
+- Ascend 950 products
 
-> [!NOTE]NOTE
->
->- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
+> [!NOTE]
+> 
+>- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/en/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
 >- For details about the supported functions, see the documentation of the corresponding function module.
 
 ## Precautions
@@ -83,10 +85,11 @@ The following products are supported:
 - You need to ensure the execution security of executable files or applications.
     - You are advised to restrict the operation permission on executable files or applications to avoid privilege escalation risks.
     - Avoid high-risk operations (such as deleting files, deleting directories, changing passwords, and running privilege escalation commands) to prevent security risks.
+- During operation, the tool loads `.so` files from `LD_LIBRARY_PATH`. Before using the tool, ensure that the content of the `LD_LIBRARY_PATH` environment variable is secure and trustworthy, that the paths it points to do not involve symbolic links, and that the permissions and owners meet security expectations and cannot be tampered with by third parties. Otherwise, there is a risk of arbitrary code injection.
 
 ## Command Reference
 
-**Table 1** Command reference
+**Table 2** Command reference
 
 <table><thead align="left"><tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row416221055015"><th class="cellrowborder" valign="top" width="20.75%" id="mcps1.2.5.1.1"><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p5638288509">Command</p>
 </th>
@@ -178,6 +181,42 @@ The following products are supported:
 <td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p735955412457">Queries information about the task where the operator runs.</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen5372121319404">ascend info tasks</pre>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row1535845412458"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p11358125415451">ascend info threads</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p435865434512">-</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p735955412458">Queries thread information in simt_vf during on-board debugging and thread information of the generated coredump file.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen5372121319405">ascend info threads</pre>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row1535845412458"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p11358125415459">ascend thread &lt;thread-id&gt;</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p435865434526">-</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p735955412485">Queries information about the simt threads used by the currently focused core. Supported for use in simt_vf during on-board debugging.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen638314455">ascend thread &lt;thread-id&gt; </pre>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row1535845412459"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p11358125415466">ascend thread &lt;(thread_id_x, thread_id_y, thread_id_z)&gt;</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p435865434578">-</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p735955412488">Switches the simt thread focused by the debugger. Supported for use in simt_vf during on-board debugging.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen5372121319416">ascend thread &lt;(thread_id_x, thread_id_y, thread_id_z)&gt;</pre>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row1535845412459"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p11358125415452">frame select &lt;frame-id&gt;</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p435865434513">-</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p735955412458">Displays the code corresponding to a stack frame.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen5372121319406">frame select &lt;frame-id&gt;</pre>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row1325915420409"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p1825944210405">ascend info stream</p>
@@ -335,9 +374,9 @@ Command Options Usage:
 </tbody>
 </table>
 
-> [!NOTE]NOTE
->
-> - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop\_reason` is `CUBE\_ERROR`, `CCU\_ERROR`, `MTE\_ERROR`, `VEC\_ERROR`, and `FIXP\_ERROR`.
+> [!NOTE]
+> 
+> - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop_reason` is `CUBE_ERROR`, `CCU_ERROR`, `MTE_ERROR`, `VEC_ERROR`, and `FIXP_ERROR`.
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
 >    ```bash
@@ -350,17 +389,18 @@ Command Options Usage:
 
 **Importing Debugging Information**
 
-Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool.
+Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool.
 
-**Starting the tool**
+**Starting the Tool**
 
 The msDebug tool can be started in either of the following ways.
 
-> [!NOTE]NOTE
+> [!NOTE]
+> 
 > If `Cannot read termcap database; using dumb terminal settings` is displayed, configure `export TERMINFO=xx` to eliminate the message. `xx` indicates the local TERMINFO path.
 >
 > ```bash
-> export TERMINFO=xx    # You can run the infocmp -D command to query the value of xx. You can select a path that meets the current terminal configuration as the value of TERMINFO.
+> export TERMINFO=xx    # You can run the infocmp -D command to query the value of xx. You can select a path that meets the current terminal configuration as the value of TERMINFO
 > ```
 
 - Load the executable file `application`.
@@ -371,9 +411,9 @@ The msDebug tool can be started in either of the following ways.
         $ msdebug ./application
         ```
 
-        > [!NOTE]NOTE
-        >
-        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> "[Kernel Launch](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)" in *Ascend C Operator Development Guide*.
+        > [!NOTE]
+        > 
+        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> [Kernel Launch](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md) in *Ascend C Operator Development Guide*.
         > - If the executable file has other input parameters, pass them as follows:
         >
         >    ```bash
@@ -395,8 +435,9 @@ The msDebug tool can be started in either of the following ways.
         (msdebug)
         ```
 
-        > [!NOTE]NOTE
-        > For details about the single-operator calling scenario through the PyTorch framework, see "OpPlugin in [Ascend-developed Plugins](https://www.hiascend.com/document/detail/zh/Pytorch/720/modthirdparty/modparts/thirdpart_0009.html)" in *Ascend Extension for PyTorch Suite and Third-party Library Support List*.
+        > [!NOTE]
+        > 
+        > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
 
 **Exiting Debugging**
 
@@ -407,7 +448,8 @@ Exit the debugger.
 [localhost add_ascendc_sample]$
 ```
 
-> [!NOTE]NOTE
+> [!NOTE]
+> 
 > The debugging channel cannot be disabled independently. To disable the debugging channel, you need to enable the overwrite mode. For details, see the NPU driver and firmware installation documents.
 
 **Specifying a Device ID (MC2 Operator Scenario)**
@@ -418,10 +460,10 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 - Well targeted: You can debug a specific device to detect and resolve performance bottlenecks or compatibility issues related to the device.
 - Issue isolation: If a performance or function issue occurs, you can specify different device IDs to check whether the issue is caused by a specific device, thereby making it easier to locate the issue.
 
-> [!NOTE]NOTE
->
+> [!NOTE]
+> 
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
-> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > "[HCCL Kernel APIs](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_0869.html)" in *Ascend C Operator Development API Reference*.
+> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > [HCCL Kernel APIs](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/ascendcopapi/docs/api/SIMD-API/%E9%AB%98%E9%98%B6API/HCCL%E9%80%9A%E4%BF%A1%E7%B1%BB/HCCL-Kernel%E4%BE%A7%E6%8E%A5%E5%8F%A3/HCCL%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md) in *Ascend C Operator Development API Reference*.
 
 ```tex
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
@@ -487,11 +529,22 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
     ...
     ```
 
+- In scenarios involving Ascend 950 products, simd vf functions and their subfunctions must be inlined, causing a large amount of code line information to be lost and making it impossible to resolve breakpoint information. You can add the `__asm__("NOP")` statement in the simd vf function and set a breakpoint on that line.
+
+    ```cpp
+    __simd_vf__ inline void funcA () {
+        for(uint16_t i = 0; i < repeatTimes; ++i) {
+            AscendC::Reg::LoadAlign<>(xxxx);
+            __asm__("NOP"); // After adding this line, you can set a breakpoint on this line
+        }
+    }
+    ```
+
 ### Example
 
 **Setting a Line Breakpoint**
 
-1. Add a breakpoint in line 114 of the kernel function implementation file `matmul\_leakyrelu`. If the following information is displayed, the breakpoint is successfully added:
+1. Add a breakpoint in line 114 of the kernel function implementation file `matmul_leakyrelu`. If the following information is displayed, the breakpoint is successfully added:
 
     ```bash
     (msdebug) b matmul_leakyrelu_kernel.cpp:114
@@ -500,7 +553,7 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
 
     For details about the command output, see the following table.
 
-    **Table 1** Information description
+    **Table 3** Information description
 
     <table><thead align="left"><tr id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_row2416102584614"><th class="cellrowborder" valign="top" width="36.63%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_p641642504618">Field</p>
     </th>
@@ -510,7 +563,7 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
     </thead>
     <tbody><tr id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_row2556152517514"><td class="cellrowborder" valign="top" width="36.63%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_p12416122512469">device_debugdata</p>
     </td>
-    <td class="cellrowborder" valign="top" width="63.370000000000005%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_p341614250468">Name of the <strong id="zh-cn_topic_0000002015877393_b389113443">.o</strong> file on the device.</p>
+    <td class="cellrowborder" valign="top" width="63.370000000000005%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_p341614250468">Name of the <code id="zh-cn_topic_0000002015877393_b389113443">.o</code> file on the device.</p>
     </td>
     </tr>
     <tr id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_row25566251454"><td class="cellrowborder" valign="top" width="36.63%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_p1241672564613">matmul_leakyrelu_kernel.cpp</p>
@@ -536,7 +589,7 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
     </tbody>
     </table>
 
-2. Run the operator program and wait until the breakpoint is hit. `0x000000000000ff88` indicates the address of the PC where the breakpoint is located.
+2. Run the operator program and wait until the breakpoint is hit. 0x000000000000ff88 indicates the address of the PC where the breakpoint is located.
 
     ```bash
     (msdebug) run
@@ -597,7 +650,7 @@ Based on the variable type and usage, a variable can be stored in a register or 
 
 ### Precautions
 
-Currently, the msDebug tool cannot directly print the value of a template parameter by variable name. You need to print the value of the template parameter using the `p *Template_parameter_object*`. The value of the template parameter is displayed after printing. For example, `COMPUTE\_LENGTH` is a template parameter, and `this` is the object pointer to which the template parameter belongs. If you want to print the value of the parameter, run the `p this` command where the parameter is used. An example is provided as follows:
+Currently, the msDebug tool cannot directly print the value of a template parameter by variable name. You need to print the value of the template parameter using the `p *Template_parameter_object*`. The value of the template parameter is displayed after printing. For example, `COMPUTE_LENGTH` is a template parameter, and `this` is the object pointer to which the template parameter belongs. If you want to print the value of the parameter, run the `p this` command where the parameter is used. An example is provided as follows:
 
 ```bash
    22   template<class ArchTag_, class ElementAccumulator_, class ElementOut_, uint32_t COMPUTE_LENGTH>
@@ -615,7 +668,7 @@ Currently, the msDebug tool cannot directly print the value of a template parame
 
 **Printing Variables**
 
-After a breakpoint is hit, you can run the `p variable\_name` command to print the value of a specified variable. For example:
+After a breakpoint is hit, you can run the `p variable_name` command to print the value of a specified variable. For example:
 
 ```bash
 (msdebug) p alpha
@@ -634,7 +687,7 @@ After a breakpoint is hit, you can run the `p variable\_name` command to print t
 
 `GlobalTensor` is used to store the global data of the global memory (external storage).
 
-You can run the following commands to print `GlobalTensor`. The following takes `cGlobal` as an example. The `address_` field specifies the memory address of `zGm`. In this example, the value is `0x000012c045400000`.
+You can run the following commands to print `GlobalTensor`. The following takes `cGlobal` as an example. The `address_` field specifies the memory address of `zGm`. In this example, the value is 0x000012c045400000.
 
 ```bash
 (msdebug) p cGlobal
@@ -655,23 +708,24 @@ You can run the following commands to print `GlobalTensor`. The following takes 
 }
 ```
 
-The actual values of `GlobalTensor` variables are stored in the GM. Run the following command to print the values at `0x000012c045400000` in the GM. The example printing format contains the following information: one line to be printed, 256 bytes in each line, in float32 format.
+The actual values of `GlobalTensor` variables are stored in the GM. Run the following command to print the values at 0x000012c045400000 in the GM. The example printing format contains the following information: one line to be printed, 256 bytes in each line, in float32 format.
 
 ```bash
 (msdebug) x -m GM -f float32[] 0x000012c045400000 -s 256 -c 1
 0x12c045400000: {4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096}
 ```
 
-> [!NOTE]NOTE
->
+> [!NOTE]
+> 
 > - If you want to print other custom addresses, ensure the validity of the custom addresses. Otherwise, errors may occur during operator running.
-> - If you want to print the memory starting from a custom address, you can add an offset based on the `address\_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
+> - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
+> - Currently, GM memory can be read and displayed when the breakpoint stops on the Kernel side or the host side.
 
 **Printing LocalTensor**
 
 `LocalTensor` is used to store the data in the local memory (internal storage) of the AI Core.
 
-Run the following command to print the `LocalTensor` variable. `reluOutLocal` is used as an example. For the memory address of `reluOutLocal`, refer to the `bufferAddr` parameter in the `address\_` field. In this example, the address is `0`, and the length is `131072`.
+Run the following command to print the `LocalTensor` variable. `reluOutLocal` is used as an example. For the memory address of `reluOutLocal`, refer to the `bufferAddr` parameter in the `address_` field. In this example, the address is 0, and the length is 131072.
 
 ```bash
 (msdebug) p reluOutLocal
@@ -689,17 +743,17 @@ Run the following command to print the `LocalTensor` variable. `reluOutLocal` is
 }
 ```
 
-The actual content of the tensor is stored in the UB memory. You can run the following command to print the value at address `0` in the UB memory. The example printing format contains the following information: one line to be printed, 256 bytes in each line, in float32 format.
+The actual content of the tensor is stored in the UB memory. You can run the following command to print the value at address 0 in the UB memory. The example printing format contains the following information: one line to be printed, 256 bytes in each line, in float32 format.
 
 ```bash
 (msdebug) x -m UB -f float32[] 0 -s 256 -c 1
 0x00000000: {4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096}
 ```
 
-> [!NOTE]NOTE
+> [!NOTE]
 >
 > - In this sample, the actual content of the tensor variables is stored in the UB. However, the local tensor may be stored in the UB, L1, L0A, or L0B. You need to determine store location based on the code, and select the correct memory type for the `-m` option of the printing command.
-> - If you want to print the memory starting from a custom address, you can add an offset based on the `address\_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
+> - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
 
 **Printing All Local Variables**
 
@@ -727,7 +781,7 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
 ### Example
 
-**Example for Using the thread step-over Command**
+**Example for Using the `thread step-over` Command**
 
 1. Set a breakpoint to the position to be debugged and run the program. For details about how to set a breakpoint, see [Breakpoint Setting](#breakpoint-setting).
 
@@ -755,7 +809,7 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
     (msdebug) n
     Process 177943 stopped
     [Switching to focus on Kernel matmul_leakyrelu_custom, CoreId 44, Type aiv]
-    * thread #1, name = 'matmul_leakyrelu', stop reason = step over   // If the PC location is displayed in the command output, the step-by-step execution is successful.
+    * thread #1, name = 'matmul_leakyrelu', stop reason = step over   // If the PC location is displayed in the command output, the step-by-step execution is successful
         frame #0: 0x000000000000f048 device_debugdata`_ZN17MatmulLeakyKernelIDhDhffE10CalcOffsetEiiRK11TCubeTilingRiS4_S4_S4__mix_aiv(this=0x0000000000217b60, blockIdx=0, usedCoreNum=2, tiling=0x0000000000217e28, offsetA=0x00000000002175c8, offsetB=0x00000000002175c4, offsetC=0x00000000002175c0, offsetBias=0x00000000002175bc) at matmul_leakyrelu_kernel.cpp:130:18
        127      offsetA = mCoreIndx * tiling.Ka * tiling.singleCoreM;
        128      offsetB = nCoreIndx * tiling.singleCoreN;
@@ -770,12 +824,12 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
     (msdebug) ascend info cores
       CoreId  Type  Device Stream Task Block         PC               stop reason
        12     aic      1     3     0     0     0x12c0c00f03b0         breakpoint 1.2
-    *  44     aiv      1     3     0     0     0x12c0c00f8048         step over               // * indicates the core that is currently running.
+    *  44     aiv      1     3     0     0     0x12c0c00f8048         step over               // * indicates the core that is currently running
        45     aiv      1     3     0     0     0x12c0c00f801c         breakpoint 1.2
     ```
 
-    > [!NOTE]NOTE
-    >
+    > [!NOTE]
+    > 
     > - If the current core is stopped due to both step-by-step debugging and breakpoints, "breakpoint" is displayed.
     > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows:
     >    - The user program itself has an infinite loop, which needs to be rectified by repairing the program.
@@ -788,7 +842,7 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
     Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y
     ```
 
-**Example for Using the thread step-in and thread step-out Commands**
+**Example for Using the `thread step-in` and `thread step-out` Commands**
 
 1. Set a breakpoint to the position to be debugged and run the program. For details about how to set a breakpoint, see [Breakpoint Setting](#breakpoint-setting).
 
@@ -832,11 +886,12 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
     (msdebug) ascend info cores
       CoreId  Type  Device Stream Task Block         PC               stop reason
        13     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-    *  46     aiv      1     3     0     0     0x12c0c00f8ebc         step in          // * indicates the core that is currently running.
+    *  46     aiv      1     3     0     0     0x12c0c00f8ebc         step in          // * indicates the core that is currently running
        47     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
     ```
 
-    > [!NOTE]NOTE
+    > [!NOTE]
+    > 
     > If the current core is stopped due to both function debugging and breakpoints, `breakpoint` is displayed.
 
 4. After debugging the CopyOut function, run the `finish` command to exit the CopyOut function and return to the main program to continue execution.
@@ -856,7 +911,7 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
        87   }
     ```
 
-## Running Interrupting
+## Interrupting Execution
 
 ### Function
 
@@ -879,7 +934,7 @@ When the operator execution program freezes, manually interrupt the operator exe
     (msdebug) r
     Process 173221 launched: '${INSTALL_DIR}/projects/mix/matmul_leakyrelu.fatbin' (aarch64)
     [Launch of Kernel matmul_leakyrelu_custom on Device 1]
-    // Enter CTRL+C.
+    // Enter CTRL+C
     Process 173221 stopped
     [Switching to focus on Kernel matmul_leakyrelu_custom, CoreId 35, Type aiv]
     * thread #1, name = 'matmul_leakyrelu', stop reason = signal SIGSTOP
@@ -1024,7 +1079,7 @@ After using msDebug to call an operator, you can read register values of the dev
       SCALAR_EVENT_TABLE = 0x0
     ```
 
-- After `register read $\{variable name\}` is entered, the register value on the current device is returned. Separate multiple registers with spaces.
+- After `register read ${variable name}` is entered, the register value on the current device is returned. Separate multiple registers with spaces.
 
     - The register value is returned when the variable name is available on the current device.
     - `Invalid register name 'variable name'` is returned when the variable name is not available on the current device.
@@ -1036,7 +1091,7 @@ After using msDebug to call an operator, you can read register values of the dev
                    GPR30 = 0x147640
     ```
 
-## Debugging Information Displaying
+## Debugging Information Display
 
 ### Function
 
@@ -1044,9 +1099,9 @@ Query information about the device where the operator runs.
 
 ### Example
 
-**ascend info devices**
+**`ascend info devices`**
 
-Run the following command to query the information about the device where the operator is running. The line where `\*` is located indicates the target device.
+Run the following command to query the information about the device where the operator is running. The line where `*` is located indicates the target device.
 
 ```bash
 (msdebug) ascend info devices
@@ -1054,12 +1109,13 @@ Run the following command to query the information about the device where the op
 *    1      1       2      0x10000     0x3
 ```
 
-> [!NOTE]NOTE
+> [!NOTE]
+> 
 > In the MC2 operator scenario, multiple device IDs are displayed.
 
 For details about the command output, see the following table.
 
-**Table 1** Information description
+**Table 4** Information description
 
 <table><thead align="left"><tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row8128154771415"><th class="cellrowborder" valign="top" width="30.97%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p31281547101416">Field</p>
 </th>
@@ -1095,7 +1151,7 @@ For details about the command output, see the following table.
 </tbody>
 </table>
 
-**ascend info cores**
+**`ascend info cores`**
 
 Run the following command to query the information about the core where the operator is running. The line where `*` is located indicates the target core. In the following example, the target core is core 0 of the AIV.
 
@@ -1109,7 +1165,7 @@ Run the following command to query the information about the core where the oper
 
 For details about the command output, see the following table.
 
-**Table 2** Information description
+**Table 5** Information description
 
 <table><thead align="left"><tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row2096593410286"><th class="cellrowborder" valign="top" width="30.8%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p92283663716">Field</p>
 </th>
@@ -1160,7 +1216,7 @@ For details about the command output, see the following table.
 </tbody>
 </table>
 
-**ascend info tasks**
+**`ascend info tasks`**
 
 Run the following command to query the task information of the operator. The line where `*` is located indicates the target task, including device ID, stream ID, task ID, and invocation (name of the called kernel function).
 
@@ -1170,7 +1226,7 @@ Run the following command to query the task information of the operator. The lin
 *   1       3     0  matmul_leakyrelu_custom
 ```
 
-**ascend info stream**
+**`ascend info stream`**
 
 Run the following command to query the stream information of the operator. The line where `*` is located indicates the target stream, including device ID, stream ID, and type (kernel type, which can be AIC or AIV).
 
@@ -1180,7 +1236,7 @@ Run the following command to query the stream information of the operator. The l
 *   1      3    aiv
 ```
 
-**ascend info blocks**
+**`ascend info blocks`**
 
 Run the following command to query the block information of the operator. The line where `*` is located indicates the target block, including device ID, stream ID, task ID, and block ID.
 
@@ -1232,122 +1288,183 @@ Current stop state of all blocks:
    145  __aicore__ inline void SetSyncBaseAddrImpl(uint64_t config)
 ```
 
+## SIMT Thread Switching
+
+### Function
+
+Queries information between threads. Supported for use in simt_vf during on-board debugging.
+
+### Example
+
+**`ascend info threads`**
+
+Run the following command to query thread information. The line where `*` is located indicates the currently focused device.
+
+```bash
+(msdebug) ascend info threads
+ ThreadIdx To ThreadIdx ActiveCount             PC ActiveMask   Filename Line
+*  (0,0,0)     (15,1,0)          32 0x12004ca00808 0xffffffff kernel.cpp   36
+   (0,2,0)     (15,3,0)          32 0x12004ca00808 0xffffffff kernel.cpp   36
+   (0,4,0)     (15,5,0)          32 0x12004ca00808 0xffffffff kernel.cpp   36
+   (0,6,0)     (15,7,0)          32 0x12004ca00808 0xffffffff kernel.cpp   36
+   (0,8,0)     (15,9,0)          32 0x12004ca00808 0xffffffff kernel.cpp   36
+```
+
+For details about the key information, see the following table.
+
+**Table 6** Information description
+
+| Field | Description |
+| ---- | ---- |
+| ThreadIDx To ThreadIDx | From thread to thread, the active threads |
+| ActiveCount | Number of threads |
+| PC | Program counter |
+| ActiveMask | Indicates which threads among the ActiveCount threads are active. A bit value of 1 indicates an active thread |
+| Filename | Indicates the code file where the thread is located |
+| Line | Indicates the line number where the thread is located |
+
+**`ascend thread <thread id>`**
+
+Queries information about the simt threads used by the currently focused core.
+
+```bash
+(msdebug) ascend thread 100
+[Switching to focus on Kernel vec_add, CoreId 36, Type aiv, Thread (4, 6, 0)]
+* thread #1, name = 'test.fatbin', stop reason = breakpoint 1.1
+    frame #0: 0x000012004ca00808 device_debugdata_0`void SimtCompute<unsigned int>(dst=<unavailable>, src0=<unavailable>, src1=<unavailable>) (.vector) at kernel.cpp:36:15
+   33       //uint64_t arr[3];
+   34       //arr[0] = dst[0];
+   35       int idx = Simt::GetThreadIdx<0>();
+-> 36       int idy = Simt::GetThreadIdx<1>();
+   37       int idz = Simt::GetThreadIdx<2>();
+   38       int blockIdx = Simt::GetBlockIdx();
+   39       int tmp = 10;
+```
+
+**`ascend thread <(thread_id_x, thread_id_y, thread_id_z)>`**
+
+Switches the simt thread focused by the debugger.
+
+```bash
+(msdebug) ascend thread (0,8,0)
+[Switching to focus on Kernel vec_add, CoreId 36, Type aiv, Thread (0, 8, 0)]
+* thread #1, name = 'test.fatbin', stop reason = breakpoint 1.1
+    frame #0: 0x000012004ca00808 device_debugdata_0`void SimtCompute<unsigned int>(dst=<unavailable>, src0=<unavailable>, src1=<unavailable>) (.vector) at kernel.cpp:36:15
+   33       //uint64_t arr[3];
+   34       //arr[0] = dst[0];
+   35       int idx = Simt::GetThreadIdx<0>();
+-> 36       int idy = Simt::GetThreadIdx<1>();
+   37       int idz = Simt::GetThreadIdx<2>();
+   38       int blockIdx = Simt::GetBlockIdx();
+   39       int tmp = 10;
+```
+
 ## Abnormal Operator Dump File Parsing
 
 ### Function
 
 If a hardware issue happens onsite, repeated stress tests are needed to reproduce the issue, which slows down troubleshooting. To solve this problem, the system initiates a dump operation upon detecting a potential hardware issue, and captures the current status information. The msDebug tool parses the dump file of an abnormal operator. You can collect sufficient data for fault analysis even without a stress test. The above functions enhance hardware exception detection and minimize repetitive stress tests.
 
-> [!NOTE]NOTE
-> Currently, only the function of parsing dump files of abnormal operators is supported by Ascend 950 products. Other functions are not supported by Ascend 950 products.
-
 ### Precautions
 
-If you enable the abnormal operator dump function, other functions of msDebug cannot be used after the configuration.
+If you enable the dump function for abnormal operators, you cannot use other functions of msDebug after the configuration.
 
 ### Example
 
-1. Enable the function of generating dump files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> "[aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910beta3/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)" in *Application Development Guide \(C&C++\)*.
+1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581) in *Application Development Guide (C&C++)*.
 
-    > [!NOTE]NOTE
-    > Choose either of the following two methods:
+    > [!NOTE]
+    > 
+    > Use either of the following methods:
+    > 
+    > 1. Run the following command to set the `dump_scene` parameter to `aic_err_detail_dump` and configure the `dump_path` parameter to the path for exporting the core file of the abnormal operator.
+    > 
+    >     ```bash
+    >     export ASCEND_DUMP_SCENE="aic_err_detail_dump"
+    >     export ASCEND_DUMP_PATH="output"
+    >     ```
+    > 
+    > 2. In the `acl.json` configuration file, set the `dump_scene` parameter to `aic_err_detail_dump` and configure the `dump_path` parameter to the path for exporting the core file of the abnormal operator.
 
-    1. In the `acl.json` configuration file, set `dump\_scene` to `aic\_err\_detail\_dump` and set `dump\_path` to the path for exporting the dump file of the abnormal operator.
-
-    2. Run the following commands to set `dump\_scene` to `aic\_err\_detail\_dump` and set `dump\_path` to the path for exporting the dump file of the abnormal operator.
-
-        ```bash
-        export ASCEND_DUMP_SCENE="aic_err_detail_dump"
-        export ASCEND_DUMP_PATH="output"
-        ```
-
-2. When an aic_error exception occurs during operator execution (for example, memory out-of-bounds access), a core file of the abnormal operator is generated. The file name ends with .core.
+2. When an aic_error exception occurs during operator running (for example, out-of-bounds memory access), a core file of the abnormal operator is generated. The file name ends with `.core`.
 3. Run the following command with the msDebug tool to load the core file of the abnormal operator:
 
     ```bash
-    msdebug --core output2/extra-info/data-dump/0/xxx.core add.fatbin
+    msdebug --core output2/extra-info/data-dump/0/xxx.core
     msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
     The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
     This enables developers to debug Ascend kernels without being affected by potential changes brought by simulation and emulation environments.
-    (msdebug) target create "add.fatbin" --core "output2/extra-info/data-dump/0/xxx.core"
-    Core file '/home/xxx/coredump_test/output2/extra-info/data-dump/0/xxx.core' (aarch64) was loaded.
-    [Switching to focus on CoreId 26, Type aiv]
+    (msdebug) target create --core "output2/extra-info/data-dump/0/xxx.core"
+    Core file '/home/xxx/coredump_test/output2/extra-info/data-dump/0/xxx.core' (hiipu64) was loaded.
+    [Switching to focus on Kernel add_custom, CoreId 1, Type aiv]
     ```
 
-    > [!NOTE]NOTE
+    > [!NOTE]
+    > 
     > To view the call stack, use the `-O2/O3 + -g` option to compile and generate the `kernel.o` file that contains debugging information, or generate the ELF file of the fatbin structure.
     >
     > Cause: During operator execution, if a hardware exception occurs due to instruction execution, the hardware usually continues to execute several instructions before reporting the exception and generating a core file. Therefore, the memory and register data in the core file may be inaccurate. However, the value of the PC register is usually corrected.
     >
-    > At the O2/O3 optimization level, the inline function is used by default. Call stack can still be traced accurately without requiring stack memory data. At the O0 optimization level, no inline function is used forcibly, and the stack memory data is inaccurate. Generally, accurate data requires the 0 stack frame.
+    > At the O2/O3 optimization level, inline is used by default. An accurate call stack can still be traced without requiring stack memory data. At the O0 optimization level, no inline is forced, and the stack memory data is inaccurate. Generally, accurate data requires the 0 stack frame.
 
 4. View the core file information of the abnormal operator.
 
     ```bash
-    msdebug --core output2/extra-info/data-dump/0/xxx.core /home/xxxxx/Ascend/cann/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_xxxx.o
+    msdebug --core output2/extra-info/data-dump/0/xxx.core
 
     msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
     The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
     This enables developers to debug Ascend kernels without being affected by potential changes brought by simulation and emulation environments.
-    (msdebug) target create "/home/xxx/Ascend/cann/opp/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910b/add_custom/AddCustom_xxx.o" --core "output2/extra-info/data-dump/0/xxx.core"
-    Core file '/home/xxx/output2
-    /extra-info/data-dump/0/xxx.core' (hiipu64) was loaded.
-    [Switching to focus on CoreId 34, Type aiv]
+    (msdebug) target create --core "output2/extra-info/data-dump/0/xxx.core"
+    Core file '/home/xxx/coredump_test/output2/extra-info/data-dump/0/xxx.core' (hiipu64) was loaded.
+    [Switching to focus on Kernel add_custom, CoreId 1, Type aiv]
+    * thread #1, stop reason = MTE_ERROR
+        frame #0: 0x000012c041200420 device_debugdata`::add_custom(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__) [inlined] void AscendC::DataCopyGM2UBImpl<short>(dst=0x0000000000000000, src=0, intriParams=<unavailable>) at kernel_operator_data_copy_impl.h:59:9
+       56               __gm__ uint8_t* workSpace = GetSysWorkSpacePtr();
+       57               AscendCUtils::CheckGmMemOverflowNormal(src, workSpace, true, false, intriParams);
+       58           }
+    -> 59           copy_gm_to_ubuf((__ubuf__ void*)dst, (__gm__ void*)src, 0, intriParams.blockCount, intriParams.blockLen,
+       60               intriParams.srcStride, intriParams.dstStride);
+       61       }
+       62   }
+
+    (msdebug) bt
+    * thread #1, stop reason = MTE_ERROR
+      * frame #0: 0x000012c041200420 device_debugdata`::add_custom(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__) [inlined] void AscendC::DataCopyGM2UBImpl<short>(dst=0x0000000000000000, src=0, intriParams=<unavailable>) at kernel_operator_data_copy_impl.h:59:9
+        frame #1: 0x000012c041200420 device_debugdata`::add_custom(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__) [inlined] void AscendC::DataCopy<short>(dst=<unavailable>, src=<unavailable>, repeatParams=<unavailable>) at kernel_operator_data_copy_intf_impl.h:76:9
+        frame #2: 0x000012c041200420 device_debugdata`::add_custom(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__) [inlined] void AscendC::DataCopy<short>(dst=<unavailable>, src=<unavailable>, count=128) at kernel_operator_data_copy_intf_impl.h:782:5
+        frame #3: 0x000012c041200420 device_debugdata`::add_custom(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__) [inlined] KernelAdd::CopyIn(this=0x0000000000000000, progress=<unavailable>) at add_kernel.cpp:59:9
+        frame #4: 0x000012c04120030c device_debugdata`::add_custom(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__) [inlined] KernelAdd::Process(this=0x0000000000000000) at add_kernel.cpp:47:13
+        frame #5: 0x000012c04120029c device_debugdata`add_custom(x=<unavailable>, y=<unavailable>, z=<unavailable>) at add_kernel.cpp:101:8
 
     (msdebug) ascend info summary
       CoreId  CoreType        PC         DeviceId    ChipType
-        33       AIV    0x12c0412004c8       0        A2/A3
-     *  34       AIV    0x12c0412007c0       0        A2/A3
-        35       AIV    0x12c0412007c0       0        A2/A3
-        36       AIV    0x12c0412007c0       0        A2/A3
-        37       AIV    0x12c0412007c0       0        A2/A3
-        38       AIV    0x12c0412007c0       0        A2/A3
-        39       AIV    0x12c0412007c0       0        A2/A3
-        40       AIV    0x12c0412007c0       0        A2/A3
+         0       AIV    0x12c041200360       0        A2/A3
+     *   1       AIV    0x12c041200420       0        A2/A3
+         2       AIV    0x12c041200420       0        A2/A3
+         3       AIV    0x12c041200420       0        A2/A3
+         4       AIV    0x12c041200420       0        A2/A3
+         5       AIV    0x12c041200420       0        A2/A3
+         6       AIV    0x12c041200420       0        A2/A3
+        47       AIV    0x12c041200420       0        A2/A3
 
       Id           DataType                   MemType                     Addr                       Size             CoreId    CoreType    Dim
-       0    DEVICE_KERNEL_OBJECT                GM                   0x12c041200000                 167872             NA         AIV        NA
-       1            STACK                    GM/DCACHE           0xff000108000(invalid)              32768             33         AIV        NA
-       2            STACK                    GM/DCACHE           0xff000110000(invalid)              32768             34         AIV        NA
-       3            STACK                    GM/DCACHE           0xff000118000(invalid)              32768             35         AIV        NA
-       4            STACK                    GM/DCACHE           0xff000120000(invalid)              32768             36         AIV        NA
-       5            STACK                    GM/DCACHE           0xff000128000(invalid)              32768             37         AIV        NA
-       6            STACK                    GM/DCACHE           0xff000130000(invalid)              32768             38         AIV        NA
-       7            STACK                    GM/DCACHE           0xff000138000(invalid)              32768             39         AIV        NA
-       8            STACK                    GM/DCACHE           0xff000140000(invalid)              32768             40         AIV        NA
-       9      WORKSPACE_TENSOR                  GM                         0x0                         0               NA          NA        NA
-      10         TILING_DATA                 GM/DCACHE               0x12c100000038                   16               NA          NA        NA
-      11        OUTPUT_TENSOR                   GM                   0x12c0c0024000                  32768             NA          NA        [8, 2048]
-      12        INPUT_TENSOR                    GM                   0x12c0c0012000                  32768             NA          NA        [8, 2048]
-      13        INPUT_TENSOR                    GM                   0x12c0c001b000                  32768             NA          NA        [8, 2048]
-      14            ARGS                     GM/DCACHE               0x12c100000000                   96               NA          NA        NA
+       0    DEVICE_KERNEL_OBJECT                GM                   0x12c041200000                 189432             NA          NA        NA
+       1            STACK                    GM/DCACHE                0xff0000c8000                  32768             0          AIV        NA
+       2            STACK                    GM/DCACHE                0xff0000d0000                  32768             1          AIV        NA
+       3            STACK                    GM/DCACHE                0xff0000d8000                  32768             2          AIV        NA
+       4            STACK                    GM/DCACHE                0xff0000e0000                  32768             3          AIV        NA
+       5            STACK                    GM/DCACHE                0xff0000e8000                  32768             4          AIV        NA
+       6            STACK                    GM/DCACHE                0xff0000f0000                  32768             5          AIV        NA
+       7            STACK                    GM/DCACHE                0xff0000f8000                  32768             6          AIV        NA
+       8            STACK                    GM/DCACHE                0xff000240000                  32768             47         AIV        NA
+       9            ARGS                     GM/DCACHE               0x12c100000000                   24               NA          NA        NA
 
-    (msdebug) bt
-       * thread #1, stop reason = VEC_ERROR
-         * frame #0: 0x000012c0412004c8 AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
-       int8_t *__gm__, uint8_t *__gm__) [inlined] void AscendC::TPipe::ReleaseEventID<(AscendC::HardEvent)5>(this=<unavailable>, id=<unavailable>) at kernel_tpipe_impl.h:454:24
-           frame #1: 0x000012c0412004c8 AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
-       int8_t *__gm__, uint8_t *__gm__) [inlined] AscendC::TQueBind<(AscendC::TPosition)0, (AscendC::TPosition)9, 2, 0>::AllocBuffer(this=<unavailable>) at kernel_tquebind_impl.h:512:3
-       6
-           frame #2: 0x000012c041200474 AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
-       int8_t *__gm__, uint8_t *__gm__) [inlined] AscendC::LocalTensor<half> AscendC::TQueBind<(this=<unavailable>)0, (AscendC::TPosition)9, 2, 0>::AllocTensor<half>() at kernel_tquebi
-       nd_impl.h:78:16
-           frame #3: 0x000012c041200474 AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
-       int8_t *__gm__, uint8_t *__gm__) [inlined] KernelAdd::CopyIn(this=<unavailable>, progress=<unavailable>) at add_custom.cpp:42:57
-           frame #4: 0x000012c041200474 AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
-       int8_t *__gm__, uint8_t *__gm__) at add_custom.cpp:33:13
-           frame #5: 0x000012c04120039c AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
-       int8_t *__gm__, uint8_t *__gm__) [inlined] add_custom_0_tilingkey(x=<unavailable>, y=<unavailable>, z=<unavailable>, workspace=<unavailable>, tiling=<unavailable>) at add_custom
-       .cpp:83:8
-           frame #6: 0x000012c041200064 AddCustom_xxx.o`::AddCustom_xxx_0(uint8_t *__gm__, uint8_t *__gm__, uint8_t *__gm__, u
-       int8_t *__gm__, uint8_t *__gm__) [inlined] ascendc_auto_gen_add_custom_kernel(x_in__=<unavailable>, y_in__=<unavailable>, z_out_=<unavailable>, workspace=<unavailable>, tiling=<
-       unavailable>) at AddCustom_xxx_3800102_kernel.cpp:43:5
-           frame #7: 0x000012c04120004c AddCustom_xxx.o`::AddCustom_xxx_0(x_in__=<unavailable>, y_in__=<unavailable>, z_out_=<
-       unavailable>, workspace=<unavailable>, tiling=<unavailable>) at AddCustom_xxx_3800102_kernel.cpp:48:5
+     (msdebug)
 
     ```
 
-5. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), and [Memory and Variable Printing](#memory-and-variable-printing).
+5. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), [Memory and Variable Printing](#memory-and-variable-printing), and [SIMT Thread Switching](#simt-thread-switching).
 6. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash

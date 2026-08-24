@@ -8,24 +8,25 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
 **Preparations**
 
-- Obtain the [sample project](https://gitcode.com/Ascend/mstt/tree/master/sample).
+- Obtain the [sample project](https://gitcode.com/Ascend/mstt/blob/br_26.0.0_beta1/sample/README.md).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
 
 1. Compile the operator based on the sample project and obtain the executable file `add.fatbin`.
-    1. Modify the `COMPILER\_FLAG` option in the `sample/normal\_sample/vec\_only/Makefile` file, that is, change `-O2` to `-O0 -g --cce-ignore-always-inline=true` to enable the compiler debugging function.
+    1. Modify the `COMPILER_FLAG` option in the `sample/normal_sample/vec_only/Makefile` file, that is, change `-O2` to `-O0 -g --cce-ignore-always-inline=true` to enable the compiler debugging function.
 
         ```bash
         # Makefile
         ...
         COMPILER            := $(ASCEND_HOME_PATH)/compiler/ccec_compiler/bin/ccec
-        COMPILER_FLAG       := -xcce -O0 -g --cce-ignore-always-inline=true -std=c++17 # Enable compiler debugging.
+        COMPILER_FLAG       := -xcce -O0 -g --cce-ignore-always-inline=true -std=c++17 # Enable compiler debugging
         ```
 
     2. Compile the operator.
 
-        > [!NOTE]NOTE
+        > [!NOTE]
+        > 
         > In non-initial scenarios, you can run the `make clean && make` command instead of the `make` command.
 
         ```bash
@@ -43,7 +44,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         (msdebug)
         ```
 
-    2. In this sample, the implementation code of the kernel function is stored in `add\_kernel.cpp`. Set NPU breakpoints in this file for required code lines.
+    2. In this sample, the implementation code of the kernel function is stored in `add_kernel.cpp`. Set NPU breakpoints in this file for required code lines.
 
         ```bash
         (msdebug) b add_kernel.cpp:69
@@ -54,7 +55,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
 3. Run the operator program.
 
-    The program starts to run until the first breakpoint (`add\_kernel.cpp:69`) is hit. msDebug detects that the NPU core function `add\_custom` starts to run on device 0.
+    The program starts to run until the first breakpoint (`add_kernel.cpp:69`) is hit. msDebug detects that the NPU core function `add_custom` starts to run on device 0.
 
     ```cpp
     (msdebug) run
@@ -101,8 +102,9 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     - Run the `print` and `memory read` commands together to print values stored in the tensor variables.
         - Print the data stored in LocalTensor in the UB memory.
 
-            > [!NOTE]NOTE
-            > For details about the start address for printing the UB memory, see the `bufferAddr` parameter in the `address\_` field of the LocalTensor variable. The following uses the `xLocal` variable as an example. The start address of the memory is `0`.
+            > [!NOTE]
+            > 
+            > For details about the start address for printing the UB memory, see the `bufferAddr` parameter in the `address_` field of the LocalTensor variable. The following uses the `xLocal` variable as an example. The start address of the memory is 0.
 
             ```bash
             (msdebug) print xLocal
@@ -123,8 +125,9 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
         - Print the data stored in GlobalTensor in the GM.
 
-            > [!NOTE]NOTE
-            > For details about the start address for GM memory printing, see the `address\_` field of the GlobalTensor variable. The following uses the `xGm` variable as an example. The start address of the memory is `0x00001240c0015000`.
+            > [!NOTE]
+            > 
+            > For details about the start address for GM memory printing, see the `address_` field of the GlobalTensor variable. The following uses the `xGm` variable as an example. The start address of the memory is 0x00001240c0015000.
 
             ```bash
             (msdebug) print xGm
@@ -146,7 +149,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     - Switch to another AIV core and print the required information.
 
         ```cpp
-        (msdebug) ascend aiv 24  // Select the core ID corresponding to block 7 in ascend info cores. In this example, the core ID is 24.
+        (msdebug) ascend aiv 24  // Select the core ID corresponding to block 7 in ascend info cores. In this example, the core ID is 24
         [Switching to focus on Kernel add_custom, CoreId 24, Type aiv]
         * thread #1, name = 'add.fatbin', stop reason = breakpoint 2.1
             frame #0: 0x0000000000004974 device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x00000000001c6930, progress=0) at add_kernel.cpp:69:9
@@ -205,7 +208,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
 Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom).
 
-> [!NOTE]NOTE
+> [!NOTE]
 >
 >- This sample project does not support <term>Atlas A3 training products</term>.
 >- When downloading the code sample, run the following command to specify the branch version:
@@ -225,10 +228,10 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
 2. Run the following command to generate a custom operator project and implement the operator on the host and kernel:
 
     ```bash
-    bash install.sh -v Ascendxxxyy    # xxxyy indicates the type of the chip used by the user.
+    bash install.sh -v Ascendxxxyy    # xxxyy indicates the type of the chip used by the user
     ```
 
-3. In the `$\{git\_clone\_path\}/samples/operator/ascendc/0\_introduction/1\_add\_frameworklaunch/CustomOp` directory, change the value of `"Release"` to `"Debug"` in `cacheVariables` of the `CMakePresets.json` file.
+3. In the `${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/CustomOp` directory, change the value of `"Release"` to `"Debug"` in `cacheVariables` of the `CMakePresets.json` file.
 
     ```bash
     "cacheVariables": {
@@ -240,14 +243,14 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     }
     ```
 
-4. Compile and deploy the operator by referring to [Operator Compilation and Deployment](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html). <a id="step-4-operator-compilation"></a>
-5. Go to the directory where the msOpGen script `install.sh` is located, compile the single-operator calling application by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md), and obtain the executable file `execute\_add\_op`. <a id="step-5"></a>
+4. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md) section. <a id="step-4-operator-compilation"></a>
+5. Go to the directory where the msOpGen script `install.sh` is located, compile the single-operator calling application by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md), and obtain the executable file `execute_add_op`. <a id="step-5"></a>
 
     ```bash
     cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation
     ```
 
-6. Use msDebug to load the single-operator executable file `execute\_add\_op` obtained in [5](#step-5).
+6. Use msDebug to load the single-operator executable file `execute_add_op` obtained in [5](#step-5).
 
     ```bash
     export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/opp/vendors/customize/op_api/lib:$LD_LIBRARY_PATH
@@ -284,8 +287,9 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     (msdebug)
     ```
 
-    > [!NOTE]NOTE
-    > For details about the subsequent debugging process, see "[Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage)", "[Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing)", and "[Core Switching](../user_guide/msdebug_user_guide.md#core-switching)".
+    > [!NOTE]
+    > 
+    > For details about the subsequent debugging process, see [Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage), [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 ## Debugging the Operators Called by a PyTorch Interface
 
@@ -297,17 +301,17 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
 
 - Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom).
 
-    > [!NOTE]NOTE
+    > [!NOTE]
     >
-    > - This sample project supports only Python 3.9. If you want to run the project in other Python versions, change the Python version in the `run\_op\_plugin.sh` file in the `$\{git\_clone\_path\}/samples/operator/ascendc/0\_introduction/1\_add\_frameworklaunch/PytorchInvocation` directory.
+    > - This sample project supports only Python 3.9. If you want to run the project in other Python versions, change the Python version in the `run_op_plugin.sh` file in the `${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation` directory.
     > - This sample project does not support <term>Atlas A3 training products</term>.
     > - When downloading the code sample, run the following command to specify the branch version:
->
+    >
     >    ```bash
     >    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
     >    ```
 
-- Install the PyTorch framework and torch_npu plugin by referring to [Ascend Extension for PyTorch Software Installation Guide](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html).
+- Install the PyTorch framework and `torch_npu` plugin by referring to [TorchNPU Software Installation](https://www.hiascend.com/document/detail/en/Pytorch/910/installguide/swinstall/docs/en/installation_guide/installation_description.md).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
@@ -315,10 +319,10 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
 1. Run the following command to generate a custom operator project and implement the operator on the host and kernel:
 
     ```bash
-    bash install.sh -v Ascendxxxyy    # xxxyy indicates the type of the chip used by the user.
+    bash install.sh -v Ascendxxxyy    # xxxyy indicates the type of the chip used by the user
     ```
 
-2. In the `$\{git\_clone\_path\}/samples/operator/ascendc/0\_introduction/1\_add\_frameworklaunch/CustomOp` directory, change the value of `"Release"` to "Debug" in `cacheVariables` of the `CMakePresets.json` file.
+2. In the `${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/CustomOp` directory, change the value of `"Release"` to "Debug" in `cacheVariables` of the `CMakePresets.json` file.
 
     ```bash
     "cacheVariables": {
@@ -330,23 +334,24 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     }
     ```
 
-3. Compile and deploy the operator by referring to [Operator Compilation and Deployment](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html).
+3. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md) section.
 4. Go to the sample directory and download the sample code in CLI mode. Use PyTorch to call the AddCustom operator project and complete the compilation by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md).
 
     ```bash
     cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation
     ```
 
-    > [!NOTE]NOTE
+    > [!NOTE]
+    > 
     > The sample project directory is as follows:
->
+    >
     > ```text
     > PytorchInvocation
     > ├── op_plugin_patch
     > ├── README.md        // Registration sample of calling the AddCustom operator project in PyTorch mode
     > ├── run_op_plugin.sh      // Required for executing the sample
     > └── test_ops_custom.py    // Required for starting the tool
-    > └── test_ops_custom_register_in_graph.py  // Executes the test case script in torch.compile mode.
+    > └── test_ops_custom_register_in_graph.py  // Executes the test case script in torch.compile mode
     > ```
 
 5. Execute the sample. During the sample execution, test data is automatically generated. Run the PyTorch sample, and verify the running result.
@@ -419,10 +424,11 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     (msdebug)
     ```
 
-    > [!NOTE]NOTE
-    > For details about other debugging operations, see "[Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage)", "[Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing)", "[Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display)", and "[Core Switching](../user_guide/msdebug_user_guide.md#core-switching)".
+    > [!NOTE]
+    > 
+    > For details about other debugging operations, see [Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage), [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), [Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
-9. Delete the breakpoint. For details, see "[Setting Breakpoints] (../user_guide/msdebug_user_guide.md#setting-breakpoints)".
+9. Delete the breakpoint. For details, see [Setting Breakpoints](../user_guide/msdebug_user_guide.md#breakpoint-setting).
 10. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash
@@ -443,9 +449,9 @@ This section shows how to use msDebug to debug a template library operator (matm
 
 **Procedure**
 
-1. Compile the operator based on the sample project obtained in "Preparations" to generate the executable file `00\_basic\_matmul`.
+1. Compile the operator based on the sample project obtained in [Preparations](#Preparations) to generate the executable file `00_basic_matmul`.
 
-    Run the following command to compile the operator. After the compilation is complete, the executable file `00\_basic\_matmul` is generated in the `build/bin` directory.
+    Run the following command to compile the operator. After the compilation is complete, the executable file `00_basic_matmul` is generated in the `output/bin` directory.
 
     ```bash
     bash ./scripts/build.sh 00_basic_matmul --debug --msdebug
@@ -454,15 +460,15 @@ This section shows how to use msDebug to debug a template library operator (matm
 2. Start msDebug to start the operator program and enter the debugging page.
 
     ```bash
-    msdebug ./build/bin/00_basic_matmul 256 512 1024 0
-    (msdebug) target create "./build/bin/00_basic_matmul"
-    Current executable set to '/home/mindstudio/projects/ascendc-templates/build/bin/00_basic_matmul' (aarch64).
+    msdebug ./output/bin/00_basic_matmul 256 512 1024 0
+    (msdebug) target create "./output/bin/00_basic_matmul"
+    Current executable set to '/home/mindstudio/projects/ascendc-templates/output/bin/00_basic_matmul' (aarch64).
     (msdebug)
     ```
 
 3. Sets a breakpoint.
 
-    In this test case, the code implementation of the kernel function is located in `basic\_matmul.hpp`. In this file, set an NPU breakpoint for the required code line.
+    In this test case, the code implementation of the kernel function is located in `basic_matmul.hpp`. In this file, set an NPU breakpoint for the required code line.
 
     ```bash
     (msdebug) b basic_matmul.hpp:121
@@ -472,11 +478,11 @@ This section shows how to use msDebug to debug a template library operator (matm
 
 4. Run the operator program and wait until the breakpoint is hit.
 
-    The program starts to run until the first breakpoint (`basic\_matmul.hpp:127`) is hit. msDebug detects that the NPU core function starts to run on device 0.
+    The program starts to run until the first breakpoint (`basic_matmul.hpp:127`) is hit. msDebug detects that the NPU core function starts to run on device 0.
 
     ```cpp
     (msdebug) run
-    Process 3344307 launched: '/home/mindstudio/projects/ascendc-templates/build/bin/00_basic_matmul' (aarch64)
+    Process 3344307 launched: '/home/mindstudio/projects/ascendc-templates/output/bin/00_basic_matmul' (aarch64)
     [Launch of Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo on Device 0]
     Process 3344307 stopped
     [Switching to focus on Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo, CoreId 21, Type aic]
@@ -492,8 +498,8 @@ This section shows how to use msDebug to debug a template library operator (matm
     (msdebug)
     ```
 
-    > [!NOTE]NOTE
-    > `\_ZN7Catlass13KernelAdapterINS\_4Gemm6Kernel11BasicMatmulINS1\_5Blo` indicates the kernel name of the template library. Only the first 64 characters are displayed in the example.
+    > [!NOTE]
+    > `_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo` indicates the kernel name of the template library. Only the first 64 characters are displayed in the example.
 
 5. Review information.
 
@@ -535,7 +541,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     - Switch to another AIC core and print the required information.
 
         ```cpp
-        (msdebug) ascend aic 24  // Select the core ID corresponding to block 3 in ascend info cores. In this example, the core ID is 24.
+        (msdebug) ascend aic 24  // Select the core ID corresponding to block 3 in ascend info cores. In this example, the core ID is 24
         [Switching to focus on Kernel _ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo, CoreId 24, Type aic]
         * thread #1, name = '00_basic_matmul', stop reason = breakpoint 1.1
             frame #0: 0x0000000000001c38 device_debugdata`_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Block9BlockMmadINS1_19MmadAtlasA2PingpongILb1EEENS_9GemmShapeILj128ELj256ELj256EEENS8_ILj128ELj256ELj64EEENS1_8GemmTypeIDhNS_6layout8RowMajorELN7AscendC9TPositionE0EEESG_SG_vNS1_4Tile8TileCopyINS_4Arch7AtlasA2ESG_SG_SG_vEENSH_8TileMmadISK_SG_SG_vEEEEvNS4_24GemmIdentityBlockSwizzleILj3ELj0EEEEEEEvNT_6ParamsE_mix_aic at basic_matmul.hpp:121:71
@@ -550,8 +556,9 @@ This section shows how to use msDebug to debug a template library operator (matm
         (uint32_t) $1 = 0
         ```
 
-    > [!NOTE]NOTE
-    > For details about other debugging operations, see "[Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing)", "[Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-displaying)", and "[Core Switching](../user_guide/msdebug_user_guide.md#core-switching)".
+    > [!NOTE]
+    > 
+    > For details about other debugging operations, see [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), [Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 6. Query and delete breakpoints to resume program execution.
 

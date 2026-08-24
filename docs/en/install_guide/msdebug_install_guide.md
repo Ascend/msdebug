@@ -2,29 +2,31 @@
 
 <br>
 
-## 1. Binary Installation
+## 1. Installation Description
 
-The MindStudio toolchain is integrated into the CANN package for release. msDebug is stored in the `{install_cann_path}/cann/tools/msdebug` directory. You can install the CANN package in either of the following ways:
+This tool has been integrated into CANN. If CANN has been installed and this tool does not need to be updated, you can directly use it without following the instructions in this document.
 
-### Method 1: Install the software according to the CANN official document
+If CANN has not been installed in your environment, install the Ascend NPU driver and CANN software (including the Toolkit and ops) by referring to [CANN Quick Installation](https://www.hiascend.com/cann/download), and configure environment variables.
 
-For details, see <a href="https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst" target="_blank">CANN Installation Guide</a>.
-Perform the installation and configuration step by step according to the document.
+If you need to upgrade this tool separately or use the latest version, you can install it in any of the following ways: [Online Installation](#21-online-installation), [Offline Installation](#22-offline-installation), and [Source Installation](#23-source-installation).
 
-### Method 2: Use the official CANN container image
+## 2. Installation Methods
 
-Visit <a href="https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884" target="_blank">CANN official image repository</a>.
-Pull the image and start the container according to the instructions in the repository.
+### 2.1 Online Installation
 
-<br>
+If your device has Internet access, you can run a single command to automatically download and install the tool. Visit the [Ascend community](https://www.hiascend.com/en/developer/software/mindstudio/download), select the target CANN version, and choose "Online" installation method. The system will guide you through the subsequent operations.
 
-## 2. Source Code Installation
+### 2.2 Offline Installation
+
+For devices that are not connected to the Internet, such as those on an enterprise intranet, download the complete offline installation package on a device that has Internet access and then transfer the package to the target device for installation. Visit the [Ascend community](https://www.hiascend.com/en/developer/software/mindstudio/download), select the target CANN version, and choose "Offline" installation method. The system will guide you through the subsequent operations.
+
+### 2.3 Source Installation
 
 To use the functions of the latest code or modify the source code to enhance functions, you can download the code from this repository, build and package the tool, and install it.
 
-### 2.1 Environment Setup
+#### 2.3.1 Preparing the Environment
 
-Set up the environment by referring to the [Operator Tool Development Environment Setup Guide](https://gitcode.com/Ascend/msot/blob/master/docs/en/common/dev_env_setup.md).
+Set up the environment by referring to the [Operator Tool Development Environment Setup Guide](https://gitcode.com/Ascend/msot/blob/26.1.0/docs/en/common/dev_env_setup.md).
 
 The requirements for compilation tools are as follows:
 
@@ -34,15 +36,24 @@ The requirements for compilation tools are as follows:
 
 - Git LFS is installed.
 
-### 2.2 Building and Packaging
+#### 2.3.2 Building and Packaging
 
-Run the one-click script to automatically download and build the dependency repository:
+- Clone this repository.
 
-```shell
-python build.py
-```
+    ```sh
+    git clone https://gitcode.com/Ascend/msdebug.git -b 26.1.0
+    ```
 
-> [!NOTE]NOTE
+- Build and packaging
+
+    Run the one-click script to automatically download and build the dependency repository:
+
+    ```shell
+    cd msdebug
+    python build.py
+    ```
+
+> [!NOTE]
 >
 > If you have modified the code in the local dependency sub-repositories and wish to skip the update process during the build, run `python build.py local`.
 
@@ -54,21 +65,21 @@ When the following information is displayed, the package is built and the .run p
 
 By default, the built .run package is saved in the `output` directory. In the file name, `<version>` indicates the version number and `<arch>` indicates the CPU architecture.
 
-> [!NOTE]NOTE
+> [!NOTE] Description
 >
-> The generation of the .runfile depends on the pigz library, which is typically provided by the system. If no version is displayed in `pigz --version`, download it.
+> The generation of `.run` depends on the pigz library, which is typically provided by the system. If no version is displayed in `pigz --version`, download it.
 
-### 2.3 Installation and Uninstallation
+#### 2.3.3 Installation
 
-#### 2.3.1 Preparing the .run Package
+##### 2.3.3.1 Preparing the `.run` Package
 
-Before installation, grant the execute permission to the .run package. Go to the directory where the .run package is saved and run the following command to add the execute permission:
+Before installation, grant the execute permission to the `.run` package. Go to the directory where the .run package is saved and run the following command to add the execute permission:
 
 ```shell
 chmod +x mindstudio-debugger_<version>_<arch>.run
 ```
 
-#### 2.3.2 Installation
+##### 2.3.3.2 Installation
 
 Copy the .run package to the operating environment and run the following command to install it:
 
@@ -82,7 +93,7 @@ When the following information is displayed, the software package is successfull
 mindstudio-debugger package install success!
 ```
 
-> [!NOTE]NOTE
+> [!NOTE]
 >
 > - If the `ASCEND_HOME_PATH` environment variable is configured, the software package will be installed to `${ASCEND_HOME_PATH}`. Otherwise, it will be installed to `${HOME}/Ascend`.
 >
@@ -90,38 +101,47 @@ mindstudio-debugger package install success!
 >
 > - If an earlier version of the tool has been installed in the system, a message will be displayed during the installation asking you whether to replace it. Enter "y" to perform an overwrite installation.
 
-#### 2.3.3 Uninstallation
+## 3. Installation Verification
 
-Run the following command to uninstall the software:
-
-```shell
-./mindstudio-debugger_<version>_<arch>.run --uninstall
-```
-
-When the following information is displayed, the software package is successfully uninstalled:
-
-```text
-mindstudio-debugger uninstall success!
-```
-
-> [!NOTE]NOTE
-> By default, the uninstallation targets the directory in `${HOME}/Ascend`. If the package is installed using the `--install-path` option, specify the same path during uninstallation, for example, `./mindstudio-debugger_<version>_<arch>.run  --install-path=./test --uninstall`.
-
-If the .run package has been deleted, run the following command to uninstall the software:
+After the installation is complete, run the following command to check whether the tool is successfully installed:
 
 ```shell
-bash $HOME/Ascend/share/info/mindstudio-debugger/script/uninstall.sh   # For custom installation paths, run "bash ./xxx/share/info/mindstudio-debugger/script/uninstall.sh".
+msdebug --help
 ```
 
-#### 2.3.4 Upgrade
+If no error is reported and the help information is displayed, the installation is successful.
 
-To replace the installed mindstudio-debugger package with the .run package, run the following command:
+## 4. Uninstallation
 
-```shell
-./mindstudio-debugger_<version>_<arch>.run --run
-```
+To uninstall the tool, perform the following steps:
 
-During the process, you will be prompted `do you want to overwrite current installation? [y/n]` Enter `y` to proceed with the automatic upgrade.
+1. Download the script.
 
-> [!NOTE]NOTE
-> By default, the upgrade targets the `mindstudio-debugger` directory in `${HOME}/Ascend`. If the previous version is installed to a custom path, use the `--install-path` option, for example, `./mindstudio-debugger_<version>_<arch>.run  --install-path=./test --run`, where `test` is the previous installation directory.
+   ```bash
+   curl -O https://inst.obs.cn-north-4.myhuaweicloud.com/26.1.0/ms_install.py
+   ```
+
+   > [!NOTE]
+   >
+   > - Internet access is required to download the script. If your target environment is offline or does not allow Internet access, download the script on an Internet-connected device first, then copy it to the target device.
+   > - If the command does not respond, or you encounter connection failures, SSL certificate errors, or other issues, refer to [FAQs](https://www.hiascend.com/developer/blog/details/02176213671719317003).
+
+2. Uninstall the tool.
+
+   ```bash
+   python ms_install.py uninstall {tools_name}
+   ```
+
+   Replace `{tools_name}` with the name of the tool to be uninstalled. You can run the `python ms_install.py help` command to query the tool name, which is displayed under the `Available Tools` field in the command output.
+
+   If the uninstallation is successful, the following information is displayed:
+
+   ```text
+   Successfully uninstalled 1 tool ({tools_name})
+   ```
+
+## 5. Upgrade
+
+Upgrades follow the "uninstall first, then install" process. Simply run the installation command. The tool will automatically remove the previous version and guide you through the upgrade process.
+
+You can run the `msdebug --version` command to view the version information of the current environment, and then select the version to upgrade. When upgrading, pay attention to the version compatibility. For details, see the [Release Notes](https://gitcode.com/Ascend/release-management/blob/master/MindStudio/26.1.0/release_notes.md).
