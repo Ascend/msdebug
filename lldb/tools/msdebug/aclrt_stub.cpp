@@ -20,6 +20,21 @@
 
 using namespace std;
 
+// 记录halMemAdvise设置的内存属性advise值，key为(ptr, device)
+// 用于在调用halMemAdvise前判断advise是否已是预期值，避免重复调用
+// 定义在匿名命名空间外，供runtime_stub.cpp共享使用
+std::map<std::pair<uint64_t, uint32_t>, unsigned int> &GetHalMemAdviseMap() {
+  static std::map<std::pair<uint64_t, uint32_t>, unsigned int> inst{};
+  return inst;
+}
+
+// 共享函数声明（定义在匿名命名空间后），供匿名命名空间内调用
+MemAdviseRestoreInfo &GetMemAdviseRestoreInfo();
+drvError_t halMemAdviseOrigin(DVdeviceptr ptr, size_t count,
+                              unsigned int advise, DVdevice device);
+void SetMemAdviseIfNecessary(uint64_t base_ptr, size_t psize, int32_t deviceId);
+void RestoreMemAdvise();
+
 namespace {
 
 typedef pid_t (*drvDeviceGetBareTgidFunc)(void);
@@ -45,7 +60,6 @@ static std::map<const aclrtBinary, rtDevBinary_t> &GetDevBinaryMap()
     static std::map<const aclrtBinary, rtDevBinary_t> inst{};
     return inst;
 }
-
 
 std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
 {
@@ -336,17 +350,6 @@ void *GetStubFuncPtr(const std::string funcName, bool throw_error)
     return it->second.funcPtr;
 }
 
-drvError_t halMemAdvise(DVdeviceptr ptr, size_t count, unsigned int advise, DVdevice device)
-{
-    RT_STUB_LOG_INFO("Enter %s, ptr=%#llx, count=%lu, advise=%u\n", __FUNCTION__, ptr, count, advise);
-    using FuncType = decltype(&halMemAdvise);
-    auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
-    if (func == nullptr) {
-        return 1;
-    }
-    return func(ptr, count, advise, device);
-}
-
 const char *aclrtGetSocNameImpl()
 {
     using FuncType = decltype(&aclrtGetSocNameImpl);
@@ -354,65 +357,83 @@ const char *aclrtGetSocNameImpl()
     return func();
 }
 
-uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle)
-{
-    using FuncType = decltype(&aclrtGetFunctionAddrImpl);
-    auto func = (FuncType)GetStubFuncPtr("aclrtGetFunctionAddrImpl");
-    void *aicAddr{nullptr};
-    void *aivAddr{nullptr};
-    auto ret = func(funcHandle, &aicAddr, &aivAddr);
-    if (ret != 0) {
-        RT_STUB_LOG_ERROR("aclrtGetFunctionAddrImpl failed. ret=%d\n", ret);
-        PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
-        return 0;
-    }
-    uint64_t pcStartAddr{};
-    if (aicAddr) {
-        pcStartAddr = reinterpret_cast<uint64_t>(aicAddr);
-    } else if (aivAddr) {
-        pcStartAddr = reinterpret_cast<uint64_t>(aivAddr);
-    } else {
-        RT_STUB_LOG_ERROR("aclrtGetFunctionAddrImpl get addr all zero\n");
-        PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
-        return 0;
-    }
+// 调用aclrtGetFunctionAddrImpl获取核函数的原始起始地址(aic或aiv)
+uint64_t GetRawPcStartAddr(aclrtFuncHandle funcHandle) {
+  using FuncType = decltype(&aclrtGetFunctionAddrImpl);
+  auto func = (FuncType)GetStubFuncPtr("aclrtGetFunctionAddrImpl");
+  void *aicAddr{nullptr};
+  void *aivAddr{nullptr};
+  auto ret = func(funcHandle, &aicAddr, &aivAddr);
+  if (ret != 0) {
+    RT_STUB_LOG_ERROR("aclrtGetFunctionAddrImpl failed. ret=%d\n", ret);
+    PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
+    return 0;
+  }
+  if (aicAddr) {
+    return reinterpret_cast<uint64_t>(aicAddr);
+  }
+  if (aivAddr) {
+    return reinterpret_cast<uint64_t>(aivAddr);
+  }
+  RT_STUB_LOG_ERROR("aclrtGetFunctionAddrImpl get addr all zero\n");
+  PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
+  return 0;
+}
 
-    std::string targetKernelName = GetKernelNameFromStubFunc(funcHandle);
-    const void *handle = MapManager::Instance().GetHandle(funcHandle);
+// 根据kernel信息修正pc起始地址
+uint64_t FixPcStartAddr(aclrtFuncHandle funcHandle, uint64_t pcStartAddr) {
+  std::string targetKernelName = GetKernelNameFromStubFunc(funcHandle);
+  const void *handle = MapManager::Instance().GetHandle(funcHandle);
+  if (handle == nullptr) {
+    RT_STUB_LOG_ERROR("GetHandle failed for funcHandle=%p\n",
+                      static_cast<void *>(funcHandle));
+    return 0;
+  }
+  const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
+  return GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
+}
 
-    const auto &kernelInfo = MapManager::Instance().GetKernelInfo(handle);
-    pcStartAddr = GetFixedPcStartAddr(kernelInfo, targetKernelName, pcStartAddr);
-    static std::string soc_version = aclrtGetSocNameImpl();
-    // 950
-    if (!StartsWith(soc_version, "Ascend950")) {
-      return pcStartAddr;
-    }
-    void *ptr = reinterpret_cast<void *>(pcStartAddr);
-    uint64_t *base_ptr{};
-    uint64_t psize{};
-    ret = aclrtMemGetAddressRangeImpl(ptr, (void**)&base_ptr, &psize);
-    if (ret != ACL_SUCCESS) {
-        RT_STUB_LOG_WARNING("aclrtMemGetAddressRange get addr size failed, "
-                "If the memory used by your process is in a read-only state, "
-                "it may lead to failure in setting breakpoints.\n");
-        PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
-        return pcStartAddr;
-    }
-    RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize=%lu\n",
-                     pcStartAddr, (uint64_t)base_ptr, psize);
-    int32_t deviceId{0};
-    aclrtGetDeviceImpl(&deviceId);
-    deviceId = ConvertToVisibleDeviceId(deviceId);
-    drvError_t hal_ret = halMemAdvise(pcStartAddr, psize, 3, deviceId);
-    if (hal_ret != 0) {
-      RT_STUB_LOG_WARNING(
-          "halMemAdvise failed, ret=%u, device_id=%u, "
-          "If the memory used by your process is in a read-only state, "
-          "it may lead to failure in setting breakpoints.\n",
-          hal_ret, deviceId);
-      return pcStartAddr;
-    }
+// 将核函数所在内存设置为可读写，以支持断点设置
+void EnableMemReadWrite(uint64_t pcStartAddr) {
+  void *ptr = reinterpret_cast<void *>(pcStartAddr);
+  uint64_t *base_ptr{};
+  uint64_t psize{};
+  auto ret = aclrtMemGetAddressRangeImpl(ptr, (void **)&base_ptr, &psize);
+  if (ret != ACL_SUCCESS) {
+    RT_STUB_LOG_WARNING(
+        "aclrtMemGetAddressRange get addr size failed, "
+        "If the memory used by your process is in a read-only state, "
+        "it may lead to failure in setting breakpoints.\n");
+    PrintErrorCode(ACLRT_GET_FUNCTION_ADDR_IMPL_FAILED_ERR);
+    return;
+  }
+  RT_STUB_LOG_INFO("pc_start_addr=%#lx,  base_addr=%#lx, psize=%lu\n",
+                   pcStartAddr, (uint64_t)base_ptr, psize);
+  int32_t deviceId{0};
+  aclrtGetDeviceImpl(&deviceId);
+  deviceId = ConvertToVisibleDeviceId(deviceId);
+  SetMemAdviseIfNecessary((uint64_t)base_ptr, psize, deviceId);
+}
+
+uint64_t GetPcStartAddr(aclrtFuncHandle funcHandle) {
+  uint64_t pcStartAddr = GetRawPcStartAddr(funcHandle);
+  if (pcStartAddr == 0) {
+    return 0;
+  }
+
+  pcStartAddr = FixPcStartAddr(funcHandle, pcStartAddr);
+  if (pcStartAddr == 0) {
+    return 0;
+  }
+
+  static std::string soc_version = aclrtGetSocNameImpl();
+  // 950
+  if (!StartsWith(soc_version, "Ascend950")) {
     return pcStartAddr;
+  }
+
+  EnableMemReadWrite(pcStartAddr);
+  return pcStartAddr;
 }
 
 size_t ReadBinary(std::string const &filename, vector<uint8_t> &data)
@@ -484,18 +505,21 @@ int32_t SetDevicePost(int32_t device)
 
 void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)
 {
-    // 打印launch info
-    std::string kernelName = GetKernelNameFromStubFunc(funcHandle);
-    kernelName = GetSimpleKernelName(kernelName);
-    int32_t deviceId{0};
-    aclrtGetDeviceImpl(&deviceId);
-    ShowKernelLaunchInfo(kernelName, deviceId);
-    // 获取pc_start_addr
-    uint64_t pcStartAddr = GetPcStartAddr(funcHandle);
-    if (pcStartAddr == 0) {
-      RT_STUB_LOG_INFO("Get start pc for kernel=%.1024s failed, skip it", kernelName.c_str());
-      return;
-    }
+  // 重置内存属性恢复信息，防止上一次launch的残留数据影响本次
+  GetMemAdviseRestoreInfo() = {};
+  // 打印launch info
+  std::string kernelName = GetKernelNameFromStubFunc(funcHandle);
+  kernelName = GetSimpleKernelName(kernelName);
+  int32_t deviceId{0};
+  aclrtGetDeviceImpl(&deviceId);
+  ShowKernelLaunchInfo(kernelName, deviceId);
+  // 获取pc_start_addr
+  uint64_t pcStartAddr = GetPcStartAddr(funcHandle);
+  if (pcStartAddr == 0) {
+    RT_STUB_LOG_INFO("Get start pc for kernel=%.1024s failed, skip it",
+                     kernelName.c_str());
+    return;
+  }
 
     ProcessAddrAsIpcMem(pcStartAddr);
 
@@ -512,6 +536,7 @@ void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)
 void LaunchKernelPost(aclrtStream stream)
 {
     aclrtSynchronizeStreamImpl(stream);
+    RestoreMemAdvise();
 }
 
 int32_t ConvertToVisibleDeviceIdIfPossible(int32_t devId)
@@ -533,6 +558,82 @@ int32_t ConvertToVisibleDeviceIdIfPossible(int32_t devId)
 }
 
 } // namespace
+
+// 调用原始的halMemAdvise（非劫持版本），纯粹的接口调用
+// 内部函数应调用此函数而非extern "C"的劫持版本halMemAdvise
+drvError_t halMemAdviseOrigin(DVdeviceptr ptr, size_t count,
+                              unsigned int advise, DVdevice device) {
+  using FuncType = drvError_t (*)(DVdeviceptr, size_t, unsigned int, DVdevice);
+  auto func = (FuncType)GetStubFuncPtr("halMemAdvise", false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find halMemAdvise failed\n");
+    return 1;
+  }
+  return func(ptr, count, advise, device);
+}
+
+MemAdviseRestoreInfo &GetMemAdviseRestoreInfo() {
+  static thread_local MemAdviseRestoreInfo inst{};
+  return inst;
+}
+
+// 检查advise
+// map，若已是预期值则跳过；否则保存原始值并调用halMemAdviseOrigin设置可读写
+// 供aclrt_stub.cpp的EnableMemReadWrite和runtime_stub.cpp的SetMemoryWritable共享调用
+void SetMemAdviseIfNecessary(uint64_t base_ptr, size_t psize,
+                             int32_t deviceId) {
+  constexpr unsigned int expectedAdvise = ADVISE_ACCESS_READWRITE;
+  auto &adviseMap = GetHalMemAdviseMap();
+  auto key = std::make_pair(base_ptr, (uint32_t)deviceId);
+  auto it = adviseMap.find(key);
+  if (it == adviseMap.end()) {
+    // map中没有记录，说明该内存未被halMemAdvise过，默认为可读写，无需调用
+    RT_STUB_LOG_INFO("halMemAdvise not set before, default read-write, "
+                     "ptr=%#lx, device=%u, skip\n",
+                     base_ptr, (uint32_t)deviceId);
+    return;
+  }
+  if (it->second == expectedAdvise) {
+    // advise已经是预期的值，无需再次调用halMemAdvise
+    RT_STUB_LOG_INFO("halMemAdvise already set to %u, ptr=%#lx, device=%u, "
+                     "skip\n",
+                     expectedAdvise, base_ptr, (uint32_t)deviceId);
+    return;
+  }
+  // 保存原来的advise值，用于LaunchKernelPost中恢复
+  auto &restoreInfo = GetMemAdviseRestoreInfo();
+  restoreInfo.ptr = base_ptr;
+  restoreInfo.size = psize;
+  restoreInfo.device = (uint32_t)deviceId;
+  restoreInfo.originalAdvise = it->second;
+  restoreInfo.needsRestore = true;
+  drvError_t hal_ret =
+      halMemAdviseOrigin(base_ptr, psize, expectedAdvise, deviceId);
+  if (hal_ret != 0) {
+    RT_STUB_LOG_WARNING(
+        "halMemAdvise failed, ret=%u, device_id=%u, "
+        "If the memory used by your process is in a read-only state, "
+        "it may lead to failure in setting breakpoints.\n",
+        hal_ret, deviceId);
+    restoreInfo.needsRestore = false;
+  }
+}
+
+// 恢复在kernel launch前修改的内存属性
+// 如果不知道原来的属性值(needsRestore为false)，则不恢复
+// 供aclrt_stub.cpp和runtime_stub.cpp的LaunchKernelPost共享调用
+void RestoreMemAdvise() {
+  auto &restoreInfo = GetMemAdviseRestoreInfo();
+  if (!restoreInfo.needsRestore) {
+    return;
+  }
+  RT_STUB_LOG_INFO("Restore halMemAdvise, ptr=%#lx, advise=%u, device=%u\n",
+                   restoreInfo.ptr, restoreInfo.originalAdvise,
+                   restoreInfo.device);
+  halMemAdviseOrigin(restoreInfo.ptr, restoreInfo.size,
+                     restoreInfo.originalAdvise, restoreInfo.device);
+  restoreInfo = {};
+}
 
 /* ACLRUNTIME INSTRUMENTATION FUNCTION */
 
@@ -889,6 +990,26 @@ aclError aclrtFreeWithDevSyncImpl(void *devPtr) {
   SendIpcMemFreeInfo((uint64_t)devPtr);
 
   auto ret = func(devPtr);
+  return ret;
+}
+
+drvError_t halMemAdvise(DVdeviceptr ptr, size_t count, unsigned int advise,
+                        DVdevice device) {
+  RT_STUB_LOG_INFO(
+      "Enter halMemAdvise, ptr=%#lx, count=%lu, advise=%u, device=%u\n",
+      (uint64_t)ptr, count, advise, (uint32_t)device);
+  using FuncType = decltype(&halMemAdvise);
+  auto func = (FuncType)GetStubFuncPtr(__FUNCTION__, false);
+  if (func == nullptr) {
+    RT_STUB_LOG_ERROR("Find %s failed\n", __FUNCTION__);
+    return 1;
+  }
+
+  auto ret = func(ptr, count, advise, device);
+  if (ret == 0) {
+    // 劫持函数保存/更新advise值到全局map，供其他函数判断使用
+    GetHalMemAdviseMap()[{(uint64_t)ptr, (uint32_t)device}] = advise;
+  }
   return ret;
 }
 }

@@ -168,6 +168,8 @@ VISIBILITY_EXPORT aclError aclrtMallocWithCfgImpl(void **devPtr, size_t size,
                                                   void *cfg);
 VISIBILITY_EXPORT aclError aclrtFreeImpl(void *devPtr);
 VISIBILITY_EXPORT aclError aclrtFreeWithDevSyncImpl(void *devPtr);
+VISIBILITY_EXPORT drvError_t halMemAdvise(DVdeviceptr ptr, size_t count,
+                                          unsigned int advise, DVdevice device);
 }
 
 #endif
