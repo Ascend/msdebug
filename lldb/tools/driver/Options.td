@@ -179,9 +179,12 @@ def: Separate<["-"], "O">,
 // General options.
 def version: F<"version">,
   HelpText<"Prints out the current version number of the LLDB debugger.">;
-def: Flag<["-"], "v">,
+def: Flag<["-"], "V">,
   Alias<version>,
   HelpText<"Alias for --version">;
+def: Flag<["-"], "v">,
+  Alias<version>,
+  Flags<[HelpHidden]>;
 
 def help: F<"help">,
   HelpText<"Prints out the usage information for the LLDB debugger.">;

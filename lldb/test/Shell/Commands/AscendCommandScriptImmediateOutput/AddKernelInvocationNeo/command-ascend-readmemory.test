@@ -1,14 +1,14 @@
 # REQUIRES: ascend-debugger
 # RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
 # RUN: cd ~/samples/operator/AddCustomSample/KernelLaunch/AddKernelInvocationNeo/
-# msdebug -v
+# msdebug -V
 # RUN: LD_LIBRARY_PATH=$(pwd)/out/lib:$LD_LIBRARY_PATH msdebug ascendc_kernels_bbit -s %s | FileCheck %s -dump-input=always
 
 b add_custom.cpp:44
 # CHECK-LABEL: b add_custom.cpp:44
 # CHECK-NEXT: Breakpoint {{[0-9]+}}:
 
-run 
+run
 # CHECK-LABEL: run
 # CHECK: [Launch of Kernel {{[0-9a-zA-Z_]+}} on Device {{[0-9]+}}]
 # CHECK: Process {{[0-9]+}} stopped

@@ -1,7 +1,7 @@
 # REQUIRES: ascend-debugger
 # RUN: source ~/Ascend_Daily/ascend-toolkit/set_env.sh
 # RUN: cd ~/samples/operator/AddCustomSample/KernelLaunch/AddKernelInvocationNeo/
-# msdebug -v
+# msdebug -V
 # RUN: LD_LIBRARY_PATH=$(pwd)/out/lib:$LD_LIBRARY_PATH msdebug ascendc_kernels_bbit -s %s | FileCheck %s -dump-input=always
 
 b add_custom.cpp:77

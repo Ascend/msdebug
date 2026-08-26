@@ -82,6 +82,19 @@ class LLDBOptTable : public opt::GenericOptTable {
 public:
   LLDBOptTable() : opt::GenericOptTable(InfoTable) {}
 };
+
+#ifdef MS_DEBUGGER
+static bool HasDeprecatedVersionArg(const opt::InputArgList &args) {
+  for (const auto *arg : args) {
+    if (!arg->getOption().matches(OPT_version))
+      continue;
+    const opt::Arg *alias = arg->getAlias();
+    if (alias && alias->getSpelling() == "-v")
+      return true;
+  }
+  return false;
+}
+#endif
 } // namespace
 
 static void reset_stdin_termios();
@@ -191,6 +204,10 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   m_debugger.SkipAppInitFiles(false);
 #ifdef MS_DEBUGGER
   const bool has_version_arg = args.hasArg(OPT_version);
+  if (HasDeprecatedVersionArg(args))
+    llvm::errs() << "WARNING: '-v' will be deprecated in MindStudio 27.2.0. "
+                    "use '-V' instead.\n";
+
   if (!has_version_arg) {
       const bool should_colorize =
         !args.hasArg(OPT_no_use_colors) && llvm::outs().has_colors();
@@ -724,8 +741,30 @@ static void sigtstp_handler(int signo) {
 
 #ifdef MS_DEBUGGER
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
-  std::string usage_str = tool_name.str() + " [options]";
-  table.printHelp(llvm::outs(), usage_str.c_str(), "", false);
+  std::string generated_options;
+  llvm::raw_string_ostream options_stream(generated_options);
+  table.printHelp(options_stream, "", "", false);
+  options_stream.flush();
+
+  llvm::StringRef options(generated_options);
+  for (unsigned header = 0; header != 2; ++header) {
+    size_t separator = options.find("\n\n");
+    if (separator == llvm::StringRef::npos)
+      break;
+    options = options.drop_front(separator + 2);
+  }
+
+  llvm::outs()
+      << "Description:\n"
+      << "  MindStudio Debugger (" << tool_name
+      << ") launches and controls debugging sessions for a program.\n\n"
+      << "Usage:\n"
+      << "  " << tool_name
+      << " [options] [<program> [program-args ...] [-- "
+         "option-like-program-args ...]]\n"
+      << "  " << tool_name << " [options] [-- <program> [program-args ...]]\n\n"
+      << "Optional arguments:\n"
+      << options;
 
   std::string examples = R"___(
 EXAMPLES:
@@ -766,7 +805,15 @@ EXAMPLES:
 
   Note: In REPL mode no file is loaded, so commands specified to run after
   loading the file (via -o or -s) will be ignored.)___";
-  llvm::outs() << examples << '\n';
+  llvm::outs() << examples
+               << "\n\nOutput:\n"
+               << "  Version information is written to stdout; the MindStudio "
+                  "logo and diagnostics are written to stderr.\n\n"
+               << "Troubleshooting:\n"
+               << "  - Unknown program options: use -- before arguments that "
+                  "start with '-'.\n"
+               << "  - Missing option value: run 'msdebug --help' and check "
+                  "the option signature.\n";
 }
 #else
 
@@ -844,7 +891,11 @@ int main(int argc, char const *argv[]) {
   llvm::StringRef argv0 = llvm::sys::path::filename(argv[0]);
 
   if (input_args.hasArg(OPT_help)) {
+#ifdef MS_DEBUGGER
+    printHelp(T, "msdebug");
+#else
     printHelp(T, argv0);
+#endif
     return 0;
   }
 

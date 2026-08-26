@@ -56,15 +56,40 @@ foreach(name IN LISTS NAMES)
   append_info(${name} "${revision}" "${repository}")
 endforeach()
 
-if(LLDB_SOURCE_DIR AND MS_DEBUGGER)
-  get_source_info("${LLDB_SOURCE_DIR}" revision repository)
-  set(version "26.0.0")
-  if(version AND revision)
-    string(SUBSTRING ${revision} 0 7 revision)
-    set(version "${version}-${revision}")
-    file(APPEND "${HEADER_FILE}.tmp"
-      "#define MSDEBUG_VERSION_STRING \"${version}\"\n")
+if(MS_DEBUGGER)
+  set(msdebug_package_version "")
+  if(MSDEBUG_VERSION_FILE AND EXISTS "${MSDEBUG_VERSION_FILE}")
+    file(READ "${MSDEBUG_VERSION_FILE}" msdebug_version_contents)
+    string(REGEX MATCH "Version=([^\r\n]+)" _ "${msdebug_version_contents}")
+    set(msdebug_package_version "${CMAKE_MATCH_1}")
+    string(STRIP "${msdebug_package_version}" msdebug_package_version)
   endif()
+
+  set(msdebug_revision "")
+  set(msdebug_repository "")
+  if(LLDB_SOURCE_DIR)
+    get_source_info("${LLDB_SOURCE_DIR}" msdebug_revision msdebug_repository)
+  endif()
+
+  if(msdebug_package_version)
+    file(APPEND "${HEADER_FILE}.tmp"
+      "#define MSDEBUG_VERSION_STRING \"${msdebug_package_version}\"\n")
+  else()
+    file(APPEND "${HEADER_FILE}.tmp" "#undef MSDEBUG_VERSION_STRING\n")
+  endif()
+
+  if(msdebug_revision)
+    file(APPEND "${HEADER_FILE}.tmp"
+      "#define MSDEBUG_GIT_COMMIT \"${msdebug_revision}\"\n")
+  else()
+    file(APPEND "${HEADER_FILE}.tmp" "#undef MSDEBUG_GIT_COMMIT\n")
+  endif()
+
+  if(NOT MSDEBUG_BUILD_DATE)
+    string(TIMESTAMP MSDEBUG_BUILD_DATE "%Y-%m-%dT%H:%M:%SZ" UTC)
+  endif()
+  file(APPEND "${HEADER_FILE}.tmp"
+    "#define MSDEBUG_BUILD_DATE \"${MSDEBUG_BUILD_DATE}\"\n")
 endif()
 # Copy the file only if it has changed.
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different

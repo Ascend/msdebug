@@ -200,7 +200,7 @@ OPTIONS
 
  Prints out the current version number of the LLDB debugger.
 
-.. option:: -v
+.. option:: -V
 
  Alias for --version
 

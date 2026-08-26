@@ -1,0 +1,16 @@
+UNSUPPORTED: lldb-repro
+
+RUN: %lldb -V 2>/dev/null | FileCheck %s --check-prefix=VERSION
+RUN: %lldb --version 2>/dev/null | FileCheck %s --check-prefix=VERSION
+RUN: %lldb -V > /dev/null 2>&1
+RUN: %lldb -v 2>&1 | FileCheck %s --check-prefix=DEPRECATED --check-prefix=VERSION
+
+DEPRECATED: WARNING: '-v' will be deprecated in MindStudio 27.2.0. use '-V' instead.
+
+VERSION: msdebug {{[0-9]+\.[0-9]+\.[0-9]+}} ({{[0-9a-f]{7,40}}})
+VERSION-NEXT: Copyright (c) 2026 Huawei Technologies Co., Ltd.
+VERSION-NEXT: License: Mulan PSL v2.
+VERSION-NEXT: {{^$}}
+VERSION-NEXT: Build Info:
+VERSION-NEXT: Date: {{.+}}
+VERSION-NEXT: Repo: https://gitcode.com/Ascend/msdebug

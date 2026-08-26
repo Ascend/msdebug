@@ -13,24 +13,37 @@ if(lldb_vc AND LLVM_APPEND_VC_REV)
 endif()
 
 if(MS_DEBUGGER)
-add_custom_command(OUTPUT "${vcs_version_inc}"
-  DEPENDS "${lldb_vc}" "${generate_vcs_version_script}"
-  COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
-                           "-DLLDB_SOURCE_DIR=${lldb_source_dir}"
-                           "-DHEADER_FILE=${vcs_version_inc}"
-                           "-DMS_DEBUGGER=1"
-                           "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
-                           "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
-                           -P "${generate_vcs_version_script}")
+  if(ROOT_DIR)
+    set(msdebug_root_dir "${ROOT_DIR}")
+  else()
+    get_filename_component(msdebug_root_dir "${LLDB_SOURCE_DIR}/.." ABSOLUTE)
+  endif()
+  set(msdebug_version_file "${msdebug_root_dir}/package/conf/version.info")
+  if(NOT EXISTS "${msdebug_version_file}")
+    message(FATAL_ERROR "msdebug version file not found: ${msdebug_version_file}")
+  endif()
+  string(TIMESTAMP msdebug_build_date "%Y-%m-%dT%H:%M:%SZ" UTC)
+
+  add_custom_command(OUTPUT "${vcs_version_inc}"
+    DEPENDS "${lldb_vc}" "${generate_vcs_version_script}" "${msdebug_version_file}"
+    COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
+                             "-DLLDB_SOURCE_DIR=${lldb_source_dir}"
+                             "-DHEADER_FILE=${vcs_version_inc}"
+                             "-DMSDEBUG_VERSION_FILE=${msdebug_version_file}"
+                             "-DMSDEBUG_BUILD_DATE=${msdebug_build_date}"
+                             "-DMS_DEBUGGER=1"
+                             "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                             "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
+                             -P "${generate_vcs_version_script}")
 else()
-add_custom_command(OUTPUT "${vcs_version_inc}"
-  DEPENDS "${lldb_vc}" "${generate_vcs_version_script}"
-  COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
-                           "-DLLDB_SOURCE_DIR=${lldb_source_dir}"
-                           "-DHEADER_FILE=${vcs_version_inc}"
-                           "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
-                           "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
-                           -P "${generate_vcs_version_script}")
+  add_custom_command(OUTPUT "${vcs_version_inc}"
+    DEPENDS "${lldb_vc}" "${generate_vcs_version_script}"
+    COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
+                             "-DLLDB_SOURCE_DIR=${lldb_source_dir}"
+                             "-DHEADER_FILE=${vcs_version_inc}"
+                             "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                             "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
+                             -P "${generate_vcs_version_script}")
 endif()
 
 
