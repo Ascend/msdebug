@@ -40,6 +40,19 @@ typedef struct {
     uint32_t dataOffset;
 } aclrtPlaceHolderInfo;
 
+typedef struct dim3 {
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
+#ifdef __cplusplus
+#if __cplusplus >= 201103L
+    constexpr dim3(uint32_t vx = 1, uint32_t vy = 1, uint32_t vz = 1) : x(vx), y(vy), z(vz) {}
+#else
+    dim3(uint32_t vx = 1, uint32_t vy = 1, uint32_t vz = 1) : x(vx), y(vy), z(vz) {}
+#endif
+#endif // __cplusplus
+} dim3;
+
 typedef int aclError;
 typedef void* aclrtStream;
 typedef void* aclrtEvent;
@@ -146,6 +159,18 @@ VISIBILITY_EXPORT aclError aclrtLaunchKernelWithHostArgsImpl(
 VISIBILITY_EXPORT aclError aclrtLaunchKernelV2Impl(
     aclrtFuncHandle funcHandle, uint32_t blockDim, const void *argsData,
     size_t argsSize, aclrtLaunchKernelCfg *cfg, aclrtStream stream);
+
+VISIBILITY_EXPORT aclError aclrtLaunchSIMTKernelWithArgsArrayImpl(void *func,
+    dim3 gridDim, dim3 blockDim, size_t dynUbufSize, aclrtStream stream,
+    aclrtLaunchKernelCfg *cfg, void **args);
+
+VISIBILITY_EXPORT aclError aclrtLaunchKernelWithArgsArrayImpl(void *func,
+    uint32_t numBlocks, aclrtStream stream, aclrtLaunchKernelCfg *cfg, void **args);
+
+VISIBILITY_EXPORT aclError aclrtLaunchSIMTKernelWithHostArgsImpl(void *func,
+    dim3 gridDim, dim3 blockDim, size_t dynUbufSize, aclrtStream stream,
+    aclrtLaunchKernelCfg *cfg, void *hostArgs, size_t argsSize,
+    aclrtPlaceHolderInfo *placeHolderArray, size_t placeHolderNum);
 
 VISIBILITY_EXPORT aclError aclrtBinaryLoadFromDataImpl(
     const void *data, size_t length, const aclrtBinaryLoadOptions *options,

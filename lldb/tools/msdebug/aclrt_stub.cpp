@@ -90,6 +90,17 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
           {"aclrtLaunchKernelV2Impl",
            {"aclrtLaunchKernelV2Impl",
             ACLRT_LAUNCH_KERNEL_V2_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtLaunchSIMTKernelWithArgsArrayImpl",
+           {"aclrtLaunchSIMTKernelWithArgsArrayImpl",
+            ACLRT_LAUNCH_SIMT_KERNEL_WITH_ARGS_ARRAY_IMPL_NOT_FOUND_ERR,
+            nullptr}},
+          {"aclrtLaunchKernelWithArgsArrayImpl",
+           {"aclrtLaunchKernelWithArgsArrayImpl",
+            ACLRT_LAUNCH_KERNEL_WITH_ARGS_ARRAY_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtLaunchSIMTKernelWithHostArgsImpl",
+           {"aclrtLaunchSIMTKernelWithHostArgsImpl",
+            ACLRT_LAUNCH_SIMT_KERNEL_WITH_HOST_ARGS_IMPL_NOT_FOUND_ERR,
+            nullptr}},
           {"aclrtGetFunctionAddrImpl",
            {"aclrtGetFunctionAddrImpl",
             ACLRT_GET_FUNCTION_ADDR_IMPL_NOT_FOUND_ERR, nullptr}},
@@ -125,7 +136,10 @@ std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
           {"aclrtGetFunctionNameImpl",
            {"aclrtGetFunctionNameImpl",
-            ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
+             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
+          {"aclrtGetFuncBySymbolImpl",
+           {"aclrtGetFuncBySymbolImpl",
+             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
           {"aclrtSynchronizeDeviceWithTimeoutImpl",
            {"aclrtSynchronizeDeviceWithTimeoutImpl",
             ACLRT_SYNCHRONIZE_DEVICE_WITH_TIMEOUT_NOT_FOUND_ERR, nullptr}},
@@ -537,6 +551,25 @@ int32_t SetDevicePost(int32_t device)
     return SendDeviceInfo(device, virtualDeviceId, socVersion, tgid);
 }
 
+// 归一化 launch 接口第一个入参 func：可能是核函数符号，也可能是 func handle。
+// 先尝试 aclrtGetFuncBySymbolImpl(func, &fh)：成功 → func 是核函数符号，用解析出的 handle；
+// 失败 → func 本身就是 handle，直接使用。
+aclrtFuncHandle ResolveFuncHandle(void *func) {
+  aclrtFuncHandle fh = nullptr;
+  if (func != nullptr) {
+    using FuncType = aclError (*)(const void *, aclrtFuncHandle *);
+    auto impl = (FuncType)GetStubFuncPtr("aclrtGetFuncBySymbolImpl");
+    if (impl(func, &fh) == ACL_SUCCESS) {
+      RT_STUB_LOG_INFO("Receive param is kernel symbol, func=%p, "
+                       "resolved funcHandle=%p\n",
+                       func, static_cast<void *>(fh));
+      return fh;
+    }
+  }
+  RT_STUB_LOG_INFO("Receive param is funcHandle, func=%p\n", func);
+  return static_cast<aclrtFuncHandle>(func);
+}
+
 void LaunchKernelPre(aclrtFuncHandle funcHandle, aclrtStream stream)
 {
   // 重置内存属性恢复信息，防止上一次launch的残留数据影响本次
@@ -812,6 +845,52 @@ aclError aclrtLaunchKernelImpl(aclrtFuncHandle funcHandle,
     auto func = (FuncType)GetStubFuncPtr(__FUNCTION__);
     LaunchKernelPre(funcHandle, stream);
     auto ret = func(funcHandle, blockDim, argsData, argsSize, stream);
+    if (ret == ACL_SUCCESS) {
+        LaunchKernelPost(stream);
+    }
+    return ret;
+}
+
+aclError aclrtLaunchSIMTKernelWithArgsArrayImpl(void *func, dim3 gridDim,
+    dim3 blockDim, size_t dynUbufSize, aclrtStream stream,
+    aclrtLaunchKernelCfg *cfg, void **args)
+{
+    using FuncType = decltype(&aclrtLaunchSIMTKernelWithArgsArrayImpl);
+    auto origin = (FuncType)GetStubFuncPtr(__FUNCTION__);
+    aclrtFuncHandle funcHandle = ResolveFuncHandle(func);
+    LaunchKernelPre(funcHandle, stream);
+    auto ret = origin(func, gridDim, blockDim, dynUbufSize, stream, cfg, args);
+    if (ret == ACL_SUCCESS) {
+        LaunchKernelPost(stream);
+    }
+    return ret;
+}
+
+aclError aclrtLaunchKernelWithArgsArrayImpl(void *func, uint32_t numBlocks,
+    aclrtStream stream, aclrtLaunchKernelCfg *cfg, void **args)
+{
+    using FuncType = decltype(&aclrtLaunchKernelWithArgsArrayImpl);
+    auto origin = (FuncType)GetStubFuncPtr(__FUNCTION__);
+    aclrtFuncHandle funcHandle = ResolveFuncHandle(func);
+    LaunchKernelPre(funcHandle, stream);
+    auto ret = origin(func, numBlocks, stream, cfg, args);
+    if (ret == ACL_SUCCESS) {
+        LaunchKernelPost(stream);
+    }
+    return ret;
+}
+
+aclError aclrtLaunchSIMTKernelWithHostArgsImpl(void *func, dim3 gridDim,
+    dim3 blockDim, size_t dynUbufSize, aclrtStream stream,
+    aclrtLaunchKernelCfg *cfg, void *hostArgs, size_t argsSize,
+    aclrtPlaceHolderInfo *placeHolderArray, size_t placeHolderNum)
+{
+    using FuncType = decltype(&aclrtLaunchSIMTKernelWithHostArgsImpl);
+    auto origin = (FuncType)GetStubFuncPtr(__FUNCTION__);
+    aclrtFuncHandle funcHandle = ResolveFuncHandle(func);
+    LaunchKernelPre(funcHandle, stream);
+    auto ret = origin(func, gridDim, blockDim, dynUbufSize, stream, cfg,
+                      hostArgs, argsSize, placeHolderArray, placeHolderNum);
     if (ret == ACL_SUCCESS) {
         LaunchKernelPost(stream);
     }

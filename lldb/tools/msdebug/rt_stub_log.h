@@ -74,6 +74,12 @@ enum MSDEBUG_ERROR_CODE {
       0x1012F, // aclrtLaunchKernelWithHostArgsImpl
   ACLRT_LAUNCH_KERNEL_V2_IMPL_NOT_FOUND_ERR =
       0x10130, // aclrtLaunchKernelV2Impl
+  ACLRT_LAUNCH_SIMT_KERNEL_WITH_ARGS_ARRAY_IMPL_NOT_FOUND_ERR =
+      0x10131, // aclrtLaunchSIMTKernelWithArgsArrayImpl
+  ACLRT_LAUNCH_KERNEL_WITH_ARGS_ARRAY_IMPL_NOT_FOUND_ERR =
+      0x10132, // aclrtLaunchKernelWithArgsArrayImpl
+  ACLRT_LAUNCH_SIMT_KERNEL_WITH_HOST_ARGS_IMPL_NOT_FOUND_ERR =
+      0x10133, // aclrtLaunchSIMTKernelWithHostArgsImpl
   ACLRT_BINARY_LOAD_FROM_DATA_IMPL_NOT_FOUND_ERR =
       0x1013A,                                    // aclrtBinaryLoadFromDataImpl
   ACLRT_SYNC_STREAM_IMPL_NOT_FOUND_ERR = 0x1013B, // aclrtSynchronizeStreamImpl
