@@ -1943,6 +1943,7 @@ const std::vector<ConstString> BINARY_NAME = {
   ConstString(".ascend.kernel.ascend910_9392."),
   ConstString(".ascend.kernel.ascend910_9382."),
   ConstString(".ascend.kernel.ascend910_9362."),
+  ConstString(".ascend.kernel.ascend910_9363."),
   ConstString(".ascend.kernel.ascend310p5."),
   ConstString(".ascend.kernel.ascend310p7."),
   ConstString(".ascend.kernel.ascend310p3vir01."),
@@ -2233,7 +2234,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
 
   // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
   // embedded in there and replace the one in the original object file (if any).
-  // If there's none in the orignal object file, we add it to it.
+  // If there's none in the original object file, we add it to it.
   if (auto gdd_obj_file = GetGnuDebugDataObjectFile()) {
     if (auto gdd_objfile_section_list = gdd_obj_file->GetSectionList()) {
       if (SectionSP symtab_section_sp =

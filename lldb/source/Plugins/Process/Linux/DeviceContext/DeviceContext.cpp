@@ -79,6 +79,7 @@ static const std::map<std::string, SocType> SOC_STRING_TO_TYPE = {
     {"Ascend910_9382", SocType::ASCEND910B},
     {"Ascend910_9372", SocType::ASCEND910B},
     {"Ascend910_9362", SocType::ASCEND910B},
+    {"Ascend910_9363", SocType::ASCEND910B},
     {"Ascend310P1", SocType::ASCEND310P},
     {"Ascend310P2", SocType::ASCEND310P},
     {"Ascend310P3", SocType::ASCEND310P},
