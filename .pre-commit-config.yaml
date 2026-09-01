@@ -19,6 +19,7 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
       - id: check-json
+        exclude: ^\.devcontainer/
 
   # codespell
   - repo: https://gitcode.com/gh_mirrors/co/codespell

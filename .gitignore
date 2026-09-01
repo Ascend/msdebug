@@ -28,6 +28,8 @@
 
 # Nested build directory
 /build*
+output
+artifacts
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).
@@ -56,7 +58,8 @@ autoconf/autom4te.cache
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
 #==============================================================================#
 # VS2017 and VSCode config files.
-.vscode
+# devcontainer适配
+# .vscode
 .vs
 # pythonenv for github Codespaces
 pythonenv*
@@ -73,3 +76,5 @@ pythonenv*
 .codemate/
 cmake-build-debug
 .codemate.clang-tidy-build/
+
+.devcontainer/.host-gitconfig

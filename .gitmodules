@@ -2,11 +2,14 @@
 	path = third-party/makeself
 	url = https://gitcode.com/cann-src-third-party/makeself.git
 	branch = v2.5.0.x
+	ignore = all
 [submodule "third-party/libedit"]
 	path = third-party/libedit
 	url = https://gitcode.com/src-openeuler/libedit.git
 	branch = openEuler-24.03-LTS-SP1-release
+	ignore = all
 [submodule "third-party/ncurses"]
 	path = third-party/ncurses
 	url = https://gitcode.com/src-openeuler/ncurses.git
     branch = master
+	ignore = all

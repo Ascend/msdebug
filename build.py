@@ -90,15 +90,20 @@ class BuildManager:
         if self.parsed_arguments.build_version != None:
             logging.info("--build-version: %s", self.parsed_arguments.build_version)
             subprocess.run(['sed', '-i', f"s/^Version=.*/Version={self.parsed_arguments.build_version}/", "./package/conf/version.info"], check=True)
-
+        extra_options = {}
         for option in self.parsed_arguments.extra:
             key, _, value = option.partition('=')
+            extra_options[key] = value
             logging.info("--extra: %s = %s", key, value)
 
         # 在非 local 场景下按需更新依赖；在 local 场景下仅使用本地已有代码，不更新依赖。
         if 'local' not in self.parsed_arguments.command:
             from download_dependencies import DependencyManager
             DependencyManager(self.parsed_arguments).run()
+
+        if extra_options.get('only_down_deps') == 'true':
+            logging.info("only_down_deps=true, exiting after dependency download.")
+            return
 
         if 'test' in self.parsed_arguments.command:
             # -------------------- 单元测试 --------------------
@@ -110,6 +115,7 @@ class BuildManager:
                 "cmake", "-G", self._get_cmake_generator(),
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DENABLE_LLDB_TESTS=ON",
+                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
                 ".."
             ])
         else:
@@ -122,6 +128,7 @@ class BuildManager:
                 "cmake", "-G", self._get_cmake_generator(),
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DENABLE_LLDB_TESTS=OFF",
+                "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
                 ".."
             ])
         # 自动选择ninja还是make构建
