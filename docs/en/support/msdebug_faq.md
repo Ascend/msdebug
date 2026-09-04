@@ -50,7 +50,8 @@ The HDK driver package is not installed using the `--debug` option, or the drive
     - The device node `/dev/drv_debug` on which debugging depends can be found.
     - The container environment has permission to access the device node.
 
-    > [!NOTE]NOTE  
+    > [!NOTE]
+    > 
     > You are advised to add the `--privileged --device=/dev/drv_debug` option to the container startup command to ensure that the device node on which debugging depends is mapped and the container environment can access the node.
 
 ## Operator Execution Fails When the `continue` Command Is Run After the msDebug Breakpoint in the Kernel Function Is Hit

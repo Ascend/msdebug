@@ -65,7 +65,7 @@
 
 构建成功的run包默认保存在output目录下。其中`<version>`表示版本号，`<arch>`表示CPU架构。
 
-> [!NOTE]  说明
+> [!NOTE]
 >
 > 生成run包依赖pigz库，一般系统自带，`pigz --version`如果没有显示版本，可自行下载。
 

@@ -6,7 +6,7 @@
 
 This tool has been integrated into CANN. If CANN has been installed and this tool does not need to be updated, you can directly use it without following the instructions in this document.
 
-If CANN has not been installed in your environment, install the Ascend NPU driver and CANN software (including the Toolkit and ops) by referring to [CANN Quick Installation](https://www.hiascend.com/cann/download), and configure environment variables.
+If CANN has not been installed in your environment, install the Ascend NPU driver and CANN software (including the Toolkit and ops) by referring to [CANN Quick Installation](https://www.hiascend.com/en/cann/download), and configure environment variables.
 
 If you need to upgrade this tool separately or use the latest version, you can install it in any of the following ways: [Online Installation](#21-online-installation), [Offline Installation](#22-offline-installation), and [Source Installation](#23-source-installation).
 
@@ -65,7 +65,7 @@ When the following information is displayed, the package is built and the .run p
 
 By default, the built .run package is saved in the `output` directory. In the file name, `<version>` indicates the version number and `<arch>` indicates the CPU architecture.
 
-> [!NOTE] Description
+> [!NOTE]
 >
 > The generation of `.run` depends on the pigz library, which is typically provided by the system. If no version is displayed in `pigz --version`, download it.
 
@@ -144,4 +144,4 @@ To uninstall the tool, perform the following steps:
 
 Upgrades follow the "uninstall first, then install" process. Simply run the installation command. The tool will automatically remove the previous version and guide you through the upgrade process.
 
-You can run the `msdebug --version` command to view the version information of the current environment, and then select the version to upgrade. When upgrading, pay attention to the version compatibility. For details, see the [Release Notes](https://gitcode.com/Ascend/release-management/blob/master/MindStudio/26.1.0/release_notes.md).
+You can run the `msdebug --version` command to view the version information of the current environment, and then select the version to upgrade. When upgrading, pay attention to the version compatibility. For details, see the [Release Notes](https://gitcode.com/Ascend/release-management/blob/master/MindStudio/26.1.0/release_notes_en.md).

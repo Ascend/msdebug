@@ -499,6 +499,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     ```
 
     > [!NOTE]
+    > 
     > `_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo` indicates the kernel name of the template library. Only the first 64 characters are displayed in the example.
 
 5. Review information.

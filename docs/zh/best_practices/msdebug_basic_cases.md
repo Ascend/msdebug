@@ -499,6 +499,7 @@
     ```
 
     > [!NOTE]
+    > 
     > **_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo**为模板库的kernel名字，示例仅显示前面64位。
 
 5. 检视信息。

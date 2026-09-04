@@ -76,7 +76,7 @@ For details about frequently asked questions and solutions, see [msDebug FAQs](d
 
 ## 🛠️ Contribution Guide
 
-You are welcome to contribute to the project. For details, see [Contribution Guide](./docs/en/contributing/contributing_guide.md). 
+You are welcome to contribute to the project. For details, see [Contribution Guide](./docs/en/contributing/contributing_guide.md).
 
 ## ⚖️ Related Information
 
