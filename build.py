@@ -292,6 +292,11 @@ class BuildManager:
         # 2. 全量编译 llvm_project（产出 build/llvm-build 的 .a / 生成头 / llvm-tblgen）
         self._execute_command(["cmake", "--build", ".", "--target", "llvm_project"])
 
+        # 2.5 补编全量单测所需的 LLVM 库：libLLVMObjectYAML.a 不在 LLDB 产品链接闭包
+        # （llvm_project 只编 lldb/lldb-server/runtime_stub），但 lldb/unittests 的
+        # Callback 单测链接它。预编译模式跑 UT 需此库随包分发。
+        self._execute_command(["cmake", "--build", "llvm-build", "--target", "LLVMObjectYAML"])
+
         # 3. 打包 prebuilt 包
         self._prepare_prebuilt()
 
