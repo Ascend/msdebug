@@ -121,6 +121,7 @@ class BuildManager:
             return
 
         failed = []
+        total_tests = 0
         for test_exe in test_exes:
             logging.info("=== 运行单测: %s ===", test_exe)
             # gtest 测试自身会打印 [ INFO ]/GMOCK 等输出（brief 无法抑制），
@@ -129,23 +130,30 @@ class BuildManager:
                 proc = subprocess.run([str(test_exe), "--gtest_brief=1"], check=True, env=env,
                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                       text=True, timeout=3600)
+                output = proc.stdout
                 if proc.returncode != 0:
-                    sys.stdout.write(proc.stdout)
+                    sys.stdout.write(output)
                     sys.stdout.flush()
             except subprocess.CalledProcessError as e:
                 failed.append((str(test_exe), e.returncode))
-                if e.output:
-                    sys.stdout.write(e.output)
-                    sys.stdout.flush()
+                output = e.output or ""
+                sys.stdout.write(output)
+                sys.stdout.flush()
                 logging.error("单测失败: %s (exit=%s)", test_exe, e.returncode)
             except subprocess.TimeoutExpired as e:
                 failed.append((str(test_exe), "timeout"))
-                if e.output:
-                    sys.stdout.write(e.output)
-                    sys.stdout.flush()
+                output = e.output or ""
+                sys.stdout.write(output)
+                sys.stdout.flush()
                 logging.error("单测超时: %s", test_exe)
 
-        logging.info("单测汇总: 共 %d 个可执行，失败 %d 个", len(test_exes), len(failed))
+            # 统计该可执行 gtest 汇总行：`[==========] N tests from M test suites ran.`
+            m = re.search(r"\[==========\]\s+(\d+)\s+tests?\s+from", output or "")
+            if m:
+                total_tests += int(m.group(1))
+
+        logging.info("单测汇总: 共 %d 个可执行，用例总数 %d，失败 %d 个",
+                     len(test_exes), total_tests, len(failed))
         if failed:
             raise RuntimeError("以下单测失败: " + ", ".join(f"{p}({c})" for p, c in failed))
 
