@@ -171,8 +171,6 @@ else()
     add_custom_target(package_prebuilt
         COMMAND ${CMAKE_COMMAND} -E echo "Generating prebuilt package from ${LLVM_BINARY_DIR} ..."
         COMMAND ${PYTHON_EXECUTABLE} ${ROOT_DIR}/build.py prebuild
-            --llvm-build ${LLVM_BINARY_DIR}
-            --tar
         COMMENT "Packaging prebuilt LLVM/Clang libraries for release"
         DEPENDS llvm_project
     )

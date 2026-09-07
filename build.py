@@ -56,10 +56,6 @@ class BuildManager:
                                      help='Build version, overrides --build-version and --whl-version if set')
         argument_parser.add_argument('-e', '--extra', metavar='KEY=VALUE', action='append', default=[],
                                      help='Extra build options in KEY=VALUE format, can be specified multiple times')
-        argument_parser.add_argument('--llvm-build', type=str, default=None,
-                                     help='LLVM full build directory for packaging prebuilt libs (default: build/llvm-build)')
-        argument_parser.add_argument('--tar', action='store_true',
-                                     help='Also create a distributable prebuilt tarball')
         self.parsed_arguments = argument_parser.parse_args()
 
         if self.parsed_arguments.version is not None:
@@ -131,8 +127,8 @@ class BuildManager:
         path.write_text(content)
 
     def _prepare_prebuilt(self):
-        """制作 prebuilt 预编译包：从全量构建产物拷贝 .a + 生成头 + cmake 配置，可选打 tar。"""
-        build = Path(self.parsed_arguments.llvm_build or self.project_root / "build" / "llvm-build")
+        """制作 prebuilt 预编译包：从 build/llvm-build 产物拷贝 .a + 生成头 + cmake 配置，并打 tar 可分发包。"""
+        build = self.project_root / "build" / "llvm-build"
         output = self.project_root / "prebuilt"
         version = self._read_version()
         if not version:
@@ -220,15 +216,14 @@ class BuildManager:
                      len(list(lib_dir.glob("libLLVM*.a"))), len(list(lib_dir.glob("libclang*.a"))))
 
         # 6. 打 tar 包
-        if self.parsed_arguments.tar:
-            name = "msdebug-prebuilt-llvm"
-            if version:
-                name += f"-{version}"
-            name += f"-{arch}"
-            tar_path = output / f"{name}.tar.gz"
-            with tarfile.open(tar_path, "w:gz") as tar:
-                tar.add(out, arcname=arch)
-            logging.info("tar 包已生成: %s (%.1f MB)", tar_path, tar_path.stat().st_size / 1024 / 1024)
+        name = "msdebug-prebuilt-llvm"
+        if version:
+            name += f"-{version}"
+        name += f"-{arch}"
+        tar_path = output / f"{name}.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tar:
+            tar.add(out, arcname=arch)
+        logging.info("tar 包已生成: %s (%.1f MB)", tar_path, tar_path.stat().st_size / 1024 / 1024)
 
     def _build_and_package_prebuilt(self):
         """从源码全量编译 LLVM/Clang 并打包 prebuilt 预编译包（生成可分发产物）。
