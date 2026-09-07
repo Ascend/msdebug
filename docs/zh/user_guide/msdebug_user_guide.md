@@ -371,6 +371,24 @@ Command Options Usage:
 </div>
 </td>
 </tr>
+<tr id="zh-cn_topic_0000001979357376_row43201348105418"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p10320248205417">help</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p33205488545">-h</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_p771932814512">用于查看帮助信息。</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="screen" id="zh-cn_topic_0000001979357376_screen919875915415">msdebug -h</pre>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000001979357376_row43201348105419"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p10320248205418">version</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p33205488546">-V</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_p771932814513">用于查询相关版本信息。</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="screen" id="zh-cn_topic_0000001979357376_screen919875915416">msdebug -V</pre>
+</td>
+</tr>
 </tbody>
 </table>
 
