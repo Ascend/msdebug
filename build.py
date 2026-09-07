@@ -123,23 +123,26 @@ class BuildManager:
         failed = []
         for test_exe in test_exes:
             logging.info("=== 运行单测: %s ===", test_exe)
-            # --gtest_brief=1 只在失败时打印用例详情，成功仅输出汇总行，
-            # 与源码模式 lit 的进度条观感一致，避免 1331 个用例逐条刷屏。
+            # gtest 测试自身会打印 [ INFO ]/GMOCK 等输出（brief 无法抑制），
+            # 与 lit 一致默认静默：成功只记汇总，仅失败/超时回放完整输出便于定位。
             try:
                 proc = subprocess.run([str(test_exe), "--gtest_brief=1"], check=True, env=env,
                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                       text=True, timeout=3600)
-                sys.stdout.write(proc.stdout)
-                sys.stdout.flush()
+                if proc.returncode != 0:
+                    sys.stdout.write(proc.stdout)
+                    sys.stdout.flush()
             except subprocess.CalledProcessError as e:
                 failed.append((str(test_exe), e.returncode))
-                # 失败时回放完整输出（brief 下失败用例详情本就在其中）
                 if e.output:
                     sys.stdout.write(e.output)
                     sys.stdout.flush()
                 logging.error("单测失败: %s (exit=%s)", test_exe, e.returncode)
             except subprocess.TimeoutExpired as e:
                 failed.append((str(test_exe), "timeout"))
+                if e.output:
+                    sys.stdout.write(e.output)
+                    sys.stdout.flush()
                 logging.error("单测超时: %s", test_exe)
 
         logging.info("单测汇总: 共 %d 个可执行，失败 %d 个", len(test_exes), len(failed))
