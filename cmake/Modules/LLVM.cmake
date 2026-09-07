@@ -55,7 +55,7 @@ if(USE_PREBUILT_LLVM)
         -DLLDB_ENABLE_LIBEDIT=ON
         -DMS_DEBUGGER=1
         -DCMAKE_BUILD_TYPE=Release
-        -DLLDB_INCLUDE_TESTS=OFF
+        -DLLDB_INCLUDE_TESTS=${LLDB_INCLUDE_TESTS}
         -DROOT_DIR=${ROOT_DIR}
         -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
         -DLIBEDIT_LIBRARY=${LIBEDIT_INSTALL_DIR}/lib
@@ -66,12 +66,24 @@ if(USE_PREBUILT_LLVM)
         ${LLDB_CCACHE_ARGS}
     )
 
+    # 预编译模式下构建全部 gtest 单测：LLDBUnitTests 聚合 target 依赖
+    # 所有 add_lldb_unittest 生成的可执行。注意这些 target 为
+    # EXCLUDE_FROM_ALL，需显式加入 BUILD_COMMAND。
+    set(LLDB_BUILD_TARGETS "lldb;lldb-server;runtime_stub")
+    if(LLDB_INCLUDE_TESTS)
+        # lldb/test 基建无条件依赖 LLVM 二进制工具（llvm-nm/llvm-ar 等），
+        # 预编译模式无这些 tool target，注入 stub 满足 configure 依赖。
+        list(APPEND LLDB_CONFIGURE_ARGS
+            -DCMAKE_PROJECT_INCLUDE=${ROOT_DIR}/cmake/Modules/LLVMTestToolStubs.cmake)
+        list(APPEND LLDB_BUILD_TARGETS LLDBUnitTests)
+    endif()
+
     ExternalProject_Add(llvm_project
         SOURCE_DIR ${LLDB_SOURCE_DIR}
         BINARY_DIR ${LLDB_STANDALONE_BUILD_DIR}
         CONFIGURE_COMMAND ${CMAKE_COMMAND} ${LLDB_CONFIGURE_ARGS}
         BUILD_COMMAND ${CMAKE_COMMAND} --build ${LLDB_STANDALONE_BUILD_DIR}
-            --target lldb lldb-server runtime_stub -- -j${NPROC}
+            --target ${LLDB_BUILD_TARGETS} -- -j${NPROC}
         INSTALL_COMMAND ${CMAKE_COMMAND} --build ${LLDB_STANDALONE_BUILD_DIR}
             --target install-msdebug -- -j${NPROC}
         USES_TERMINAL_BUILD TRUE

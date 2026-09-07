@@ -88,6 +88,51 @@ class BuildManager:
                 logging.info("Archiving artifact: %s -> %s", artifact, destination)
                 shutil.copy2(artifact, destination)
 
+    def _run_unit_tests(self, unit_test_build_dir):
+        """运行预编译模式下现编译的全部 LLDB gtest 单测。
+
+        构建产物位于 build_ut/lldb-standalone-build/unittests/ 下，
+        由 LLVM.cmake 以 LLDBUnitTests 聚合 target 构建（EXCLUDE_FROM_ALL，
+        显式加入 BUILD_COMMAND）。此处遍历所有 *Tests 可执行并逐个执行。
+        """
+        standalone_dir = unit_test_build_dir / "lldb-standalone-build"
+        unittests_dir = standalone_dir / "unittests"
+        if not unittests_dir.is_dir():
+            logging.warning("未找到 standalone unittests 目录，跳过单测运行: %s", unittests_dir)
+            return
+
+        # 测试二进制运行时需链接现编译的 liblldb/libedit/ncurses
+        env = os.environ.copy()
+        runtime_dirs = [
+            standalone_dir / "lib",
+            unit_test_build_dir / "libedit" / "lib",
+            unit_test_build_dir / "ncurses" / "install" / "lib",
+        ]
+        ld_paths = [str(p) for p in runtime_dirs if p.is_dir()]
+        env["LD_LIBRARY_PATH"] = os.pathsep.join(ld_paths + [env.get("LD_LIBRARY_PATH", "")]).strip(os.pathsep)
+
+        test_exes = []
+        for test_exe in sorted(unittests_dir.rglob("*Tests")):
+            if test_exe.is_file() and os.access(str(test_exe), os.X_OK):
+                test_exes.append(test_exe)
+
+        if not test_exes:
+            logging.warning("未找到可运行的单测可执行，请确认 LLDBUnitTests 已构建: %s", unittests_dir)
+            return
+
+        failed = []
+        for test_exe in test_exes:
+            logging.info("=== 运行单测: %s ===", test_exe)
+            try:
+                subprocess.run([str(test_exe)], check=True, env=env)
+            except subprocess.CalledProcessError as e:
+                failed.append((str(test_exe), e.returncode))
+                logging.error("单测失败: %s (exit=%s)", test_exe, e.returncode)
+
+        logging.info("单测汇总: 共 %d 个可执行，失败 %d 个", len(test_exes), len(failed))
+        if failed:
+            raise RuntimeError("以下单测失败: " + ", ".join(f"{p}({c})" for p, c in failed))
+
     @staticmethod
     def _detect_arch():
         """检测当前机器架构（prebuilt 包固定宿主架构，不支持交叉打包）。"""
@@ -279,7 +324,7 @@ class BuildManager:
             return
 
         if 'test' in self.parsed_arguments.command:
-            # -------------------- 单元测试（源码模式，UT 需要全量 LLVM） --------------------
+            # -------------------- 单元测试（预编译模式：LLVM/Clang 用 prebuilt .a，现编译 LLDB + gtest 单测） --------------------
             unit_test_build_dir = self.project_root / "build_ut"
             unit_test_build_dir.mkdir(exist_ok=True)
             os.chdir(unit_test_build_dir)
@@ -289,6 +334,7 @@ class BuildManager:
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DENABLE_LLDB_TESTS=ON",
                 "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+                "-DUSE_PREBUILT_LLVM=ON",
                 ".."
             ])
         else:
@@ -308,7 +354,9 @@ class BuildManager:
         # 自动选择ninja还是make构建
         self._execute_command(["cmake", "--build", "."])
 
-        if 'test' not in self.parsed_arguments.command:
+        if 'test' in self.parsed_arguments.command:
+            self._run_unit_tests(unit_test_build_dir)
+        else:
             self._archive_artifacts()
 
 
