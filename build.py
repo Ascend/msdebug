@@ -21,12 +21,12 @@ class BuildManager:
     统一构建管理：依赖拉取 → CMake 配置 → Ninja 编译 → 安装 / 测试。
 
     用法:
-        python build.py                  预编译构建（默认，使用 prebuilt 库，快速）
-        python build.py local            本地预编译构建（跳过依赖拉取）
+        python build.py [--use-prebuilt]  源码全量编译构建（默认）；--use-prebuilt 走预编译库加速
+        python build.py local [--use-prebuilt]    本地构建（跳过依赖拉取）
         python build.py prebuild         从源码全量编译 LLVM/Clang 并打包 prebuilt 包
         python build.py prebuild local   同上（跳过依赖拉取）
-        python build.py test             单元测试（源码模式）
-        python build.py test local       单元测试（跳过依赖拉取）
+        python build.py test [--use-prebuilt]     单元测试（默认源码模式；--use-prebuilt 走预编译）
+        python build.py test local [--use-prebuilt]    单元测试（跳过依赖拉取）
         python build.py -r <revision>    指定依赖的内部源码仓(例如msopcom)的 Git 分支/标签/commit
         python build.py -v <version>     指定构建版本号，同时覆盖 --build-version 和 --whl-version
         python build.py -e KEY=VALUE     指定额外构建选项，可多次使用
@@ -37,6 +37,7 @@ class BuildManager:
         - 参数: -v, --version : 指定构建版本号；若设置，则同时覆盖 --build-version 和 --whl-version 的值。
         - 参数: --build-version, --whl-version : 历史参数，保留用于兼容；设置了 --version 时以 --version 为准。
         - 参数: -e, --extra : 额外构建选项，格式为 KEY=VALUE，可多次指定。
+        - 参数: --use-prebuilt : 使用预编译 LLVM/Clang 库构建（默认关闭，即源码全量编译）。
 
     产物归档:
         产品构建完成后，归档到 artifacts/ 目录中。
@@ -56,6 +57,8 @@ class BuildManager:
                                      help='Build version, overrides --build-version and --whl-version if set')
         argument_parser.add_argument('-e', '--extra', metavar='KEY=VALUE', action='append', default=[],
                                      help='Extra build options in KEY=VALUE format, can be specified multiple times')
+        argument_parser.add_argument('--use-prebuilt', action='store_true',
+                                     help='Use prebuilt LLVM/Clang libraries (default off: build from source)')
         self.parsed_arguments = argument_parser.parse_args()
 
         if self.parsed_arguments.version is not None:
@@ -341,7 +344,12 @@ class BuildManager:
             self._build_and_package_prebuilt()
             return
 
-        # 默认预编译构建（架构由 PrebuiltLLVM.cmake 自动检测）
+        use_prebuilt = self.parsed_arguments.use_prebuilt
+        prebuilt_flag = "-DUSE_PREBUILT_LLVM=ON" if use_prebuilt else "-DUSE_PREBUILT_LLVM=OFF"
+        if use_prebuilt:
+            logging.info("使用预编译 LLVM/Clang 库构建（USE_PREBUILT_LLVM=ON）")
+        else:
+            logging.info("源码全量编译 LLVM/Clang（默认，USE_PREBUILT_LLVM=OFF）")
 
         # 在非 local 场景下按需更新依赖；在 local 场景下仅使用本地已有代码，不更新依赖。
         if 'local' not in self.parsed_arguments.command:
@@ -353,7 +361,10 @@ class BuildManager:
             return
 
         if 'test' in self.parsed_arguments.command:
-            # -------------------- 单元测试（预编译模式：LLVM/Clang 用 prebuilt .a，现编译 LLDB + gtest 单测） --------------------
+            if use_prebuilt:
+                logging.info("预编译模式 UT：LLVM/Clang 用 prebuilt .a，现编译 LLDB + gtest 单测")
+            else:
+                logging.info("源码模式 UT：全量编译 LLVM/Clang，check-lldb-unit（lit）驱动单测")
             unit_test_build_dir = self.project_root / "build_ut"
             unit_test_build_dir.mkdir(exist_ok=True)
             os.chdir(unit_test_build_dir)
@@ -363,11 +374,11 @@ class BuildManager:
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DENABLE_LLDB_TESTS=ON",
                 "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-                "-DUSE_PREBUILT_LLVM=ON",
+                prebuilt_flag,
                 ".."
             ])
         else:
-            # -------------------- 产品构建（默认预编译模式） --------------------
+            # 产品构建（源码模式默认；--use-prebuilt 走预编译）
             product_build_dir = self.project_root / "build"
             product_build_dir.mkdir(exist_ok=True)
             os.chdir(product_build_dir)
@@ -377,14 +388,17 @@ class BuildManager:
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DENABLE_LLDB_TESTS=OFF",
                 "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-                "-DUSE_PREBUILT_LLVM=ON",
+                prebuilt_flag,
                 ".."
             ])
         # 自动选择ninja还是make构建
         self._execute_command(["cmake", "--build", "."])
 
         if 'test' in self.parsed_arguments.command:
-            self._run_unit_tests(unit_test_build_dir)
+            if use_prebuilt:
+                self._run_unit_tests(unit_test_build_dir)
+            else:
+                logging.info("源码模式 UT 已由 check-lldb-unit（lit）执行")
         else:
             self._archive_artifacts()
 
