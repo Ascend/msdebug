@@ -45,7 +45,7 @@ endif()
 
 # 预编译库选项
 option(USE_PREBUILT_LLVM "Use prebuilt LLVM libraries" OFF)
-option(LLVM_PREBUILT_ROOT "Root directory of prebuilt LLVM libraries" "")
+set(LLVM_PREBUILT_ROOT "" CACHE PATH "Root directory of prebuilt LLVM libraries")
 set(LLVM_PREBUILT_VERSION "1.0" CACHE STRING "Version of prebuilt LLVM libraries")
 
 if(DEFINED ENABLE_LLDB_TESTS)
