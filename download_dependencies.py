@@ -18,14 +18,17 @@ class DependencyManager:
     依赖下载管理：根据 dependencies.json 拉取源码仓(Git submodule)与二进制包(artifacts)。
 
     用法:
-        python3 download_dependencies.py                  下载生产依赖：源码仓(Git submodule) + 二进制包(artifacts)
-        python3 download_dependencies.py test             下载测试依赖：源码仓(Git submodule) + 二进制包(artifacts)
+        python3 download_dependencies.py                  下载生产依赖：源码仓(Git submodule)（源码模式默认，不下载 prebuilt 包）
+        python3 download_dependencies.py --use-prebuilt   下载生产依赖：源码仓(Git submodule) + 预编译包(artifacts)
+        python3 download_dependencies.py test             下载测试依赖：源码仓(Git submodule)
+        python3 download_dependencies.py test --use-prebuilt  下载测试依赖：源码仓(Git submodule) + 预编译包(artifacts)
         python3 download_dependencies.py local            跳过所有下载：直接返回不处理
         python3 download_dependencies.py -r <revision>    指定内部源码仓的 Git 分支/标签/commit
 
     参数说明:
         - 参数: command : 执行模式: 为空时下载生产依赖, test 为下载测试依赖, local 为跳过下载。
         - 参数: -r, --revision : 指定 Git 修订版本或标签用于依赖检出。
+        - 参数: --use-prebuilt : 同时下载当前架构的预编译 LLVM/Clang 包（默认关闭，即仅源码依赖）。
     """
 
     def __init__(self, args, need_prebuilt=False):
@@ -34,7 +37,7 @@ class DependencyManager:
         self.mode = "test" if "test" in args.command else "prod"
         self.is_local = "local" in args.command
         # 源码模式（USE_PREBUILT_LLVM=OFF）不需要 prebuilt 包，仅拉 submodule；
-        # --use-prebuilt 或独立运行 download_dependencies.py 时才下载 artifact。
+        # 仅当显式 --use-prebuilt（或由 build.py 以 need_prebuilt=是否 --use-prebuilt 传入）时才下载 artifact。
         self.need_prebuilt = need_prebuilt
 
     def _exec_shell_cmd(self, cmd, cwd=None, msg=None):
@@ -171,10 +174,15 @@ def main():
     parser.add_argument('command', nargs='*', default=[], choices=[[], 'local', 'test'],
                         help='Execution mode: omit to download prod dependencies, "local" to skip downloads, "test" to download test dependencies')
     parser.add_argument('-r', '--revision', help="Specify Git revision for internal dependent repo.")
+    parser.add_argument('--use-prebuilt', action='store_true',
+                        help='Also download the prebuilt LLVM/Clang package for the current architecture '
+                             '(default off: source-mode build only needs git submodules)')
+    args = parser.parse_args()
     try:
-        # 独立运行本脚本时视为需要 prebuilt 包（全量下载）；由 build.py 调用时
-        # 会显式传 need_prebuilt=是否 --use-prebuilt。
-        DependencyManager(parser.parse_args(), need_prebuilt=True).run()
+        # 与 build.py 的源码模式默认一致：默认仅拉源码仓(Git submodule)。
+        # 仅显式 --use-prebuilt 时才下载 prebuilt 包，避免在 prebuilt 包尚未发布的架构
+        # （如 aarch64 / x86_64）上，父工程(msot)递归调用本脚本时因缺下载链接而中断整次构建。
+        DependencyManager(args, need_prebuilt=args.use_prebuilt).run()
         logging.info("")
         logging.info("=" * 50)
         logging.info("  ALL DEPENDENCIES DOWNLOADED SUCCESSFULLY!   ")
