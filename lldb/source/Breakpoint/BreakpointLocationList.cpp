@@ -258,6 +258,17 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
       }
       ModuleSP module_sp = bp_loc_sp->GetAddress().GetModule();
       if ((!module_sp) || module_sp->GetArchitecture().GetMachine() != llvm::Triple::hiipu64) {
+        // The newly created location is on the host side while this
+        // breakpoint already has device-side locations. Drop it here instead
+        // of just returning nullptr: otherwise the host location would linger
+        // in the location list without a breakpoint site, and could be
+        // resolved and installed later when the host module is (re)loaded
+        // (e.g. on the next `run`), causing an unexpected host-side stop.
+        bp_loc_sp->ClearBreakpointSite();
+        RemoveLocation(bp_loc_sp);
+        LLDB_LOG(log,
+                 "removed newly added host location with breakpoint {0}.{1}",
+                 bp_loc_sp->GetID(), bp_loc_sp->m_loc_id);
         return nullptr;
       }
     }

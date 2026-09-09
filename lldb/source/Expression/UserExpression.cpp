@@ -171,6 +171,10 @@ UserExpression::DeviceExpressionEvaluate(StackFrame *frame,
           StackFrame::eExpressionPathOptionsInspectAnonymousUnions,
           var_sp, error);
   if (error.Success() && result_valobj_sp) {
+    if (result_valobj_sp->GetError().Fail()) {
+      error = result_valobj_sp->GetError();
+      return lldb::eExpressionResultUnavailable;
+    }
     result_valobj_sp->SetPreferredDisplayLanguage(language);
     LLDB_LOG(log,
              "== [UserExpression::Evaluate] Execution completed "
@@ -255,12 +259,27 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     return execution_results;
   }
 
+#ifdef MS_DEBUGGER
+  // device 停止态下无法 JIT，且 CanJIT() 内部会 AllocateMemory 读内存，在 device
+  // 停止态下会被 Process::ReadMemory 强制路由到 device 内存，读失败甚至拖挂
+  // device，因此跳过 CanJIT。
+  bool is_device = false;
+  if (StackFrame *frame = exe_ctx.GetFramePtr()) {
+    if (frame->GetThread() && frame->GetThread()->GetProcess() != nullptr)
+      is_device = frame->GetThread()->GetProcess()->IsStopInDevice();
+  }
+#endif
+
   // Explicitly force the IR interpreter to evaluate the expression when the
   // there is no process that supports running the expression for us. Don't
   // change the execution policy if we have the special top-level policy that
   // doesn't contain any expression and there is nothing to interpret.
   if (execution_policy != eExecutionPolicyTopLevel &&
+#ifdef MS_DEBUGGER
+      (process == nullptr || (!is_device && !process->CanJIT())))
+#else
       (process == nullptr || !process->CanJIT()))
+#endif
     execution_policy = eExecutionPolicyNever;
 
   // We need to set the expression execution thread here, turns out parse can
@@ -413,12 +432,15 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
 #ifdef MS_DEBUGGER
       StackFrame *frame = exe_ctx.GetFramePtr();
-      if (frame && frame->GetThread() && frame->GetThread()->GetProcess() != nullptr &&
+      if (frame && frame->GetThread() &&
+          frame->GetThread()->GetProcess() != nullptr &&
           frame->GetThread()->GetProcess()->IsStopInDevice() &&
-          (execution_results = UserExpression::DeviceExpressionEvaluate(frame, expr, options, result_valobj_sp,
-                                                                        language.AsLanguageType(), error)) != 
-          lldb::eExpressionCompleted) {
-          result_valobj_sp = ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(), error);
+          (execution_results = UserExpression::DeviceExpressionEvaluate(
+               frame, expr, options, result_valobj_sp,
+               language.AsLanguageType(), error)) !=
+              lldb::eExpressionCompleted) {
+        result_valobj_sp = ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(), error);
         return execution_results;
       }
 #endif
