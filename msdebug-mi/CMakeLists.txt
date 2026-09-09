@@ -35,6 +35,7 @@ if (MS_DEBUGGER)
   add_link_options("-pie")
   add_compile_options("-D_FORTIFY_SOURCE=2")
   set(CMAKE_SKIP_RPATH TRUE)
+
 endif()
 list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 include(HandleLLVMStdlib)

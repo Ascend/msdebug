@@ -28,14 +28,11 @@ class DependencyManager:
         - 参数: -r, --revision : 指定 Git 修订版本或标签用于依赖检出。
     """
 
-    def __init__(self, args, need_prebuilt=False):
+    def __init__(self, args):
         self.args, self.root = args, Path(__file__).resolve().parent
         self.config = json.loads((self.root / "dependencies.json").read_text())
         self.mode = "test" if "test" in args.command else "prod"
         self.is_local = "local" in args.command
-        # 源码模式（USE_PREBUILT_LLVM=OFF）不需要 prebuilt 包，仅拉 submodule；
-        # --use-prebuilt 或独立运行 download_dependencies.py 时才下载 artifact。
-        self.need_prebuilt = need_prebuilt
 
     def _exec_shell_cmd(self, cmd, cwd=None, msg=None):
         if msg: logging.info(msg)
@@ -79,43 +76,9 @@ class DependencyManager:
                 self._download_submodule_recursively(m)
         logging.info("=== Download git submodules end ===")
 
-    @staticmethod
-    def _detect_arch():
-        """检测当前机器架构（prebuilt 包固定宿主架构，不支持交叉打包）。"""
-        import platform
-        m = platform.machine().lower()
-        if m in ("x86_64", "amd64"):
-            return "x86_64"
-        if m in ("aarch64", "arm64"):
-            return "aarch64"
-        raise SystemExit(f"不支持的非宿主架构: {m}")
-
-    def _resolve_artifacts(self, artifacts):
-        """解析 artifact 名中的 {arch} 占位：按当前机器架构展开。
-
-        例：msdebug-prebuilt-llvm-lldb-{arch} → msdebug-prebuilt-llvm-lldb-aarch64（aarch64 机器）
-        """
-        arch = self._detect_arch()
-        resolved = []
-        for name in artifacts:
-            if "{arch}" in name:
-                resolved.append(name.replace("{arch}", arch))
-            else:
-                resolved.append(name)
-        return resolved, arch
-
     def proc_artifact(self, artifacts, spec):
         logging.info("=== Download artifacts start ===")
-        artifacts, arch = self._resolve_artifacts(artifacts)
         for name in artifacts:
-            if name not in spec:
-                logging.error(f"artifact spec 中不存在 {name}")
-                sys.exit(1)
-            if not spec[name].get("url"):
-                logging.error(
-                    f"架构 {arch} 的 prebuilt 包未发布：{name}。请在对应架构机器上执行 "
-                    f"`python build.py prebuild` 后将产物上传 release 并填写 dependencies.json 的 url/sha256")
-                sys.exit(1)
             target = self.root / spec[name]["path"]
             if target.exists() and any(target.iterdir()):
                 logging.info(f"Skip existing: {name}")
@@ -159,7 +122,7 @@ class DependencyManager:
         artifacts = self.config["dependency_sets"][self.mode].get("artifacts", [])
         spec = self.config.get("artifact_spec", {})
 
-        if self.need_prebuilt and artifacts:
+        if artifacts:
             self.proc_artifact(artifacts, spec)
 
         if submodules:
@@ -172,9 +135,7 @@ def main():
                         help='Execution mode: omit to download prod dependencies, "local" to skip downloads, "test" to download test dependencies')
     parser.add_argument('-r', '--revision', help="Specify Git revision for internal dependent repo.")
     try:
-        # 独立运行本脚本时视为需要 prebuilt 包（全量下载）；由 build.py 调用时
-        # 会显式传 need_prebuilt=是否 --use-prebuilt。
-        DependencyManager(parser.parse_args(), need_prebuilt=True).run()
+        DependencyManager(parser.parse_args()).run()
         logging.info("")
         logging.info("=" * 50)
         logging.info("  ALL DEPENDENCIES DOWNLOADED SUCCESSFULLY!   ")
