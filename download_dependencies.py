@@ -28,11 +28,14 @@ class DependencyManager:
         - 参数: -r, --revision : 指定 Git 修订版本或标签用于依赖检出。
     """
 
-    def __init__(self, args):
+    def __init__(self, args, need_prebuilt=False):
         self.args, self.root = args, Path(__file__).resolve().parent
         self.config = json.loads((self.root / "dependencies.json").read_text())
         self.mode = "test" if "test" in args.command else "prod"
         self.is_local = "local" in args.command
+        # 源码模式（USE_PREBUILT_LLVM=OFF）不需要 prebuilt 包，仅拉 submodule；
+        # --use-prebuilt 或独立运行 download_dependencies.py 时才下载 artifact。
+        self.need_prebuilt = need_prebuilt
 
     def _exec_shell_cmd(self, cmd, cwd=None, msg=None):
         if msg: logging.info(msg)
@@ -156,7 +159,7 @@ class DependencyManager:
         artifacts = self.config["dependency_sets"][self.mode].get("artifacts", [])
         spec = self.config.get("artifact_spec", {})
 
-        if artifacts:
+        if self.need_prebuilt and artifacts:
             self.proc_artifact(artifacts, spec)
 
         if submodules:
@@ -169,7 +172,9 @@ def main():
                         help='Execution mode: omit to download prod dependencies, "local" to skip downloads, "test" to download test dependencies')
     parser.add_argument('-r', '--revision', help="Specify Git revision for internal dependent repo.")
     try:
-        DependencyManager(parser.parse_args()).run()
+        # 独立运行本脚本时视为需要 prebuilt 包（全量下载）；由 build.py 调用时
+        # 会显式传 need_prebuilt=是否 --use-prebuilt。
+        DependencyManager(parser.parse_args(), need_prebuilt=True).run()
         logging.info("")
         logging.info("=" * 50)
         logging.info("  ALL DEPENDENCIES DOWNLOADED SUCCESSFULLY!   ")

@@ -354,7 +354,9 @@ class BuildManager:
         # 在非 local 场景下按需更新依赖；在 local 场景下仅使用本地已有代码，不更新依赖。
         if 'local' not in self.parsed_arguments.command:
             from download_dependencies import DependencyManager
-            DependencyManager(self.parsed_arguments).run()
+            # 源码模式无需 prebuilt 包（不下载，避免 x86_64 等未发布架构报缺链接）；
+            # 仅 --use-prebuilt 才拉取对应架构的 prebuilt 包。
+            DependencyManager(self.parsed_arguments, need_prebuilt=use_prebuilt).run()
 
         if extra_options.get('only_down_deps') == 'true':
             logging.info("only_down_deps=true, exiting after dependency download.")

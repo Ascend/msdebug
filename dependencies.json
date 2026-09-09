@@ -8,9 +8,10 @@
       "note": "需在 x86_64 机器上执行 python build.py prebuild 后发布并填写 url/sha256"
     },
     "msdebug-prebuilt-llvm-lldb-aarch64": {
-      "url": "https://gitcode.com/wiyr0/msdebug/releases/download/prebuilt-v26.0.1/msdebug-prebuilt-llvm-26.2.0-aarch64.tar.gz",
-      "sha256": "d752b3c1314e46005cbf0cdb60c2fda31df65a0aa44b854ca8ca82365d94daa0",
-      "path": "prebuilt/aarch64"
+      "url": "",
+      "sha256": "",
+      "path": "prebuilt/aarch64",
+      "note": "需在 aarch64 机器上执行 python build.py prebuild 后发布并填写 url/sha256"
     }
   },
   "dependency_sets": {
