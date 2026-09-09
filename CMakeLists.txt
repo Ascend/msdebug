@@ -43,6 +43,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+# 预编译库选项
+option(USE_PREBUILT_LLVM "Use prebuilt LLVM libraries" OFF)
+set(LLVM_PREBUILT_ROOT "" CACHE PATH "Root directory of prebuilt LLVM libraries")
+set(LLVM_PREBUILT_VERSION "1.0" CACHE STRING "Version of prebuilt LLVM libraries")
+
 if(DEFINED ENABLE_LLDB_TESTS)
     set(LLDB_INCLUDE_TESTS ${ENABLE_LLDB_TESTS} CACHE BOOL "Enable LLDB tests")
 else()
@@ -53,6 +58,7 @@ endif()
 # Include modules
 include(cmake/Modules/Ncurses.cmake)
 include(cmake/Modules/Libedit.cmake)
+include(cmake/Modules/PrebuiltLLVM.cmake)
 include(cmake/Modules/LLVM.cmake)
 include(cmake/Modules/Msdebug_mi.cmake)
 include(cmake/Modules/PreparePackage.cmake)
@@ -65,6 +71,7 @@ set(ALL_EXTERNAL_TARGETS
 )
 
 
+# 预编译模式下 LLVM 仍由 llvm_project 现编译 LLDB，msdebug-mi 依赖其产物
 add_custom_target(build_debugger
         COMMENT "Building all Debugger components"
         DEPENDS ${ALL_EXTERNAL_TARGETS}

@@ -1,6 +1,19 @@
 {
   "version": "1.0",
-  "artifact_spec": {},
+  "artifact_spec": {
+    "msdebug-prebuilt-llvm-lldb-x86_64": {
+      "url": "",
+      "sha256": "",
+      "path": "prebuilt/x86_64",
+      "note": "需在 x86_64 机器上执行 python build.py prebuild 后发布并填写 url/sha256"
+    },
+    "msdebug-prebuilt-llvm-lldb-aarch64": {
+      "url": "",
+      "sha256": "",
+      "path": "prebuilt/aarch64",
+      "note": "需在 aarch64 机器上执行 python build.py prebuild 后发布并填写 url/sha256"
+    }
+  },
   "dependency_sets": {
     "prod": {
       "submodules": [
@@ -8,7 +21,9 @@
         "third-party/libedit",
         "third-party/ncurses"
       ],
-      "artifacts": []
+      "artifacts": [
+        "msdebug-prebuilt-llvm-lldb-{arch}"
+      ]
     },
     "test": {
       "submodules": [
@@ -16,8 +31,9 @@
         "third-party/libedit",
         "third-party/ncurses"
       ],
-      "artifacts": []
+      "artifacts": [
+        "msdebug-prebuilt-llvm-lldb-{arch}"
+      ]
     }
   }
 }
-
