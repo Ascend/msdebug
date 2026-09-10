@@ -11,10 +11,10 @@
 
 ### Related Product Versions
 
-| msDebug | makeself | libedit | ncurses
+| msDebug | makeself | libedit | ncurses |
 |----------|-----------------|----------|-------|
-| 26.0.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | 6.6
-| 8.3.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | openEuler-24.03-LTS-SP1-release
+| 26.0.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | 6.6 |
+| 8.3.0 | release-2.5.0 or later| openEuler-24.03-LTS-SP1-release | openEuler-24.03-LTS-SP1-release |
 
 ## Version Compatibility
 
@@ -31,13 +31,13 @@ Function:
 1. Supports board debugging without setting the kernel object path.
 2. Supports skipping the number of elements during memory reading.
 3. Supports debugging in the shared_memory operator scenario.
-4. Supports coredump debugging and board debugging for operators compiled using ASC.
+4. Supports coredump debugging and board debugging for operators compiled using `asc`.
 5. Supports printing of structure variables transferred from the host to the kernel.
 6. Added the function of backtracking the call stack in non-inline compilation mode to the coredump parsing function.
 
 Build and release:
 
-1. Changed the minimum permission required by the root user on folders during installation to `700`.
+1. Changed the minimum permission required by the root user on folders during installation to 700.
 2. Resolved the issue that the UT compilation fails on GCC 7 or 12.
 3. Standardized the installation package names.
 4. Resolved the issue that the incorrect path of the libtinfo dynamic library is found during compilation.
