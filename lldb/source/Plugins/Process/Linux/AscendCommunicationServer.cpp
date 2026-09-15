@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iomanip>
 #include <regex>
+#include <sstream>
 #include <unistd.h>
 
 using namespace llvm;

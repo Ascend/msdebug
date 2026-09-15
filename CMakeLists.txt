@@ -44,7 +44,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # 预编译库选项
-option(USE_PREBUILT_LLVM "Use prebuilt LLVM libraries" OFF)
+option(USE_PREBUILT_LLVM "Use prebuilt LLVM libraries" ON)
 set(LLVM_PREBUILT_ROOT "" CACHE PATH "Root directory of prebuilt LLVM libraries")
 set(LLVM_PREBUILT_VERSION "1.0" CACHE STRING "Version of prebuilt LLVM libraries")
 

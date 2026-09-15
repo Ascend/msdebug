@@ -6,6 +6,8 @@ import argparse
 import hashlib
 import json
 import logging
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -13,31 +15,57 @@ import tempfile
 import traceback
 from pathlib import Path
 
+
+def default_cxx():
+    """默认 C++ 编译器：优先环境变量 CXX，否则 c++。"""
+    return os.environ.get("CXX") or "c++"
+
+
+def cxx11_abi(cxx=None):
+    """实际生效的 _GLIBCXX_USE_CXX11_ABI（"0"/"1"），探测失败返回 None。
+
+    优先 CXXFLAGS/CPPFLAGS 的显式覆盖，否则取编译器默认。构建端（记录 meta）与
+    使用端（选包、校验）共用此函数，保证三处 ABI 口径一致。
+    """
+    flags = " ".join([os.environ.get("CXXFLAGS", ""), os.environ.get("CPPFLAGS", "")])
+    m = re.search(r"_GLIBCXX_USE_CXX11_ABI[ =](\d)", flags)
+    if m:
+        return m.group(1)
+    try:
+        out = subprocess.check_output(
+            [cxx or default_cxx(), "-dM", "-E", "-x", "c++", "-"], input="#include <string>\n",
+            stderr=subprocess.DEVNULL, text=True)
+    except Exception:
+        return None
+    m = re.search(r"#define _GLIBCXX_USE_CXX11_ABI (\d)", out)
+    return m.group(1) if m else None
+
+
 class DependencyManager:
     """
     依赖下载管理：根据 dependencies.json 拉取源码仓(Git submodule)与二进制包(artifacts)。
 
     用法:
-        python3 download_dependencies.py                  下载生产依赖：源码仓(Git submodule)（源码模式默认，不下载 prebuilt 包）
-        python3 download_dependencies.py --use-prebuilt   下载生产依赖：源码仓(Git submodule) + 预编译包(artifacts)
-        python3 download_dependencies.py test             下载测试依赖：源码仓(Git submodule)
-        python3 download_dependencies.py test --use-prebuilt  下载测试依赖：源码仓(Git submodule) + 预编译包(artifacts)
+        python3 download_dependencies.py                  下载生产依赖：源码仓(Git submodule) + 预编译包(artifacts)
+        python3 download_dependencies.py --no-prebuilt    仅下载源码仓(Git submodule)，不下载预编译包
+        python3 download_dependencies.py test             下载测试依赖：源码仓(Git submodule) + 预编译包(artifacts)
+        python3 download_dependencies.py test --no-prebuilt   仅下载源码仓(Git submodule)
         python3 download_dependencies.py local            跳过所有下载：直接返回不处理
         python3 download_dependencies.py -r <revision>    指定内部源码仓的 Git 分支/标签/commit
 
     参数说明:
         - 参数: command : 执行模式: 为空时下载生产依赖, test 为下载测试依赖, local 为跳过下载。
         - 参数: -r, --revision : 指定 Git 修订版本或标签用于依赖检出。
-        - 参数: --use-prebuilt : 同时下载当前架构的预编译 LLVM/Clang 包（默认关闭，即仅源码依赖）。
+        - 参数: --no-prebuilt : 不下载预编译 LLVM/Clang 包（默认下载当前架构的预编译包）。
     """
 
-    def __init__(self, args, need_prebuilt=False):
+    def __init__(self, args, need_prebuilt=True):
         self.args, self.root = args, Path(__file__).resolve().parent
         self.config = json.loads((self.root / "dependencies.json").read_text())
         self.mode = "test" if "test" in args.command else "prod"
         self.is_local = "local" in args.command
-        # 源码模式（USE_PREBUILT_LLVM=OFF）不需要 prebuilt 包，仅拉 submodule；
-        # 仅当显式 --use-prebuilt（或由 build.py 以 need_prebuilt=是否 --use-prebuilt 传入）时才下载 artifact。
+        # 默认预编译模式需要 prebuilt 包；build.py 以 need_prebuilt=是否启用预编译传入，
+        # --no-prebuilt 源码模式下仅拉 submodule，不下载 artifact（避免未发布架构报缺链接）。
         self.need_prebuilt = need_prebuilt
 
     def _exec_shell_cmd(self, cmd, cwd=None, msg=None):
@@ -94,17 +122,14 @@ class DependencyManager:
         raise SystemExit(f"不支持的非宿主架构: {m}")
 
     def _resolve_artifacts(self, artifacts):
-        """解析 artifact 名中的 {arch} 占位：按当前机器架构展开。
+        """解析 artifact 名中的占位符：{arch} 按机器架构、{abi} 按 C++11 ABI 展开。
 
-        例：msdebug-prebuilt-llvm-lldb-{arch} → msdebug-prebuilt-llvm-lldb-aarch64（aarch64 机器）
+        例：msdebug-prebuilt-llvm-lldb-{arch}-abi{abi} → ...-aarch64-abi1（aarch64、ABI=1 机器）
+        未含占位符的名字保持不变。
         """
         arch = self._detect_arch()
-        resolved = []
-        for name in artifacts:
-            if "{arch}" in name:
-                resolved.append(name.replace("{arch}", arch))
-            else:
-                resolved.append(name)
+        abi = cxx11_abi() or "1"
+        resolved = [name.replace("{arch}", arch).replace("{abi}", abi) for name in artifacts]
         return resolved, arch
 
     def proc_artifact(self, artifacts, spec):
@@ -174,15 +199,15 @@ def main():
     parser.add_argument('command', nargs='*', default=[], choices=[[], 'local', 'test'],
                         help='Execution mode: omit to download prod dependencies, "local" to skip downloads, "test" to download test dependencies')
     parser.add_argument('-r', '--revision', help="Specify Git revision for internal dependent repo.")
-    parser.add_argument('--use-prebuilt', action='store_true',
-                        help='Also download the prebuilt LLVM/Clang package for the current architecture '
-                             '(default off: source-mode build only needs git submodules)')
+    parser.add_argument('--no-prebuilt', action='store_true',
+                        help='Do not download the prebuilt LLVM/Clang package for the current architecture '
+                             '(default: download prebuilt package)')
     args = parser.parse_args()
     try:
-        # 与 build.py 的源码模式默认一致：默认仅拉源码仓(Git submodule)。
-        # 仅显式 --use-prebuilt 时才下载 prebuilt 包，避免在 prebuilt 包尚未发布的架构
-        # （如 aarch64 / x86_64）上，父工程(msot)递归调用本脚本时因缺下载链接而中断整次构建。
-        DependencyManager(args, need_prebuilt=args.use_prebuilt).run()
+        # 与 build.py 的默认预编译模式一致：默认拉取源码仓(Git submodule) + 当前架构 prebuilt 包。
+        # 仅显式 --no-prebuilt 时才跳过 prebuilt 包，避免在 prebuilt 包尚未发布的架构上
+        # 父工程(msot)递归调用本脚本时因缺下载链接而中断整次构建。
+        DependencyManager(args, need_prebuilt=not args.no_prebuilt).run()
         logging.info("")
         logging.info("=" * 50)
         logging.info("  ALL DEPENDENCIES DOWNLOADED SUCCESSFULLY!   ")

@@ -17,6 +17,7 @@
 #include <fstream>
 #include <map>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>

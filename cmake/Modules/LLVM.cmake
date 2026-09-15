@@ -55,11 +55,21 @@ if(USE_PREBUILT_LLVM)
         -DLLDB_ENABLE_LIBEDIT=ON
         -DMS_DEBUGGER=1
         -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         -DLLDB_INCLUDE_TESTS=${LLDB_INCLUDE_TESTS}
         -DROOT_DIR=${ROOT_DIR}
         -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
         -DLIBEDIT_LIBRARY=${LIBEDIT_INSTALL_DIR}/lib
+        -DLibEdit_LIBRARIES=${LIBEDIT_INSTALL_DIR}/lib/libedit.so.0
+        -DLibEdit_INCLUDE_DIRS=${LIBEDIT_INSTALL_DIR}/include
+        -DHISTEDIT_FILE=${LIBEDIT_INSTALL_DIR}/include/histedit.h
+        -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath-link,${LIBEDIT_INSTALL_DIR}/lib,-rpath-link,${NCURSES_LIB_DIR}
         -DNCURSES_LIB_DIR=${NCURSES_LIB_DIR}
+        -DCURSES_NCURSES_LIBRARY=${NCURSES_INSTALL_DIR}/lib/libncurses.so
+        -DTerminfo_LIBRARIES=${NCURSES_INSTALL_DIR}/lib/libtinfo.so
+        -DCURSES_LIBRARY=${NCURSES_INSTALL_DIR}/lib/libtinfo.so
+        -DCURSES_INCLUDE_PATH=${NCURSES_INSTALL_DIR}/include
+        -DCMAKE_PREFIX_PATH=${NCURSES_INSTALL_DIR}
         -DMS_DEBUGGER_LIBEDIT=${LIBEDIT_INSTALL_DIR}/lib
         -DMS_DEBUGGER_NCURSES=${NCURSES_INSTALL_DIR}/lib
         -DPython3_EXECUTABLE=${PYTHON_EXECUTABLE}
@@ -90,6 +100,18 @@ if(USE_PREBUILT_LLVM)
         USES_TERMINAL_CONFIGURE TRUE
         BUILD_ALWAYS TRUE
         DEPENDS libedit_project
+    )
+
+    # 将内层 compile_commands.json 链接到 build/ 目录，供 clangd 等 IDE 工具使用
+    # 剔除 gcc 追加的 -fno-lifetime-dse，避免 clang-tidy(clang>=16) 报 unknown argument
+    ExternalProject_Add_Step(llvm_project symlink_compile_commands
+        COMMAND ${CMAKE_COMMAND} -E remove -f ${PROJECT_BUILD_DIR}/compile_commands.json
+        COMMAND sed -i "s/ -fno-lifetime-dse//g" ${LLDB_STANDALONE_BUILD_DIR}/compile_commands.json
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            ${LLDB_STANDALONE_BUILD_DIR}/compile_commands.json
+            ${PROJECT_BUILD_DIR}/compile_commands.json
+        DEPENDEES build
+        COMMENT "Symlink compile_commands.json to build/ for clangd IDE support"
     )
 else()
     # ==================== 源码模式 ====================
@@ -131,6 +153,7 @@ else()
             -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
             -DLLVM_ENABLE_PROJECTS=clang
             -DLLVM_ENABLE_ZSTD=OFF
+            -DLLVM_ENABLE_ZLIB=OFF
             -DLLDB_ENABLE_LIBXML2=OFF
             -DLLDB_ENABLE_PYTHON=OFF
             -DLLDB_ENABLE_LIBEDIT=ON

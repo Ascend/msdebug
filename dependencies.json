@@ -1,17 +1,25 @@
 {
   "version": "1.0",
   "artifact_spec": {
-    "msdebug-prebuilt-llvm-lldb-x86_64": {
-      "url": "",
-      "sha256": "",
-      "path": "prebuilt/x86_64",
-      "note": "需在 x86_64 机器上执行 python build.py prebuild 后发布并填写 url/sha256"
+    "msdebug-prebuilt-llvm-lldb-x86_64-abi1": {
+      "url": "https://mindstudio-pr.obs.cn-north-4.myhuaweicloud.com/msdebug/prebuilt/msdebug-prebuilt-llvm-26.2.0-x86_64-gcc9-abi1.tar.gz",
+      "sha256": "32ddf1ffb37026ac636105e99b02a4dfcbd579c572b19313d6a03b52ea22639d",
+      "path": "prebuilt/x86_64"
     },
-    "msdebug-prebuilt-llvm-lldb-aarch64": {
-      "url": "",
-      "sha256": "",
-      "path": "prebuilt/aarch64",
-      "note": "需在 aarch64 机器上执行 python build.py prebuild 后发布并填写 url/sha256"
+    "msdebug-prebuilt-llvm-lldb-x86_64-abi0": {
+      "url": "https://mindstudio-pr.obs.cn-north-4.myhuaweicloud.com/msdebug/prebuilt/msdebug-prebuilt-llvm-26.2.0-x86_64-gcc9-abi0.tar.gz",
+      "sha256": "709d25b0a926b8b98fda2f18280c1e050d64c68049acffde123770deea65b199",
+      "path": "prebuilt/x86_64"
+    },
+    "msdebug-prebuilt-llvm-lldb-aarch64-abi1": {
+      "url": "https://mindstudio-pr.obs.cn-north-4.myhuaweicloud.com/msdebug/prebuilt/msdebug-prebuilt-llvm-26.2.0-aarch64-gcc9-abi1.tar.gz",
+      "sha256": "98e333e05d531e1cee35eccf0123605e09135e9c35343601c42bbf5ffa8fe4c3",
+      "path": "prebuilt/aarch64"
+    },
+    "msdebug-prebuilt-llvm-lldb-aarch64-abi0": {
+      "url": "https://mindstudio-pr.obs.cn-north-4.myhuaweicloud.com/msdebug/prebuilt/msdebug-prebuilt-llvm-26.2.0-aarch64-gcc9-abi0.tar.gz",
+      "sha256": "70ea6afb677d283fefd660aca8c6525e1f30ae8e3549101c884081c196845d8b",
+      "path": "prebuilt/aarch64"
     }
   },
   "dependency_sets": {
@@ -22,7 +30,7 @@
         "third-party/ncurses"
       ],
       "artifacts": [
-        "msdebug-prebuilt-llvm-lldb-{arch}"
+        "msdebug-prebuilt-llvm-lldb-{arch}-abi{abi}"
       ]
     },
     "test": {
@@ -32,7 +40,7 @@
         "third-party/ncurses"
       ],
       "artifacts": [
-        "msdebug-prebuilt-llvm-lldb-{arch}"
+        "msdebug-prebuilt-llvm-lldb-{arch}-abi{abi}"
       ]
     }
   }

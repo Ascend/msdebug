@@ -71,7 +71,14 @@ if (MS_DEBUGGER)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
   # -fPIC，保证探测结果和你真实工程编译环境一致，避免 “探测通过、实际编译失败”。
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fPIC")
-  add_compile_options("-D_FORTIFY_SOURCE=2")
+  # 预编译包在低 glibc（2.17）上构建、分发到更高 glibc：fortify 的 memset 内联会引用
+  # __warn_memset_zero_len（glibc>=2.27 已移除），导致使用端 undefined reference。
+  # 预编译构建（Dockerfile 设 MSDEBUG_PREBUILT=1）关闭 fortify，常规构建保持开启。
+  if (DEFINED ENV{MSDEBUG_PREBUILT})
+    add_compile_options("-U_FORTIFY_SOURCE")
+  else()
+    add_compile_options("-D_FORTIFY_SOURCE=2")
+  endif()
   add_compile_options("-ftrapv")
   set(CMAKE_SKIP_RPATH TRUE)
 endif()

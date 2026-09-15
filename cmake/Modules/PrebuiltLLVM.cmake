@@ -39,6 +39,37 @@ if(NOT EXISTS "${LLVM_PREBUILT_LIB_DIR}/libclangAST.a")
     message(FATAL_ERROR "Required prebuilt library not found: ${LLVM_PREBUILT_LIB_DIR}/libclangAST.a")
 endif()
 
+# ---------- 构建元数据校验（glibc）----------
+# prebuilt 包必须携带 prebuilt_meta.json；glibc 仅向后兼容，若由更高 glibc 构建，
+# 本机会因缺少新符号而失败。不按 GCC 版本判断（低/高 GCC 未必决定符号兼容）。
+set(_prebuilt_meta "${LLVM_PREBUILT_ROOT}/${LLVM_PREBUILT_ARCH}/prebuilt_meta.json")
+if(NOT EXISTS "${_prebuilt_meta}")
+    message(FATAL_ERROR
+        "Prebuilt LLVM package is incomplete: ${_prebuilt_meta} not found.\n"
+        "Fix: re-download the prebuilt package, or configure with "
+        "-DUSE_PREBUILT_LLVM=OFF (python build.py --no-prebuilt).")
+endif()
+
+file(READ "${_prebuilt_meta}" _meta_json)
+string(JSON _need_glibc ERROR_VARIABLE _json_err GET "${_meta_json}" min_glibc)
+if(NOT _need_glibc MATCHES "^[0-9]+\\.[0-9]+")
+    string(JSON _need_glibc ERROR_VARIABLE _json_err GET "${_meta_json}" glibc_version)
+endif()
+
+execute_process(COMMAND getconf GNU_LIBC_VERSION
+                OUTPUT_VARIABLE _libc_out OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+string(REGEX MATCH "[0-9]+\\.[0-9]+" _host_glibc "${_libc_out}")
+
+if(_need_glibc MATCHES "^[0-9]+\\.[0-9]+" AND _host_glibc MATCHES "^[0-9]+\\.[0-9]+"
+   AND _host_glibc VERSION_LESS _need_glibc)
+    message(FATAL_ERROR
+        "Prebuilt LLVM was built with glibc ${_need_glibc}, but this machine has glibc ${_host_glibc}.\n"
+        "Fix: rebuild the prebuilt package against an older glibc, or configure with "
+        "-DUSE_PREBUILT_LLVM=OFF (python build.py --no-prebuilt).")
+endif()
+
+message(STATUS "  Built with:     glibc ${_need_glibc} (this machine: glibc ${_host_glibc})")
+
 message(STATUS "=== Prebuilt LLVM Configuration ===")
 message(STATUS "  Architecture:   ${LLVM_PREBUILT_ARCH}")
 message(STATUS "  Library dir:    ${LLVM_PREBUILT_LIB_DIR}")

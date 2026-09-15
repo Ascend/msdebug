@@ -30,6 +30,8 @@
 /build*
 output
 artifacts
+# Prebuilt LLVM/Clang packages (downloaded/repacked build artifacts)
+prebuilt
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).
