@@ -49,11 +49,11 @@ msDebug工具支持调试所有的昇腾算子，包含Ascend C算子（Vector�
 
 ## 🚀 快速入门
 
-详细操作步骤请参见《[msDebug 快速入门](docs/zh/quick_start/msdebug_quick_start.md)》。
+基于入门教程中开发的简易加法算子，演示msDebug工具的核心功能，详细操作步骤请参见《[msDebug 快速入门](docs/zh/quick_start/msdebug_quick_start.md)》。
 
 ## 📦 安装指南
 
-介绍工具的环境依赖与安装方法，请参见《[msDebug 安装指南](docs/zh/install_guide/msdebug_install_guide.md)》。
+msDebug工具支持在线安装、离线安装以及源码安装，请参见《[msDebug 安装指南](docs/zh/install_guide/msdebug_install_guide.md)》。
 
 ## 📘 使用指南
 

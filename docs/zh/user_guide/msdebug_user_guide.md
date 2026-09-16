@@ -547,7 +547,7 @@ Process 2625643 stopped
     ...
     ```
 
-- Ascend 950PR&950DT 系列产品中的场景中，simd vf函数及其子函数必须inline，导致大量代码行信息丢失，无法解析出断点信息。可通过在simd vf内添加`__asm__("NOP")`语句，并在该行设置断点。
+- Ascend 950PR&950DT 系列产品的场景中，simd vf函数及其子函数必须inline，导致大量代码行信息丢失，无法解析出断点信息。可通过在simd vf内添加`__asm__("NOP")`语句，并在该行设置断点。
 
     ```cpp
     __simd_vf__ inline void funcA () {
@@ -791,7 +791,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 
 ### 功能说明
 
-用户需要了解代码执行具体情况时，可使用`thread step-over`命令使用示例逐行执行以进行单步调试，或执行`step in`命令可进入函数内部进行调试，或可执行`finish`命令返回函数调用点的下一行继续调试。
+用户需要了解代码执行具体情况时，可使用`thread step-over`命令逐行执行以进行单步调试，或执行`step in`命令可进入函数内部进行调试，或可执行`finish`命令返回函数调用点的下一行继续调试。
 
 ### 注意事项
 
@@ -1174,7 +1174,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 输入以下命令查询算子运行的核信息，\*所在行代表当前聚焦的核。如下所示当前聚焦的核为aiv的“core 0”。
 
 ```bash
-(mdebug) ascend info cores
+(msdebug) ascend info cores
   CoreId Type Device Stream Task Block               PC    stop reason Filename Line
       16  aic      1     3    0     0  0x12c0c00f1fc0  breakpoint 1.1       NA   NA
 *      0  aiv      1     3    0     0  0x12c0c00f8fcc  breakpoint 1.1       NA   NA
