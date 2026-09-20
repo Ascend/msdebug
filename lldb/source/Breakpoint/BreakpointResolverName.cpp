@@ -375,7 +375,14 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
 
     bool new_location;
     BreakpointLocationSP bp_loc_sp(AddLocation(break_addr, &new_location));
+#ifdef MS_DEBUGGER
+    // AddLocation may return nullptr when a host-side location is suppressed
+    // in favor of a device-side location.
+    if (bp_loc_sp)
+      bp_loc_sp->SetIsReExported(is_reexported);
+#else
     bp_loc_sp->SetIsReExported(is_reexported);
+#endif
     if (bp_loc_sp && new_location && !breakpoint.IsInternal()) {
       if (log) {
         StreamString s;

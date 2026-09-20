@@ -226,16 +226,26 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
       if (!module_sp) {
         continue;
       }
-      llvm::Triple::ArchType bp_arch_type = module_sp->GetArchitecture().GetMachine();
+      llvm::Triple::ArchType bp_arch_type =
+          module_sp->GetArchitecture().GetMachine();
       if (bp_arch_type == llvm::Triple::hiipu64) {
         device_bp_locations.push_back(m_locations[idx]);
       } else {
         host_bp_locations.push_back(m_locations[idx]);
       }
     }
-    if (!device_bp_locations.empty()) {
+    ProcessSP process_sp(m_owner.GetTarget().GetProcessSP());
+    // The breakpoint is device-scoped either when it already owns a
+    // device-side location, or when the process is currently stopped in the
+    // device. The latter is required because device modules are appended to
+    // the target image list after the host modules, so while stopped in the
+    // device a newly resolved breakpoint creates its host-side location
+    // *before* the device-side one. Relying on device_bp_locations alone lets
+    // that leading host location escape the cleanup below and linger.
+    const bool device_scoped = !device_bp_locations.empty() ||
+                               (process_sp && process_sp->IsStopInDevice());
+    if (device_scoped) {
       Log *log = GetLog(LLDBLog::Breakpoints);
-      ProcessSP process_sp(m_owner.GetTarget().GetProcessSP());
       // If process_sp is non-null, the debugged process is running.
       // However, when the breakpoint is hit on the device side,
       // the host side is still running, and the host-side breakpoint
@@ -257,7 +267,8 @@ BreakpointLocationSP BreakpointLocationList::AddLocation(
         return nullptr;
       }
       ModuleSP module_sp = bp_loc_sp->GetAddress().GetModule();
-      if ((!module_sp) || module_sp->GetArchitecture().GetMachine() != llvm::Triple::hiipu64) {
+      if ((!module_sp) ||
+          module_sp->GetArchitecture().GetMachine() != llvm::Triple::hiipu64) {
         // The newly created location is on the host side while this
         // breakpoint already has device-side locations. Drop it here instead
         // of just returning nullptr: otherwise the host location would linger
