@@ -243,7 +243,7 @@
     }
     ```
 
-4. 参考[算子编译部署](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html)完成算子的编译部署。<a id="步骤4算子编译"></a>
+4. 参考[算子编译部署](https://gitcode.com/Ascend/msopgen/blob/26.2.0/docs/zh/user_guide/msopgen_user_guide.md#%E7%AE%97%E5%AD%90%E7%BC%96%E8%AF%91%E9%83%A8%E7%BD%B2)完成算子的编译部署。<a id="步骤4算子编译"></a>
 5. 切换到msOpGen脚本install.sh所在目录，并参考[README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md)编译单算子调用应用并得到可执行文件**execute_add_op**。<a id="步骤5"></a>
 
     ```bash
@@ -334,7 +334,7 @@
     }
     ```
 
-3. 参考[算子编译部署](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/ODtools/Operatordevelopmenttools/atlasopdev_16_0024.html)，完成算子的编译部署。
+3. 参考[算子编译部署](https://gitcode.com/Ascend/msopgen/blob/26.2.0/docs/zh/user_guide/msopgen_user_guide.md#%E7%AE%97%E5%AD%90%E7%BC%96%E8%AF%91%E9%83%A8%E7%BD%B2)，完成算子的编译部署。
 4. 进入到样例目录，以命令行方式下载样例代码。参考[README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md)使用PyTorch调用方式调用AddCustom算子工程，并按照指导完成编译。
 
     ```bash

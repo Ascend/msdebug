@@ -66,7 +66,7 @@ Kernel函数中workspace入参的空间大小在Tiling函数中被设置为0，�
 
 **解决方案**
 
-参考《Ascend C算子开发指南》中的“算子实现 \> 工程化算子开发 \>  [Host侧tiling实现](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_00021.html)”章节，将workspacesize从0设置成预留内存大小。API在计算过程需要一些workspace内存作为缓存，因此算子Tiling函数需要为API预留workspace内存，预留内存大小通过GetLibApiWorkSpaceSize接口获取。参考如下代码：
+参考《Ascend C算子开发指南》中的“算子实现 \> 工程化算子开发 \>  [Host侧tiling实现](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/zh/guide/programming_guide/advanced_programming/aclnn_operator_development/design_and_implementation/host_tiling_implementation.md)”章节，将workspacesize从0设置成预留内存大小。API在计算过程需要一些workspace内存作为缓存，因此算子Tiling函数需要为API预留workspace内存，预留内存大小通过GetLibApiWorkSpaceSize接口获取。参考如下代码：
 
 ```cpp
 #include "tiling/platform/platform_ascendc.h"
