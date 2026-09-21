@@ -128,15 +128,16 @@ inline CoreMaskParam GenCoreMask(const InterruptPosInfo &pos_info) {
   core_info.magic = 0x5a5a5a5a;
   auto &cores = core_info.cores;
   auto core_id = pos_info.core_id;
-  constexpr uint8_t max_bit_num = 63;
+  // bitmap0 covers core IDs 0..63, bitmap1 covers 64..127.
+  constexpr uint8_t max_bit_num = 64;
   if (pos_info.core_type == CoreType::AIC) {
-    if (core_id > max_bit_num) {
+    if (core_id >= max_bit_num) {
       cores.aic_bitmap1 = 1ULL << (core_id - max_bit_num);
     } else {
       cores.aic_bitmap0 = 1ULL << core_id;
     }
   } else if (pos_info.core_type == CoreType::AIV) {
-    if (core_id > max_bit_num) {
+    if (core_id >= max_bit_num) {
       cores.aiv_bitmap1 = 1ULL << (core_id - max_bit_num);
     } else {
       cores.aiv_bitmap0 = 1ULL << core_id;
