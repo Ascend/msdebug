@@ -552,21 +552,34 @@ int32_t SetDevicePost(int32_t device)
 }
 
 // 归一化 launch 接口第一个入参 func：可能是核函数符号，也可能是 func handle。
-// 先尝试 aclrtGetFuncBySymbolImpl(func, &fh)：成功 → func 是核函数符号，用解析出的 handle；
-// 失败 → func 本身就是 handle，直接使用。
+// 新版本 runtime 不区分二者，核函数名称与 func handle 均可直接用于下发，此时 func 可原样使用；
+// 旧版本仅接受 func handle，传入核函数名称会报错。
+// 用 aclrtFunctionGetBinaryImpl 探测当前版本新旧：成功 → 新版本（或 func 本身就是 handle），
+// func 可原样使用；失败 → 旧版本且 func 为核函数名称，用 aclrtGetFuncBySymbolImpl 转成 handle。
 aclrtFuncHandle ResolveFuncHandle(void *func) {
-  aclrtFuncHandle fh = nullptr;
   if (func != nullptr) {
-    using FuncType = aclError (*)(const void *, aclrtFuncHandle *);
-    auto impl = (FuncType)GetStubFuncPtr("aclrtGetFuncBySymbolImpl");
-    if (impl(func, &fh) == ACL_SUCCESS) {
-      RT_STUB_LOG_INFO("Receive param is kernel symbol, func=%p, "
-                       "resolved funcHandle=%p\n",
-                       func, static_cast<void *>(fh));
+    using GetBinaryType = aclError (*)(aclrtFuncHandle, aclrtBinHandle *);
+    auto getBinary = (GetBinaryType)GetStubFuncPtr("aclrtFunctionGetBinaryImpl", false);
+    if (getBinary != nullptr) {
+      aclrtBinHandle binHandle = nullptr;
+      if (getBinary(static_cast<aclrtFuncHandle>(func), &binHandle) == ACL_SUCCESS) {
+        RT_STUB_LOG_INFO(
+            "Get binHandle by func success, func=%p is already aclrtFuncHandle "
+            "type\n",
+            func);
+        return static_cast<aclrtFuncHandle>(func);
+      }
+    }
+    using GetFuncBySymbolType = aclError (*)(const void *, aclrtFuncHandle *);
+    auto impl = (GetFuncBySymbolType)GetStubFuncPtr("aclrtGetFuncBySymbolImpl", false);
+    aclrtFuncHandle fh = nullptr;
+    if (impl != nullptr && impl(func, &fh) == ACL_SUCCESS) {
+      RT_STUB_LOG_INFO("Get func handle %p by symbol = %p success.\n", func,
+                       static_cast<void *>(fh));
       return fh;
     }
   }
-  RT_STUB_LOG_INFO("Receive param is funcHandle, func=%p\n", func);
+  RT_STUB_LOG_INFO("Receive param is nullptr or unresolvable, func=%p\n", func);
   return static_cast<aclrtFuncHandle>(func);
 }
 
