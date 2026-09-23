@@ -910,7 +910,8 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 
     > [!NOTE]
     > 
-    > 当前核的停止原因既有调试函数又有断点时，将展示为breakpoint。
+    > - 当前核的停止原因既有调试函数又有断点时，将展示为breakpoint。
+    > - 单步调试时，不支持直接从`main scalar`调试到`simd/simt vf`。
 
 4. 调试完CopyOut函数后，运行`finish`命令退出CopyOut函数，并返回主程序继续执行。
 
