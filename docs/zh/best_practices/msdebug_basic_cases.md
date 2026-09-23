@@ -8,7 +8,7 @@
 
 **前期准备**
 
-- 单击[链接](https://gitcode.com/Ascend/mstt/tree/master/sample)获取样例工程，为进行算子调试做准备。
+- 单击[链接](https://gitcode.com/Ascend/mstt/tree/7.0.RC3/sample)获取样例工程，为进行算子调试做准备。
 - 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
