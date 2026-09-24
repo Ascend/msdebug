@@ -14,6 +14,7 @@ on:
     comments: [ '^compile$' ]
 
 env:
+  org_name: Ascend
   REPO_NAME: msdebug
   REMOTE_URL: ${{ atomgit.repositoryurl }}
   PR_ID: ${{ atomgit.event.pull_request.number }}
@@ -197,7 +198,7 @@ stages:
         with:
           IMAGE_FLAG: "mindstudio-st-msot:26.1.0-0702"
           runs_on_arch: "arm64"
-          ARTIFACT_NAME: "msdebug-run-arm"
+          # ARTIFACT_NAME: "msdebug-run-arm"
 
 post:
   jobs:
