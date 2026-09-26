@@ -106,6 +106,9 @@ private:
 
   void FixSimdPC(uint64_t &pc);
   void FixSimtPC(CoreInfo &core_info);
+  void FixSimtFocus(InterruptEvent &event);
+  void RefreshFocusedPC();
+  void SetWarpOnFocus(uint16_t warp_id);
 
 private:
   std::shared_ptr<AscendCommunicationServer> m_server;

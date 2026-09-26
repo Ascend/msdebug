@@ -14,6 +14,7 @@
 #include "Plugins/Process/Linux/AscendThreadLinux.h"
 #undef private
 #undef protected
+#include "Plugins/Disassembler/LLVMC/AscendDisassembler950.h"
 #include "TestingSupport/Plugins/AscendProcessLinuxTestUtils.h"
 
 #include <gtest/gtest.h>
@@ -93,8 +94,15 @@ public:
       return m_warps_status;
     }
 
+    Status SingleStep(const InterruptPosInfo &pos_info) const override {
+      m_single_step_calls.push_back(pos_info);
+      return m_single_step_status;
+    }
+
     std::vector<WarpInfo> m_warps_info;
     Status m_warps_status;
+    mutable std::vector<InterruptPosInfo> m_single_step_calls;
+    Status m_single_step_status;
 };
 
 class AscendProcessLinuxTest : public testing::Test {
@@ -451,6 +459,342 @@ TEST_F(AscendProcessLinuxTest, GetStoppedCorePC_NoMatchingCore_Fails) {
   Status error = process->GetStoppedCorePC(pc);
 
   EXPECT_TRUE(error.Fail());
+}
+
+namespace {
+
+WarpInfo MakeWarp(uint8_t warp_id, uint64_t simt_pc, uint32_t exec_mask) {
+  WarpInfo warp{};
+  warp.core_id = 0;
+  warp.warp_id = warp_id;
+  warp.warp_num = 2;
+  warp.simt_pc = simt_pc;
+  warp.exec_mask = exec_mask;
+  return warp;
+}
+
+InterruptEvent MakeSimtBreakpointEvent(uint64_t pc, uint16_t thread_id) {
+  InterruptEvent event{};
+  event.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  event.status = CoreStatus::BRKPT;
+  event.core_type = static_cast<uint8_t>(CoreType::AIV);
+  event.core_id = 0;
+  event.pc = pc;
+  event.thread_info.thread_dim_x = 32;
+  event.thread_info.thread_dim_y = 1;
+  event.thread_info.thread_dim_z = 1;
+  event.thread_info.thread_id = thread_id;
+  return event;
+}
+
+// 通过公共只读接口拿到 map 后 const_cast 写入，避免依赖 private hack。
+void AddHardwareBreakpoint(AscendProcessLinux *process, lldb::addr_t addr,
+                           size_t size) {
+  const_cast<HardwareBreakpointMap &>(
+      process->GetHardwareBreakpointMap())[addr] = {addr, size};
+}
+
+CoreInfo MakeSimtCore(uint8_t core_id, CoreType core_type, uint64_t pc) {
+  CoreInfo core{};
+  core.core_id = core_id;
+  core.core_type = core_type;
+  core.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  core.pc = pc;
+  return core;
+}
+
+} // namespace
+
+// ---- AscendDisassembler950::IsBarThreadBlock ----
+
+TEST(AscendDisassembler950Test, IsBarThreadBlock_Match) {
+  EXPECT_TRUE(AscendDisassembler950::IsBarThreadBlock(0x00AE001C));
+}
+
+TEST(AscendDisassembler950Test, IsBarThreadBlock_NonMaskBitsAny_Match) {
+  // 非掩码位（bit30）任意，仍应命中。
+  EXPECT_TRUE(AscendDisassembler950::IsBarThreadBlock(0x40AE001C));
+}
+
+TEST(AscendDisassembler950Test, IsBarThreadBlock_Bit0Set_NoMatch) {
+  EXPECT_FALSE(AscendDisassembler950::IsBarThreadBlock(0x00AE001D));
+}
+
+TEST(AscendDisassembler950Test, IsBarThreadBlock_Bits5To2Wrong_NoMatch) {
+  EXPECT_FALSE(AscendDisassembler950::IsBarThreadBlock(0x00AE0018));
+}
+
+TEST(AscendDisassembler950Test, IsBarThreadBlock_HighFieldWrong_NoMatch) {
+  EXPECT_FALSE(AscendDisassembler950::IsBarThreadBlock(0x00AC001C));
+}
+
+// ---- AscendProcessLinux::FixSimtFocus ----
+
+TEST_F(AscendProcessLinuxTest, FixSimtFocus_ReportedPcNotHwBp_FocusHitWarp) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  AddHardwareBreakpoint(process.get(), 0x1000, 4);
+  // 命中 warp 的 exec_mask = 0b100，第一个 active lane = 2。
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 0b100)};
+
+  InterruptEvent event = MakeSimtBreakpointEvent(0x400, 5);
+  process->FixSimtFocus(event);
+
+  EXPECT_EQ(event.pc, 0x1000ULL);
+  EXPECT_EQ(event.thread_info.thread_id, 2u);
+  EXPECT_EQ(process->m_pos_info.pc, 0x1000ULL);
+  EXPECT_EQ(process->m_pos_info.thread_info.thread_id, 2u);
+  EXPECT_EQ(process->m_pos_info.thread_pos.x, 2u);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtFocus_ReportedPcIsHwBp_NoChange) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  AddHardwareBreakpoint(process.get(), 0x1000, 4);
+  device_ctx->m_warps_info = {MakeWarp(1, 0x1000, 1)};
+
+  InterruptEvent event = MakeSimtBreakpointEvent(0x1000, 5);
+  process->FixSimtFocus(event);
+
+  EXPECT_EQ(event.pc, 0x1000ULL);
+  EXPECT_EQ(event.thread_info.thread_id, 5u);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtFocus_NoMatchingWarp_NoChange) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  AddHardwareBreakpoint(process.get(), 0x1000, 4);
+  device_ctx->m_warps_info = {MakeWarp(0, 0x2000, 1)};
+
+  InterruptEvent event = MakeSimtBreakpointEvent(0x400, 5);
+  process->FixSimtFocus(event);
+
+  EXPECT_EQ(event.pc, 0x400ULL);
+  EXPECT_EQ(event.thread_info.thread_id, 5u);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtFocus_SingleStepEvent_NoChange) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  AddHardwareBreakpoint(process.get(), 0x1000, 4);
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1)};
+
+  InterruptEvent event = MakeSimtBreakpointEvent(0x400, 5);
+  event.status = CoreStatus::SINGLE_STEP;
+  process->FixSimtFocus(event);
+
+  EXPECT_EQ(event.pc, 0x400ULL);
+  EXPECT_EQ(event.thread_info.thread_id, 5u);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtFocus_NonSimt_NoChange) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  AddHardwareBreakpoint(process.get(), 0x1000, 4);
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1)};
+
+  InterruptEvent event = MakeSimtBreakpointEvent(0x400, 5);
+  event.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+  process->FixSimtFocus(event);
+
+  EXPECT_EQ(event.pc, 0x400ULL);
+  EXPECT_EQ(event.thread_info.thread_id, 5u);
+}
+
+TEST_F(AscendProcessLinuxTest, FixSimtFocus_EmptyHwBp_NoChange) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1)};
+
+  InterruptEvent event = MakeSimtBreakpointEvent(0x400, 5);
+  process->FixSimtFocus(event);
+
+  EXPECT_EQ(event.pc, 0x400ULL);
+  EXPECT_EQ(event.thread_info.thread_id, 5u);
+}
+
+// ---- 切核/切线程后刷新 m_pos_info.pc ----
+
+TEST_F(AscendProcessLinuxTest, SetAivOnFocus_RefreshesFocusedPC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1)};
+  process->m_cores_info = {MakeSimtCore(0, CoreType::AIV, 0)};
+  process->m_pos_info.thread_info.thread_id = 5; // warp_id = 0
+
+  process->SetAivOnFocus(0);
+
+  EXPECT_EQ(process->m_pos_info.pc, 0x1000ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, SetThreadOnFocus_RefreshesFocusedPC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1), MakeWarp(1, 0x2000, 1)};
+  process->m_cores_info = {MakeSimtCore(0, CoreType::AIV, 0)};
+  process->m_pos_info.core_id = 0;
+  process->m_pos_info.core_type = CoreType::AIV;
+  process->m_pos_info.thread_info.thread_dim_x = 32;
+  process->m_pos_info.thread_info.thread_dim_y = 2;
+  process->m_pos_info.thread_info.thread_dim_z = 1;
+
+  process->SetThreadOnFocus(40); // thread 40 -> warp 1
+
+  EXPECT_EQ(process->m_pos_info.pc, 0x2000ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, SetAivOnFocus_NoMatchingCore_KeepsPC) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  process->m_cores_info = {MakeSimtCore(0, CoreType::AIV, 0)};
+  process->m_pos_info.pc = 0xAA;
+
+  process->SetAivOnFocus(9); // 无匹配 core
+
+  EXPECT_EQ(process->m_pos_info.pc, 0xAAULL);
+}
+
+// ---- AscendProcessLinux::SingleStep 的 SIMT warp 选择 ----
+
+TEST_F(AscendProcessLinuxTest, SingleStep_NonSimt_DelegatesOnce) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMD;
+
+  process->SingleStep();
+
+  EXPECT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+}
+
+TEST_F(AscendProcessLinuxTest, SingleStep_SimtAllWarpAtPc_OneAllWarpCommand) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.pc = 0x1000;
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1), MakeWarp(1, 0x1000, 1)};
+
+  process->SingleStep();
+
+  ASSERT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+  EXPECT_FALSE(device_ctx->m_single_step_calls[0].single_warp_run);
+  EXPECT_EQ(device_ctx->m_single_step_calls[0].pc, 0x1000ULL);
+}
+
+TEST_F(AscendProcessLinuxTest, SingleStep_SimtOneWarpAtPc_StepsThatWarp) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.pc = 0x1000;
+  process->m_pos_info.thread_info.thread_dim_x = 32;
+  process->m_pos_info.thread_info.thread_dim_y = 1;
+  process->m_pos_info.thread_info.thread_dim_z = 1;
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1), MakeWarp(1, 0x2000, 1)};
+
+  process->SingleStep();
+
+  ASSERT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+  EXPECT_TRUE(device_ctx->m_single_step_calls[0].single_warp_run);
+  EXPECT_EQ(device_ctx->m_single_step_calls[0].thread_pos.x, 0u);
+}
+
+TEST_F(AscendProcessLinuxTest,
+       SingleStep_SimtNoWarpAtPc_FallbackInterruptWarp) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.pc = 0x3000;
+  process->m_pos_info.thread_info.thread_id = 5; // warp_id = 0
+  process->m_pos_info.thread_info.thread_dim_x = 32;
+  process->m_pos_info.thread_info.thread_dim_y = 1;
+  process->m_pos_info.thread_info.thread_dim_z = 1;
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1), MakeWarp(1, 0x2000, 1)};
+
+  process->SingleStep();
+
+  ASSERT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+  EXPECT_TRUE(device_ctx->m_single_step_calls[0].single_warp_run);
+  EXPECT_EQ(device_ctx->m_single_step_calls[0].thread_pos.x, 0u);
+}
+
+TEST_F(AscendProcessLinuxTest, SingleStep_GetWarpsInfoFailed_Fallback) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_warps_status = Status("query warps info failed");
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+
+  process->SingleStep();
+
+  EXPECT_EQ(device_ctx->m_single_step_calls.size(), 1u);
 }
 
 #endif

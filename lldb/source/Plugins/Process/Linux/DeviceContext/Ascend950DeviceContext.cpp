@@ -188,12 +188,13 @@ Status Ascend950DeviceContext::SingleStep(const InterruptPosInfo &pos_info) cons
   }
   param.pos_type = pos_info.pos_type;
   Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOG(log, "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, {5}), pos_type={6}",
-           param.core_info.magic,
-           FormatCoresLog(param.core_info.cores),
-           param.enable_all_warp,
-           param.thread_id_x, param.thread_id_y, param.thread_id_z,
-           static_cast<uint8_t>(param.pos_type));
+  LLDB_LOG(log,
+           "magic={0:x}, {1}, enable_all_warp={2}, thread_id_xyz=({3}, {4}, "
+           "{5}), pos_type={6}, pc={7:x}",
+           param.core_info.magic, FormatCoresLog(param.core_info.cores),
+           param.enable_all_warp, param.thread_id_x, param.thread_id_y,
+           param.thread_id_z, static_cast<uint8_t>(param.pos_type),
+           pos_info.pc);
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&param, sizeof(param));
 }
 
@@ -263,7 +264,8 @@ Ascend950DeviceContext::GetWarpsInfo(std::vector<WarpInfo> &warps_info,
     warp_info.warp_num = warp_num;
   }
 
-  LLDB_LOGF(log, "GetWarpsInfo total_num=%u", warp_info.warp_num);
+  LLDB_LOG(log, "GetWarpsInfo total_num={0}, warp_id={1}, warp_pc={2:x}",
+           warp_info.warp_num, warp_info.warp_id, warp_info.simt_pc);
 
   warps_info.push_back(warp_info);
 

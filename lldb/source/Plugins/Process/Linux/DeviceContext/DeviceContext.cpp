@@ -559,6 +559,31 @@ Status DeviceContext::SingleStep(const InterruptPosInfo &pos_info) const {
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&maskInfo, sizeof(maskInfo));
 }
 
+Status DeviceContext::RecvEvent(InterruptEvent &event) const {
+  Status error;
+  if (m_drv_fd == -1) {
+    error.SetErrorStringWithFormatv(
+        "DeviceContext has not be initialized success, reason: {0}",
+        m_init_err);
+    return error;
+  }
+  DebugInfo debug_info = {m_device_id, g_timeout, 0, m_pid};
+  int32_t rtn = ioctl(m_drv_fd, CMD_CQ_RECV, &debug_info);
+  if (rtn != 0) {
+    error.SetErrorStringWithFormat("receive event from device failed: %d", rtn);
+    return error;
+  }
+  DebugRecvInfo *recv_info = (DebugRecvInfo *)debug_info.data;
+  if (recv_info->cmd_type != CmdType::INTERRUPT_EVENT) {
+    error.SetErrorStringWithFormat(
+        "expect interrupt event, but got cmd_type=%d",
+        static_cast<int32_t>(recv_info->cmd_type));
+    return error;
+  }
+  event = *(const InterruptEvent *)recv_info->recv_msg;
+  return error;
+}
+
 Status DeviceContext::ReadRegister(const RegisterInfo *reg_info, const InterruptPosInfo &pos_info, RegisterValue &value) const {
   if (!m_reg_info_up) {
     return Status("internal error: need initialize m_reginster_info");

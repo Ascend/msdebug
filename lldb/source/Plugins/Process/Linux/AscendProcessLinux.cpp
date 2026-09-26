@@ -734,6 +734,62 @@ void AscendProcessLinux::FixSimtPC(CoreInfo &core_info) {
   }
 }
 
+void AscendProcessLinux::FixSimtFocus(InterruptEvent &event) {
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
+  if (event.pos_type != InterruptPosType::VEC_INTERRUPT_SIMT) {
+    return;
+  }
+  // 只处理断点事件，单步事件不做 focus 修正。
+  if (event.status != CoreStatus::BRKPT) {
+    return;
+  }
+  const HardwareBreakpointMap &hw_bps = GetHardwareBreakpointMap();
+  // 未配置硬断点，或上报 pc 本身就命中硬断点地址，则无需修正。
+  if (hw_bps.empty() || hw_bps.count(event.pc) != 0) {
+    return;
+  }
+
+  // 按本次事件的 core/pos 获取 warp 信息。
+  m_pos_info.Update(event);
+  std::vector<WarpInfo> warps_info;
+  Status error = GetWarpsInfo(warps_info);
+  if (error.Fail() || warps_info.empty()) {
+    LLDB_LOG(log, "FixSimtFocus get warps info failed: {0}, pc={1:x}", error,
+             event.pc);
+    return;
+  }
+
+  // 取第一个 active 且 simt_pc 命中硬断点地址的 warp。
+  const WarpInfo *hit_warp = nullptr;
+  for (const auto &warp : warps_info) {
+    if (warp.exec_mask == 0) {
+      continue;
+    }
+    if (hw_bps.count(warp.simt_pc) != 0) {
+      hit_warp = &warp;
+      break;
+    }
+  }
+  if (hit_warp == nullptr) {
+    LLDB_LOG(log, "FixSimtFocus no warp matches hardware breakpoint, pc={0:x}",
+             event.pc);
+    return;
+  }
+
+  // 同一 warp 内 32 个 lane 的 pc 相同，固定取第一个 active lane 作为 focus。
+  constexpr uint16_t warp_size = 32;
+  const uint16_t lane =
+      static_cast<uint16_t>(__builtin_ctz(hit_warp->exec_mask));
+  event.pc = hit_warp->simt_pc;
+  event.thread_info.thread_id =
+      static_cast<uint16_t>(hit_warp->warp_id) * warp_size + lane;
+
+  // 同步 m_pos_info 的 pc / thread_id / thread_pos。
+  m_pos_info.Update(event);
+  LLDB_LOG(log, "FixSimtFocus hit warp_id={0}, lane={1}, pc={2:x}",
+           hit_warp->warp_id, lane, event.pc);
+}
+
 void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
   Status error;
@@ -754,6 +810,7 @@ void AscendProcessLinux::HandleProcessState(const DebugRecvInfo &info) {
       TryUpdateThreadIndex(event);
     }
     if (param->status == CoreStatus::BRKPT) {
+      FixSimtFocus(event);
       MonitorBreakpoint(event);
     } else if (param->status == CoreStatus::SINGLE_STEP) {
       MonitorTrace(event);
@@ -860,22 +917,134 @@ void AscendProcessLinux::ResumeDevice() {
 Status AscendProcessLinux::SingleStep() {
   Status error;
   Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOG(log, "{0}", __FUNCTION__);
+  LLDB_LOG(log, "{0}, m_pos_info pc={1:x}", __FUNCTION__, m_pos_info.pc);
   if (m_device_context == nullptr) {
     return Status("device context is null!");
   }
-  return m_device_context->SingleStep(m_pos_info);
+  if (m_pos_info.pos_type != InterruptPosType::VEC_INTERRUPT_SIMT) {
+    return m_device_context->SingleStep(m_pos_info);
+  }
+
+  // SIMT 场景：只对 pc 命中本次停止位置的 warp 做 single step，其余 warp
+  // 保持不变。
+  std::vector<WarpInfo> warps_info;
+  Status warp_error = GetWarpsInfo(warps_info);
+  if (warp_error.Fail() || warps_info.empty()) {
+    LLDB_LOG(log, "get warps info failed: {0}, fallback to interrupt warp",
+             warp_error);
+    return m_device_context->SingleStep(m_pos_info);
+  }
+
+  std::vector<uint16_t> target_warp_ids;
+  size_t active_warp_num = 0;
+  bool all_warp_at_pc = true;
+  for (const auto &warp : warps_info) {
+    if (warp.exec_mask == 0) {
+      continue;
+    }
+    ++active_warp_num;
+    if (warp.simt_pc == m_pos_info.pc) {
+      target_warp_ids.push_back(warp.warp_id);
+    } else {
+      all_warp_at_pc = false;
+    }
+  }
+  // 没有 warp 命中时兜底为中断上报的 warp，行为等同改动前。
+  if (target_warp_ids.empty()) {
+    target_warp_ids.push_back(m_pos_info.GetWarpId());
+    all_warp_at_pc = false;
+  }
+  LLDB_LOG(log,
+           "simt single step, active_warp={0}, matched_warp={1}, all_at_pc={2}",
+           active_warp_num, target_warp_ids.size(),
+           static_cast<int>(all_warp_at_pc));
+
+  const bool saved_single_warp_run = m_pos_info.single_warp_run;
+  const ThreadPos saved_thread_pos = m_pos_info.thread_pos;
+
+  // 所有活跃 warp 都在本次停止 pc 上：一条命令让全部 warp 同步单步。
+  if (all_warp_at_pc) {
+    m_pos_info.single_warp_run = false;
+    error = m_device_context->SingleStep(m_pos_info);
+    m_pos_info.single_warp_run = saved_single_warp_run;
+    m_pos_info.thread_pos = saved_thread_pos;
+    if (error.Fail()) {
+      LLDB_LOG(log, "single step all warps failed: {0}", error);
+    }
+    return error;
+  }
+
+  for (size_t i = 0; i < target_warp_ids.size(); ++i) {
+    SetWarpOnFocus(target_warp_ids[i]);
+    error = m_device_context->SingleStep(m_pos_info);
+    if (error.Fail()) {
+      LLDB_LOG(log, "single step warp {0} failed: {1}", target_warp_ids[i],
+               error);
+      break;
+    }
+    // 非最后一个 warp：同步等待并消费 pc 事件（interrupt event），
+    // 最后一个 warp 的事件交给 listen 线程按原流程处理。
+    if (i + 1 < target_warp_ids.size()) {
+      InterruptEvent event{};
+      Status recv_error = m_device_context->RecvEvent(event);
+      if (recv_error.Fail()) {
+        LLDB_LOG(log, "recv pc event of warp {0} failed: {1}",
+                 target_warp_ids[i], recv_error);
+      } else {
+        LLDB_LOG(log, "warp {0} single step done, pc={1:x}", target_warp_ids[i],
+                 event.pc);
+      }
+    }
+  }
+  m_pos_info.single_warp_run = saved_single_warp_run;
+  m_pos_info.thread_pos = saved_thread_pos;
   return error;
+}
+
+void AscendProcessLinux::SetWarpOnFocus(uint16_t warp_id) {
+  constexpr uint32_t warp_size = 32;
+  const uint16_t dim_x = m_pos_info.thread_info.thread_dim_x;
+  const uint16_t dim_y = m_pos_info.thread_info.thread_dim_y;
+  const uint16_t dim_z = m_pos_info.thread_info.thread_dim_z;
+  // thread_dim 缺失时无法反算坐标，保留当前 thread_pos，仅标记单 warp。
+  if (dim_x == 0 || dim_y == 0 || dim_z == 0) {
+    LLDB_LOG(GetLog(LLDBLog::Process),
+             "thread dim is invalid when set warp {0} on focus", warp_id);
+    m_pos_info.single_warp_run = true;
+    return;
+  }
+  // warp 的起始 lane 线性号，再按 thread_dim 反算 thread_id_xyz。
+  const uint32_t linear_idx = static_cast<uint32_t>(warp_id) * warp_size;
+  m_pos_info.thread_pos.x = linear_idx % dim_x;
+  m_pos_info.thread_pos.y = (linear_idx / dim_x) % dim_y;
+  m_pos_info.thread_pos.z = linear_idx / (dim_x * dim_y);
+  m_pos_info.single_warp_run = true;
+}
+
+void AscendProcessLinux::RefreshFocusedPC() {
+  Log *log = GetLog(LLDBLog::Process);
+  lldb::addr_t pc = 0;
+  Status error = GetStoppedCorePC(pc);
+  if (error.Fail()) {
+    LLDB_LOG(log, "refresh focused pc failed: {0}, core_id={1}, core_type={2}",
+             error, m_pos_info.core_id, static_cast<int>(m_pos_info.core_type));
+    return;
+  }
+  m_pos_info.pc = pc;
+  LLDB_LOG(log, "refresh focused pc={0:x}, core_id={1}, core_type={2}", pc,
+           m_pos_info.core_id, static_cast<int>(m_pos_info.core_type));
 }
 
 void AscendProcessLinux::SetAicOnFocus(const uint32_t &core_id) {
   m_pos_info.core_id = core_id;
   m_pos_info.core_type = CoreType::AIC;
+  RefreshFocusedPC();
 }
 
 void AscendProcessLinux::SetAivOnFocus(const uint32_t &core_id) {
   m_pos_info.core_id = core_id;
   m_pos_info.core_type = CoreType::AIV;
+  RefreshFocusedPC();
 }
 
 void AscendProcessLinux::SetThreadOnFocus(const uint32_t &linear_idx) {
@@ -903,6 +1072,7 @@ void AscendProcessLinux::SetThreadOnFocus(const uint32_t &linear_idx) {
 
   }
 
+  RefreshFocusedPC();
 }
 
 void AscendProcessLinux::SetSingleCoreRunFlag(bool isSingleCoreRun) {
