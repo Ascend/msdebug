@@ -439,7 +439,14 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 }
 
 size_t DWARFUnit::GetDebugInfoSize() const {
-  return GetLengthByteSize() + GetLength() - GetHeaderByteSize();
+  const size_t header_size = GetHeaderByteSize();
+  const size_t length_field_size = GetLengthByteSize();
+  const uint64_t unit_length = GetLength();
+#ifdef MS_DEBUGGER
+  if (unit_length + length_field_size < header_size)
+    return 0;
+#endif
+  return length_field_size + unit_length - header_size;
 }
 
 const llvm::DWARFAbbreviationDeclarationSet *
