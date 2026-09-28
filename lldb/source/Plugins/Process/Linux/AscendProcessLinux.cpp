@@ -925,6 +925,12 @@ Status AscendProcessLinux::SingleStep() {
     return m_device_context->SingleStep(m_pos_info);
   }
 
+  // Ascend950 且非单核运行（命令作用于所有核）时，遍历所有核的所有 warp，
+  // 仅对 simt_pc 命中本次停止 pc 的 warp 下发单步，其余 warp 不动。
+  if (GetSocType() == SocType::ASCEND950 && !m_pos_info.single_core_run) {
+    return SingleStepSimtAllCores();
+  }
+
   // SIMT 场景：只对 pc 命中本次停止位置的 warp 做 single step，其余 warp
   // 保持不变。
   std::vector<WarpInfo> warps_info;
@@ -999,6 +1005,148 @@ Status AscendProcessLinux::SingleStep() {
   m_pos_info.single_warp_run = saved_single_warp_run;
   m_pos_info.thread_pos = saved_thread_pos;
   return error;
+}
+
+// 遍历所有 SIMT 核的 warp，按核汇总：活跃 warp 全部命中停止 pc 的核、仅部分
+// 命中的 warp，以及查询失败被跳过的核。
+AscendProcessLinux::SimtStepPlan AscendProcessLinux::CollectSimtStepPlan(
+    const std::vector<CoreInfo> &cores_info) {
+  Log *log = GetLog(LLDBLog::Process);
+  SimtStepPlan plan;
+  for (const auto &core : cores_info) {
+    if (core.pos_type != InterruptPosType::VEC_INTERRUPT_SIMT) {
+      continue;
+    }
+    InterruptPosInfo core_pos = m_pos_info;
+    core_pos.core_id = core.core_id;
+    core_pos.core_type = core.core_type;
+
+    std::vector<WarpInfo> warps_info;
+    Status warp_error = m_device_context->GetWarpsInfo(warps_info, core_pos);
+    if (warp_error.Fail()) {
+      LLDB_LOG(log, "simt single step: get warps of core {0} failed: {1}, skip",
+               core.core_id, warp_error);
+      ++plan.skipped_cores;
+      continue;
+    }
+    size_t active_num = 0;
+    std::vector<uint16_t> matched_ids;
+    for (const auto &warp : warps_info) {
+      if (warp.exec_mask == 0) {
+        continue;
+      }
+      ++active_num;
+      if (warp.simt_pc == m_pos_info.pc) {
+        matched_ids.push_back(warp.warp_id);
+      }
+    }
+    plan.total_active += active_num;
+    plan.matched_total += matched_ids.size();
+    if (active_num == 0) {
+      continue;
+    }
+    if (matched_ids.size() == active_num) {
+      plan.full_cores.push_back(core);
+    } else {
+      for (uint16_t warp_id : matched_ids) {
+        plan.partial_warps.push_back({core, warp_id});
+      }
+    }
+  }
+  return plan;
+}
+
+// 按 plan 选择性下发单步：全命中的核一条命令推进其所有 warp，部分命中的核
+// 逐 warp 下发，只推进命中的 warp，其余 warp 不动。
+Status AscendProcessLinux::StepSimtWarpsAtPc(const SimtStepPlan &plan) {
+  constexpr uint32_t warp_size = 32;
+  Log *log = GetLog(LLDBLog::Process);
+  const size_t command_num =
+      (plan.full_cores.empty() ? 0 : 1) + plan.partial_warps.size();
+  size_t issued = 0;
+  Status error;
+  auto issue = [&](const InterruptPosInfo &pos,
+                   const std::vector<CoreInfo> &cores) -> bool {
+    error = m_device_context->SingleStep(pos, cores);
+    if (error.Fail()) {
+      LLDB_LOG(log, "simt single step command failed: {0}", error);
+      return false;
+    }
+    ++issued;
+    // 非最后一条命令：同步等待并消费 pc 事件，最后一条交给 listen 线程。
+    if (issued < command_num) {
+      InterruptEvent event{};
+      Status recv_error = m_device_context->RecvEvent(event);
+      if (recv_error.Fail()) {
+        LLDB_LOG(log, "recv single step event failed: {0}", recv_error);
+      }
+    }
+    return true;
+  };
+
+  // 活跃 warp 全部命中 pc 的核：一条命令单步该核所有 warp。
+  if (!plan.full_cores.empty()) {
+    InterruptPosInfo pos = m_pos_info;
+    pos.single_warp_run = false;
+    if (!issue(pos, plan.full_cores)) {
+      return error;
+    }
+  }
+
+  // 部分命中 pc 的核：逐 warp 下发，只推进命中的 warp，其余不动。
+  for (const auto &matched : plan.partial_warps) {
+    InterruptPosInfo pos = m_pos_info;
+    pos.single_warp_run = true;
+    const uint16_t dim_x = matched.core.thread_dim_x;
+    const uint16_t dim_y = matched.core.thread_dim_y;
+    const uint16_t dim_z = matched.core.thread_dim_z;
+    if (dim_x != 0 && dim_y != 0 && dim_z != 0) {
+      const uint32_t linear_idx =
+          static_cast<uint32_t>(matched.warp_id) * warp_size;
+      pos.thread_pos.x = linear_idx % dim_x;
+      pos.thread_pos.y = (linear_idx / dim_x) % dim_y;
+      pos.thread_pos.z = linear_idx / (dim_x * dim_y);
+    } else {
+      pos.thread_pos = m_pos_info.thread_pos;
+    }
+    if (!issue(pos, {matched.core})) {
+      return error;
+    }
+  }
+  return error;
+}
+
+Status AscendProcessLinux::SingleStepSimtAllCores() {
+  Log *log = GetLog(LLDBLog::Process);
+  std::vector<CoreInfo> cores_info;
+  Status cores_error = GetCoresInfo(cores_info);
+  if (cores_error.Fail()) {
+    LLDB_LOG(log, "simt single step: get cores info failed: {0}", cores_error);
+    return m_device_context->SingleStep(m_pos_info);
+  }
+
+  const SimtStepPlan plan = CollectSimtStepPlan(cores_info);
+  LLDB_LOG(log,
+           "simt single step all cores: total_active={0}, matched={1}, "
+           "full_cores={2}, partial_warps={3}, skipped_cores={4}",
+           plan.total_active, plan.matched_total, plan.full_cores.size(),
+           plan.partial_warps.size(), plan.skipped_cores);
+
+  if (plan.matched_total == 0) {
+    return Status(
+        "no simt warp at current pc, refuse to single step all cores");
+  }
+
+  // 所有活跃 warp 都在本次停止 pc 上，且没有查询失败的核：空核表 +
+  // enable_all_warp 快速路径（有失败的核时不能下发空核表，否则会误推进它）。
+  if (plan.matched_total == plan.total_active && plan.skipped_cores == 0) {
+    InterruptPosInfo pos = m_pos_info;
+    pos.single_warp_run = false;
+    LLDB_LOG(log, "simt single step: all warps at pc, one all-warp command");
+    return m_device_context->SingleStep(pos, {});
+  }
+
+  return StepSimtWarpsAtPc(plan);
 }
 
 void AscendProcessLinux::SetWarpOnFocus(uint16_t warp_id) {

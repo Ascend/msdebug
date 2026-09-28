@@ -17,18 +17,20 @@
 #include "Plugins/Disassembler/LLVMC/AscendDisassembler950.h"
 #include "TestingSupport/Plugins/AscendProcessLinuxTestUtils.h"
 
-#include <gtest/gtest.h>
+#include <fcntl.h>
 #include <gmock/gmock.h>
-#include <unistd.h>
+#include <gtest/gtest.h>
 #include <linux/unistd.h>
-#include <sys/socket.h>
-#include <sys/syscall.h>
+#include <map>
+#include <set>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <unistd.h>
 
 #include "llvm/Testing/Support/Error.h"
 
@@ -50,8 +52,13 @@ public:
     Status CheckRegisterAddr(CoreType core_type, uint64_t addr) const override {
         return Status();
     }
-    SocType GetSocType() override { return SocType::SOC_END; }
+    SocType GetSocType() override { return m_soc_type; }
     MemType GetStackMemType() const override { return MemType::OUT_MEM; }
+
+    Status GetCoresInfo(std::vector<CoreInfo> &cores_info) override {
+      cores_info = m_cores_info;
+      return m_cores_status;
+    }
 
     size_t ReadGlobalMemory(lldb::addr_t addr, size_t size, void *data) override {
         DebugInfo debug_info = {0, 1000, 0, 0};
@@ -90,18 +97,36 @@ public:
 
     Status GetWarpsInfo(std::vector<WarpInfo> &warps_info,
                         const InterruptPosInfo &pos_info) const override {
-      warps_info = m_warps_info;
+      if (m_warps_fail_cores.count(pos_info.core_id) != 0) {
+        return Status("query warps info failed");
+      }
+      auto iter = m_warps_by_core.find(static_cast<uint8_t>(pos_info.core_id));
+      warps_info = iter == m_warps_by_core.end() ? m_warps_info : iter->second;
       return m_warps_status;
     }
 
     Status SingleStep(const InterruptPosInfo &pos_info) const override {
       m_single_step_calls.push_back(pos_info);
+      m_single_step_cores.emplace_back();
       return m_single_step_status;
     }
 
+    Status SingleStep(const InterruptPosInfo &pos_info,
+                      const std::vector<CoreInfo> &cores) const override {
+      m_single_step_calls.push_back(pos_info);
+      m_single_step_cores.push_back(cores);
+      return m_single_step_status;
+    }
+
+    SocType m_soc_type = SocType::SOC_END;
+    std::vector<CoreInfo> m_cores_info;
+    Status m_cores_status;
     std::vector<WarpInfo> m_warps_info;
+    std::map<uint8_t, std::vector<WarpInfo>> m_warps_by_core;
+    std::set<uint8_t> m_warps_fail_cores;
     Status m_warps_status;
     mutable std::vector<InterruptPosInfo> m_single_step_calls;
+    mutable std::vector<std::vector<CoreInfo>> m_single_step_cores;
     Status m_single_step_status;
 };
 
@@ -791,6 +816,175 @@ TEST_F(AscendProcessLinuxTest, SingleStep_GetWarpsInfoFailed_Fallback) {
 
   device_ctx->m_warps_status = Status("query warps info failed");
   process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+
+  process->SingleStep();
+
+  EXPECT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+}
+
+// ---- Ascend950 全核 SIMT 单步：遍历所有核所有 warp，仅推进命中 pc 的 warp
+// ----
+
+namespace {
+
+CoreInfo MakeSimtCoreDims(uint8_t core_id, uint16_t dim_x, uint16_t dim_y,
+                          uint16_t dim_z) {
+  CoreInfo core{};
+  core.core_id = core_id;
+  core.core_type = CoreType::AIV;
+  core.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  core.thread_dim_x = dim_x;
+  core.thread_dim_y = dim_y;
+  core.thread_dim_z = dim_z;
+  return core;
+}
+
+} // namespace
+
+TEST_F(AscendProcessLinuxTest,
+       SingleStep_950AllCoresAllWarpsAtPc_AllWarpCommand) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_soc_type = SocType::ASCEND950;
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.single_core_run = false;
+  process->m_pos_info.pc = 0x1000;
+  device_ctx->m_cores_info = {MakeSimtCoreDims(0, 32, 1, 1),
+                              MakeSimtCoreDims(1, 32, 1, 1)};
+  device_ctx->m_warps_by_core[0] = {MakeWarp(0, 0x1000, 1),
+                                    MakeWarp(1, 0x1000, 1)};
+  device_ctx->m_warps_by_core[1] = {MakeWarp(0, 0x1000, 1)};
+
+  process->SingleStep();
+
+  ASSERT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+  EXPECT_FALSE(device_ctx->m_single_step_calls[0].single_warp_run);
+  EXPECT_TRUE(device_ctx->m_single_step_cores[0].empty());
+}
+
+TEST_F(AscendProcessLinuxTest,
+       SingleStep_950PartialCores_StepsOnlyMatchingWarps) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_soc_type = SocType::ASCEND950;
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.single_core_run = false;
+  process->m_pos_info.pc = 0x1000;
+  device_ctx->m_cores_info = {MakeSimtCoreDims(0, 32, 1, 1),
+                              MakeSimtCoreDims(1, 32, 1, 1)};
+  // core0 部分命中：warp0 命中，warp1 不命中。
+  device_ctx->m_warps_by_core[0] = {MakeWarp(0, 0x1000, 1),
+                                    MakeWarp(1, 0x2000, 1)};
+  // core1 全部命中。
+  device_ctx->m_warps_by_core[1] = {MakeWarp(0, 0x1000, 1),
+                                    MakeWarp(1, 0x1000, 1)};
+
+  process->SingleStep();
+
+  ASSERT_EQ(device_ctx->m_single_step_calls.size(), 2u);
+  // 先单步全部命中的核 core1。
+  EXPECT_FALSE(device_ctx->m_single_step_calls[0].single_warp_run);
+  ASSERT_EQ(device_ctx->m_single_step_cores[0].size(), 1u);
+  EXPECT_EQ(device_ctx->m_single_step_cores[0][0].core_id, 1u);
+  // 再逐 warp 单步 core0 的命中 warp。
+  EXPECT_TRUE(device_ctx->m_single_step_calls[1].single_warp_run);
+  ASSERT_EQ(device_ctx->m_single_step_cores[1].size(), 1u);
+  EXPECT_EQ(device_ctx->m_single_step_cores[1][0].core_id, 0u);
+  EXPECT_EQ(device_ctx->m_single_step_calls[1].thread_pos.x, 0u);
+}
+
+TEST_F(AscendProcessLinuxTest, SingleStep_950NoWarpAtPc_ReturnsError) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_soc_type = SocType::ASCEND950;
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.single_core_run = false;
+  process->m_pos_info.pc = 0x3000;
+  process->m_pos_info.thread_info.thread_id = 5; // warp_id = 0
+  device_ctx->m_cores_info = {MakeSimtCoreDims(0, 32, 1, 1)};
+  device_ctx->m_warps_by_core[0] = {MakeWarp(0, 0x1000, 1),
+                                    MakeWarp(1, 0x2000, 1)};
+
+  Status error = process->SingleStep();
+
+  EXPECT_TRUE(error.Fail());
+  EXPECT_TRUE(device_ctx->m_single_step_calls.empty());
+}
+
+TEST_F(AscendProcessLinuxTest, SingleStep_950SingleCoreRun_UsesFocusCoreLogic) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_soc_type = SocType::ASCEND950;
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.single_core_run = true; // 源码级 step：只对 focus 核
+  process->m_pos_info.pc = 0x1000;
+  device_ctx->m_warps_info = {MakeWarp(0, 0x1000, 1), MakeWarp(1, 0x1000, 1)};
+
+  process->SingleStep();
+
+  ASSERT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+  EXPECT_FALSE(device_ctx->m_single_step_calls[0].single_warp_run);
+}
+
+TEST_F(AscendProcessLinuxTest,
+       SingleStep_950CoreWarpsQueryFailed_SkipsThatCore) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_soc_type = SocType::ASCEND950;
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.single_core_run = false;
+  process->m_pos_info.pc = 0x1000;
+  device_ctx->m_cores_info = {MakeSimtCoreDims(0, 32, 1, 1),
+                              MakeSimtCoreDims(1, 32, 1, 1)};
+  device_ctx->m_warps_fail_cores.insert(0);
+  device_ctx->m_warps_by_core[1] = {MakeWarp(0, 0x1000, 1),
+                                    MakeWarp(1, 0x1000, 1)};
+
+  process->SingleStep();
+
+  ASSERT_EQ(device_ctx->m_single_step_calls.size(), 1u);
+  EXPECT_FALSE(device_ctx->m_single_step_calls[0].single_warp_run);
+  ASSERT_EQ(device_ctx->m_single_step_cores[0].size(), 1u);
+  EXPECT_EQ(device_ctx->m_single_step_cores[0][0].core_id, 1u);
+}
+
+TEST_F(AscendProcessLinuxTest, SingleStep_950GetCoresInfoFailed_Fallback) {
+  HostInfo::Initialize();
+  MainLoop mainloop;
+  NativeProcessLinux::Manager manager(mainloop);
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+  std::shared_ptr<FakeDeviceContext> device_ctx;
+  auto process = CreateProcess(mainloop, manager, gdb_server, device_ctx);
+
+  device_ctx->m_soc_type = SocType::ASCEND950;
+  device_ctx->m_cores_status = Status("get cores info failed");
+  process->m_pos_info.pos_type = InterruptPosType::VEC_INTERRUPT_SIMT;
+  process->m_pos_info.single_core_run = false;
 
   process->SingleStep();
 
