@@ -1024,6 +1024,10 @@ size_t ObjectFileELF::ParseDependentModules() {
 
       uint32_t str_index = static_cast<uint32_t>(symbol.d_val);
       const char *lib_name = dynstr_data.PeekCStr(str_index);
+#ifdef MS_DEBUGGER
+      if (!lib_name)
+        continue;
+#endif
       FileSpec file_spec(lib_name);
       FileSystem::Instance().Resolve(file_spec);
       m_filespec_up->Append(file_spec);
@@ -1503,7 +1507,12 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
-        ConstString name(shstr_data.PeekCStr(I->sh_name));
+        const char *name_cstr = shstr_data.PeekCStr(I->sh_name);
+#ifdef MS_DEBUGGER
+        ConstString name(name_cstr ? name_cstr : "");
+#else
+        ConstString name(name_cstr);
+#endif
 
         I->section_name = name;
 
@@ -2701,6 +2710,13 @@ ObjectFileELF::ParseSymbolTable(Symtab *symbol_table, user_id_t start_id,
     DataExtractor strtab_data;
     if (ReadSectionData(symtab, symtab_data) &&
         ReadSectionData(strtab, strtab_data)) {
+#ifdef MS_DEBUGGER
+      if (symtab_hdr->sh_entsize == 0) {
+        GetModule()->ReportError(
+            "ELF symbol table has zero sh_entsize, skipping symbol parsing");
+        return {0, {}};
+      }
+#endif
       size_t num_symbols = symtab_data.GetByteSize() / symtab_hdr->sh_entsize;
 
       return ParseSymbols(symbol_table, start_id, section_list, num_symbols,
@@ -2781,6 +2797,10 @@ unsigned ObjectFileELF::PLTRelocationType() {
 static std::pair<uint64_t, uint64_t>
 GetPltEntrySizeAndOffset(const ELFSectionHeader *rel_hdr,
                          const ELFSectionHeader *plt_hdr) {
+#ifdef MS_DEBUGGER
+  if (rel_hdr->sh_entsize == 0)
+    return {0, 0};
+#endif
   const elf_xword num_relocations = rel_hdr->sh_size / rel_hdr->sh_entsize;
 
   // Clang 3.3 sets entsize to 4 for 32-bit binaries, but the plt entries are
@@ -2825,6 +2845,10 @@ static unsigned ParsePLTRelocations(
   uint64_t plt_offset, plt_entsize;
   std::tie(plt_entsize, plt_offset) =
       GetPltEntrySizeAndOffset(rel_hdr, plt_hdr);
+#ifdef MS_DEBUGGER
+  if (rel_hdr->sh_entsize == 0)
+    return 0;
+#endif
   const elf_xword num_relocations = rel_hdr->sh_size / rel_hdr->sh_entsize;
 
   typedef unsigned (*reloc_info_fn)(const ELFRelocation &rel);
@@ -2853,6 +2877,10 @@ static unsigned ParsePLTRelocations(
       break;
 
     const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
+#ifdef MS_DEBUGGER
+    if (!symbol_name)
+      symbol_name = "";
+#endif
     uint64_t plt_index = plt_offset + i * plt_entsize;
 
     Symbol jump_symbol(
@@ -2957,9 +2985,18 @@ static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+    const size_t dst_offset =
+        rel_section->GetFileOffset() + ELFRelocation::RelocOffset64(rel);
+#ifdef MS_DEBUGGER
+    if (dst_offset + sizeof(uint64_t) > data_buffer->GetByteSize()) {
+      Log *log = GetLog(LLDBLog::Modules);
+      LLDB_LOGF(log, "Skipping out-of-bounds debug relocation: offset 0x%zx",
+                 dst_offset);
+      return;
+    }
+#endif
     uint64_t *dst = reinterpret_cast<uint64_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset64(rel));
+        data_buffer->GetBytes() + dst_offset);
     uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
     memcpy(dst, &val_offset, sizeof(uint64_t));
   }
@@ -2984,9 +3021,18 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+    const size_t dst_offset =
+        rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
+#ifdef MS_DEBUGGER
+    if (dst_offset + sizeof(uint32_t) > data_buffer->GetByteSize()) {
+      Log *log = GetLog(LLDBLog::Modules);
+      LLDB_LOGF(log, "Skipping out-of-bounds debug relocation: offset 0x%zx",
+                 dst_offset);
+      return;
+    }
+#endif
     uint32_t *dst = reinterpret_cast<uint32_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset32(rel));
+        data_buffer->GetBytes() + dst_offset);
     memcpy(dst, &truncated_addr, sizeof(uint32_t));
   }
 }
@@ -3008,8 +3054,16 @@ static void ApplyELF32ABS32RelRelocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint8_t *dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
-                   ELFRelocation::RelocOffset32(rel);
+    const size_t dst_offset =
+        rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
+#ifdef MS_DEBUGGER
+    if (dst_offset + sizeof(uint32_t) > data_buffer->GetByteSize()) {
+      LLDB_LOGF(log, "Skipping out-of-bounds debug relocation: offset 0x%zx",
+                dst_offset);
+      return;
+    }
+#endif
+    uint8_t *dst = data_buffer->GetBytes() + dst_offset;
     // Implicit addend is stored inline as a signed value.
     int32_t addend;
     memcpy(&addend, dst, sizeof(int32_t));
@@ -3036,6 +3090,13 @@ unsigned ObjectFileELF::ApplyRelocations(
     DataExtractor &debug_data, Section *rel_section) {
   ELFRelocation rel(rel_hdr->sh_type);
   lldb::addr_t offset = 0;
+#ifdef MS_DEBUGGER
+  if (rel_hdr->sh_entsize == 0) {
+    GetModule()->ReportError(
+        "ELF relocation section has zero sh_entsize, skipping relocations");
+    return 0;
+  }
+#endif
   const unsigned num_relocations = rel_hdr->sh_size / rel_hdr->sh_entsize;
   typedef unsigned (*reloc_info_fn)(const ELFRelocation &rel);
   reloc_info_fn reloc_type;
@@ -3085,6 +3146,14 @@ unsigned ObjectFileELF::ApplyRelocations(
             // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
             WritableDataBuffer *data_buffer =
                 llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+#ifdef MS_DEBUGGER
+            if (f_offset + sizeof(uint32_t) > data_buffer->GetByteSize()) {
+              GetModule()->ReportError(
+                  ".rel{0}[{1}] out-of-bounds relocation offset: 0x{2:x}",
+                  rel_section->GetName().AsCString(), i, f_offset);
+              break;
+            }
+#endif
             uint32_t *dst = reinterpret_cast<uint32_t *>(
                 data_buffer->GetBytes() + f_offset);
 
