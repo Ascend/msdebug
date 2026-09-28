@@ -35,6 +35,11 @@
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
+#ifdef MS_DEBUGGER
+#include "lldb/Target/StopInfo.h"
+#include "lldb/Target/UnixSignals.h"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -303,8 +308,20 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
     if (process->IsStopInDevice() && thread->GetStopReason() == eStopReasonSignal &&
         !process->DeviceCoredumpEnable()) {
-      result.AppendError("this command is not supported when ctrl c");
-      return false;
+      // Device stops may be delivered as eStopReasonSignal with SIGTRAP (e.g.
+      // internal breakpoint/trace fallback), which is a normal stopped state,
+      // not a task-kill. ctrl c instead uses SIGSTOP. Only reject non-SIGTRAP
+      // signals so that commands like "continue" still work at SIGTRAP stops.
+      int32_t signo = 0;
+      if (StopInfoSP stop_info_sp = thread->GetStopInfo())
+        signo = static_cast<int32_t>(stop_info_sp->GetValue());
+      int32_t sigtrap_num = 0;
+      if (const lldb::UnixSignalsSP &unix_signals = process->GetUnixSignals())
+        sigtrap_num = unix_signals->GetSignalNumberFromName("SIGTRAP");
+      if (signo != sigtrap_num) {
+        result.AppendError("this command is not supported when ctrl c");
+        return false;
+      }
     }
   }
 
@@ -398,7 +415,7 @@ void CommandObject::HandleArgumentCompletion(
     assert(entry_ptr && "We said there was one entry, but there wasn't.");
     return; // Not worth crashing if asserts are off...
   }
-  
+
   CommandArgumentEntry &entry = *entry_ptr;
   // For now, we only handle the simple case of one homogenous argument type.
   if (entry.size() != 1)
@@ -584,21 +601,21 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
          (arg_repeat_type == eArgRepeatPairRangeOptional);
 }
 
-std::optional<ArgumentRepetitionType> 
+std::optional<ArgumentRepetitionType>
 CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
   return llvm::StringSwitch<ArgumentRepetitionType>(string)
-  .Case("plain", eArgRepeatPlain)  
-  .Case("optional", eArgRepeatOptional)
-  .Case("plus", eArgRepeatPlus)
-  .Case("star", eArgRepeatStar) 
-  .Case("range", eArgRepeatRange)
-  .Case("pair-plain", eArgRepeatPairPlain)
-  .Case("pair-optional", eArgRepeatPairOptional)
-  .Case("pair-plus", eArgRepeatPairPlus)
-  .Case("pair-star", eArgRepeatPairStar)
-  .Case("pair-range", eArgRepeatPairRange)
-  .Case("pair-range-optional", eArgRepeatPairRangeOptional)
-  .Default({});
+      .Case("plain", eArgRepeatPlain)
+      .Case("optional", eArgRepeatOptional)
+      .Case("plus", eArgRepeatPlus)
+      .Case("star", eArgRepeatStar)
+      .Case("range", eArgRepeatRange)
+      .Case("pair-plain", eArgRepeatPairPlain)
+      .Case("pair-optional", eArgRepeatPairOptional)
+      .Case("pair-plus", eArgRepeatPairPlus)
+      .Case("pair-star", eArgRepeatPairStar)
+      .Case("pair-range", eArgRepeatPairRange)
+      .Case("pair-range-optional", eArgRepeatPairRangeOptional)
+      .Default({});
 }
 
 static CommandObject::CommandArgumentEntry

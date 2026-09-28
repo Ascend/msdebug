@@ -49,6 +49,9 @@ repos:
         entry: git-clang-format
         args: [--binary, clang-format, -f]
         exclude: \.(build|test|third-party)
+        # git-clang-format 使用固定的 .git/clang-format-index 临时索引，
+        # 并发执行会互相竞争导致 "Unable to create ... .lock" 报错。
+        require_serial: true
    # --------------- C++ 静态检查（本地 clang-tidy）------------------
   - repo: local
     hooks:
@@ -58,6 +61,9 @@ repos:
         language: system
         pass_filenames: true
         files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx)$
+        # 单测仅在 build_ut(LLDB_INCLUDE_TESTS=ON) 的编译库中，产品库 build/
+        # 不含 unittests，clang-tidy 无法解析其依赖，故排除单测目录。
+        exclude: ^lldb/unittests/
         args: [
           "--quiet",
           "--config-file=lldb/.clang-tidy",

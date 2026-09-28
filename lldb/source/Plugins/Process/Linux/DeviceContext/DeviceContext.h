@@ -112,6 +112,10 @@ public:
 
   virtual Status SingleStep(const InterruptPosInfo &pos_info) const;
 
+  // 同步接收一次设备事件（参考 RunListenThread 的 CQ 接收逻辑）。
+  // 用于 SIMT 多 warp 单步时逐个消费中间 warp 的 pc 事件。
+  Status RecvEvent(InterruptEvent &event) const;
+
   virtual Status SetSoftwareBreakpoint(lldb::addr_t addr);
   virtual Status SetHardwareBreakpoint(lldb::addr_t addr, uint16_t stream_id,
                                        const InterruptPosInfo &pos_info) const {

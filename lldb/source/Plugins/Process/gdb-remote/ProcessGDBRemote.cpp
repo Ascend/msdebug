@@ -85,6 +85,15 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#ifdef MS_DEBUGGER
+#include "../../Disassembler/LLVMC/AscendDisassembler950.h"
+#include "lldb/Core/Address.h"
+#include "lldb/Core/Section.h"
+#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadList.h"
+#endif
+
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1362,10 +1371,67 @@ Status ProcessGDBRemote::WillResume() {
   return Status();
 }
 
+#ifdef MS_DEBUGGER
+// 从 kernel module section 读取 pc 处的指令字，判断是否为 bar.thread_block。
+// 指令为 64bit、小端，有效位均落在低 32bit 内，故只取低 32bit。
+static bool IsPcAtBarThreadBlock(Target &target, lldb::addr_t pc) {
+  Address so_addr;
+  if (!target.ResolveLoadAddress(pc, so_addr))
+    return false;
+
+  SectionSP section_sp = so_addr.GetSection();
+  if (!section_sp)
+    return false;
+
+  uint8_t bytes[8] = {};
+  if (section_sp->GetSectionData(bytes, sizeof(bytes), so_addr.GetOffset()) < 4)
+    return false;
+
+  const uint32_t encoding = static_cast<uint32_t>(bytes[0]) |
+                            (static_cast<uint32_t>(bytes[1]) << 8) |
+                            (static_cast<uint32_t>(bytes[2]) << 16) |
+                            (static_cast<uint32_t>(bytes[3]) << 24);
+  return AscendDisassembler950::IsBarThreadBlock(encoding);
+}
+#endif
+
 Status ProcessGDBRemote::DoResume() {
   Status error;
   Log *log = GetLog(GDBRLog::Process);
   LLDB_LOGF(log, "ProcessGDBRemote::Resume()");
+
+#ifdef MS_DEBUGGER
+  // SIMT 单步：若当前 pc（或其前一条指令 pc-8）位于 bar.thread_block 指令，
+  // 不允许单步，直接返回错误。
+  if ((!m_continue_s_tids.empty() || !m_continue_S_tids.empty()) &&
+      IsStopInSimtKernel()) {
+    DeviceStopInfo stop_info{};
+    GetDeviceStopInfoCached(stop_info);
+    if (stop_info.soc_type == SocType::ASCEND950) {
+      ThreadSP thread_sp = GetThreadList().GetSelectedThread();
+      if (thread_sp) {
+        const lldb::addr_t pc =
+            thread_sp->GetRegisterContext()->GetPC(LLDB_INVALID_ADDRESS);
+        if (pc != LLDB_INVALID_ADDRESS) {
+          const lldb::addr_t prev_pc = pc >= 8 ? pc - 8 : pc;
+          const bool pc_at_barrier = IsPcAtBarThreadBlock(GetTarget(), pc);
+          const bool prev_at_barrier =
+              prev_pc != pc && IsPcAtBarThreadBlock(GetTarget(), prev_pc);
+          if (pc_at_barrier || prev_at_barrier) {
+            error.SetErrorString("current pc is at 'bar.thread_block'; "
+                                 "single step is not supported at a barrier");
+            LLDB_LOGF(log,
+                      "ProcessGDBRemote::DoResume: refuse to single step at "
+                      "bar.thread_block, pc = 0x%" PRIx64 ", pc-8 = 0x%" PRIx64,
+                      static_cast<uint64_t>(pc),
+                      static_cast<uint64_t>(prev_pc));
+            return error;
+          }
+        }
+      }
+    }
+  }
+#endif
 
   ListenerSP listener_sp(
       Listener::MakeListener("gdb-remote.resume-packet-sent"));
