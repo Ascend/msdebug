@@ -110,6 +110,22 @@ private:
   void RefreshFocusedPC();
   void SetWarpOnFocus(uint16_t warp_id);
 
+  // SIMT 全核单步的中间结果：按核汇总命中本次停止 pc 的 warp。
+  struct SimtMatchedWarp {
+    CoreInfo core;
+    uint16_t warp_id;
+  };
+  struct SimtStepPlan {
+    size_t total_active = 0;
+    size_t matched_total = 0;
+    size_t skipped_cores = 0;
+    std::vector<CoreInfo> full_cores;
+    std::vector<SimtMatchedWarp> partial_warps;
+  };
+  Status SingleStepSimtAllCores();
+  SimtStepPlan CollectSimtStepPlan(const std::vector<CoreInfo> &cores_info);
+  Status StepSimtWarpsAtPc(const SimtStepPlan &plan);
+
 private:
   std::shared_ptr<AscendCommunicationServer> m_server;
   const Socket *m_client_socket = nullptr;

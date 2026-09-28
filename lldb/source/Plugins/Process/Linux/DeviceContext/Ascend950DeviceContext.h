@@ -32,6 +32,9 @@ public:
 
   Status SingleStep(const InterruptPosInfo &pos_info) const override;
 
+  Status SingleStep(const InterruptPosInfo &pos_info,
+                    const std::vector<CoreInfo> &cores) const override;
+
   Status RemoveHardwareBreakpoint(
       lldb::addr_t addr, uint16_t stream_id, const InterruptPosInfo &pos_info) const override;
 

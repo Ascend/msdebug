@@ -112,6 +112,13 @@ public:
 
   virtual Status SingleStep(const InterruptPosInfo &pos_info) const;
 
+  // 按指定的核集合下发单步；cores 为空时表示不限制核（等价于全核）。
+  // 默认实现忽略核集合，退回单核版本。
+  virtual Status SingleStep(const InterruptPosInfo &pos_info,
+                            const std::vector<CoreInfo> &cores) const {
+    return SingleStep(pos_info);
+  }
+
   // 同步接收一次设备事件（参考 RunListenThread 的 CQ 接收逻辑）。
   // 用于 SIMT 多 warp 单步时逐个消费中间 warp 的 pc 事件。
   Status RecvEvent(InterruptEvent &event) const;

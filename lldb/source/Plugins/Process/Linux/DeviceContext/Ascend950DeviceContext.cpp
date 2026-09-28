@@ -120,30 +120,45 @@ Status Ascend950DeviceContext::GetDeviceInfo(DeviceInfo &device_info) {
   return error;
 }
 
-inline CoreMaskParam GenCoreMask(const InterruptPosInfo &pos_info) {
+// bitmap0 covers core IDs 0..63, bitmap1 covers 64..127.
+inline void SetCoreBit(DeviceCoreMask &cores, CoreType core_type,
+                       uint32_t core_id) {
+  constexpr uint32_t max_bit_num = 64;
+  if (core_type == CoreType::AIC) {
+    if (core_id >= max_bit_num) {
+      cores.aic_bitmap1 |= 1ULL << (core_id - max_bit_num);
+    } else {
+      cores.aic_bitmap0 |= 1ULL << core_id;
+    }
+  } else if (core_type == CoreType::AIV) {
+    if (core_id >= max_bit_num) {
+      cores.aiv_bitmap1 |= 1ULL << (core_id - max_bit_num);
+    } else {
+      cores.aiv_bitmap0 |= 1ULL << core_id;
+    }
+  }
+}
+
+inline CoreMaskParam GenCoreMask(const std::vector<CoreInfo> &cores) {
   CoreMaskParam core_info{};
-  if (!pos_info.single_core_run) {
+  if (cores.empty()) {
     return core_info;
   }
   core_info.magic = 0x5a5a5a5a;
-  auto &cores = core_info.cores;
-  auto core_id = pos_info.core_id;
-  // bitmap0 covers core IDs 0..63, bitmap1 covers 64..127.
-  constexpr uint8_t max_bit_num = 64;
-  if (pos_info.core_type == CoreType::AIC) {
-    if (core_id >= max_bit_num) {
-      cores.aic_bitmap1 = 1ULL << (core_id - max_bit_num);
-    } else {
-      cores.aic_bitmap0 = 1ULL << core_id;
-    }
-  } else if (pos_info.core_type == CoreType::AIV) {
-    if (core_id >= max_bit_num) {
-      cores.aiv_bitmap1 = 1ULL << (core_id - max_bit_num);
-    } else {
-      cores.aiv_bitmap0 = 1ULL << core_id;
-    }
+  for (const auto &core : cores) {
+    SetCoreBit(core_info.cores, core.core_type, core.core_id);
   }
   return core_info;
+}
+
+inline CoreMaskParam GenCoreMask(const InterruptPosInfo &pos_info) {
+  if (!pos_info.single_core_run) {
+    return CoreMaskParam{};
+  }
+  CoreInfo core{};
+  core.core_id = static_cast<uint8_t>(pos_info.core_id);
+  core.core_type = pos_info.core_type;
+  return GenCoreMask(std::vector<CoreInfo>{core});
 }
 
 inline auto FormatCoresLog(const DeviceCoreMask &cores) {
@@ -196,6 +211,33 @@ Status Ascend950DeviceContext::SingleStep(const InterruptPosInfo &pos_info) cons
            param.thread_id_z, static_cast<uint8_t>(param.pos_type),
            pos_info.pc);
   return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t*)&param, sizeof(param));
+}
+
+Status
+Ascend950DeviceContext::SingleStep(const InterruptPosInfo &pos_info,
+                                   const std::vector<CoreInfo> &cores) const {
+  ControlUnitParam param{};
+  param.core_info = GenCoreMask(cores);
+  if (pos_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT) {
+    if (pos_info.single_warp_run) {
+      param.thread_id_x = pos_info.thread_pos.x;
+      param.thread_id_y = pos_info.thread_pos.y;
+      param.thread_id_z = pos_info.thread_pos.z;
+    } else {
+      param.enable_all_warp = 1;
+    }
+  }
+  param.pos_type = pos_info.pos_type;
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log,
+           "selected cores num={0}, magic={1:x}, {2}, enable_all_warp={3}, "
+           "thread_id_xyz=({4}, {5}, {6}), pos_type={7}, pc={8:x}",
+           cores.size(), param.core_info.magic,
+           FormatCoresLog(param.core_info.cores), param.enable_all_warp,
+           param.thread_id_x, param.thread_id_y, param.thread_id_z,
+           static_cast<uint8_t>(param.pos_type), pos_info.pc);
+  return BaseSqCqComm(CmdType::SINGLE_STEP_DEVICE, (uint8_t *)&param,
+                      sizeof(param));
 }
 
 Status Ascend950DeviceContext::InvalidInstrCache(const lldb::addr_t &addr,

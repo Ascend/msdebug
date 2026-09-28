@@ -636,30 +636,6 @@ void Thread::SetupForResume() {
       BreakpointSiteSP bp_site_sp =
           GetProcess()->GetBreakpointSiteList().FindByAddress(thread_pc);
       if (bp_site_sp) {
-#ifdef MS_DEBUGGER
-        // SIMT/SIMD VF 上的硬断点，continue 时直接 resume，不走
-        // unset hard -> single step -> set hard -> resume 的软断点流程。
-        ProcessSP process_sp = GetProcess();
-        if (process_sp && process_sp->IsStopInDevice() &&
-            bp_site_sp->GetType() == BreakpointSite::eHardware) {
-          DeviceStopInfo stop_info{};
-          process_sp->GetDeviceStopInfoCached(stop_info);
-          const bool is_vf =
-              stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMT ||
-              stop_info.pos_type == InterruptPosType::VEC_INTERRUPT_SIMD;
-          ThreadPlan *cur_plan = GetCurrentPlan();
-          const bool is_continue =
-              cur_plan && cur_plan->RunState() != eStateStepping;
-          if (is_vf && is_continue) {
-            Log *log = GetLog(LLDBLog::Step);
-            LLDB_LOG(log,
-                     "device VF hardware breakpoint: skip step-over plan and "
-                     "resume directly, pc = 0x{0:x}",
-                     thread_pc);
-            return;
-          }
-        }
-#endif
         // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
         // target may not require anything special to step over a breakpoint.
 
