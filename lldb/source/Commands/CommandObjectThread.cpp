@@ -2573,7 +2573,8 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-in",
                      "Source level single step, stepping into calls.  Defaults "
-                     "to current thread unless specified.",
+                     "to current thread unless specified. "
+                     "Not supported on Triton.",
                      nullptr, eStepTypeInto, eStepScopeSource)));
 
   LoadSubCommand("step-out",

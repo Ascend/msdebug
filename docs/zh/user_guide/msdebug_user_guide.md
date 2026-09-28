@@ -414,7 +414,7 @@ Command Options Usage:
 msDebug工具支持以下两种启动方式：
 
 > [!NOTE]
-> 
+>
 > 若工具弹出**Cannot read termcap database; using dumb terminal settings.**  的提示信息，可以通过配置`export TERMINFO=xx`消除提示，xx为本地TERMINFO路径：
 >
 > ```bash
@@ -454,7 +454,7 @@ msDebug工具支持以下两种启动方式：
         ```
 
         > [!NOTE]
-        > 
+        >
         > 通过PyTorch框架进行单算子调用的场景，详细信息可参考《[TorchNPU配套软件库](https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.1.0/zh/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md)》中OpPlugin插件。
 
 **调试退出**
@@ -467,7 +467,7 @@ msDebug工具支持以下两种启动方式：
 ```
 
 > [!NOTE]
-> 
+>
 > 该调试通道无法单独关闭，若要关闭调试通道，需要通过覆盖安装方式，具体请参见对应的NPU驱动和固件安装文档。
 
 **指定Device ID（通算融合算子场景）**
@@ -795,7 +795,8 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 
 ### 注意事项
 
-算子编译时，使用`--cce-ignore-always-inline=true`的编译选项。
+- 算子编译时，使用`--cce-ignore-always-inline=true`的编译选项。
+- `step in`功能不支持Triton算子场景。
 
 ### 使用示例
 
@@ -909,7 +910,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
     ```
 
     > [!NOTE]
-    > 
+    >
     > - 当前核的停止原因既有调试函数又有断点时，将展示为breakpoint。
     > - 单步调试时，不支持直接从`main scalar`调试到`simd/simt vf`。
 
@@ -1129,7 +1130,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 ```
 
 > [!NOTE]
-> 
+>
 > 通算融合算子场景将会显示多个Device ID。
 
 关键信息说明如下表：
@@ -1393,16 +1394,16 @@ Current stop state of all blocks:
 1. 参见《应用开发指南 (C&C++)》的"acl API参考（C）\> 系统配置 \>  [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)"章节的配置文件示例（异常算子Dump配置），开启生成异常算子core文件的功能。
 
     > [!NOTE]
-    > 
+    >
     > 以下两种方法二选一即可：
-    > 
+    >
     > 1. 执行如下命令，将dump_scene参数设置为aic_err_detail_dump，并配置dump_path参数设置导出异常算子core文件的路径。
-    > 
+    >
     >     ```bash
     >     export ASCEND_DUMP_SCENE="aic_err_detail_dump"
     >     export ASCEND_DUMP_PATH="output"
     >     ```
-    > 
+    >
     > 2. 在acl.json配置文件中，将dump_scene参数设置为 aic_err_detail_dump，并配置dump_path参数设置导出异常算子core文件的路径。
 
 2. 算子运行出现aic_error异常时（如内存越界访问），触发生成异常算子core文件，文件名以.core结尾。
@@ -1419,7 +1420,7 @@ Current stop state of all blocks:
     ```
 
     > [!NOTE]
-    > 
+    >
     > 如果需要查看调用栈，需使用`-O2/O3 + -g`选项编译生成包含调试信息的kernel.o文件，或者生成fatbin结构的ELF文件。
     >
     > 原因：在算子执行过程中，若因指令执行导致硬件异常，硬件通常会继续执行若干条指令后再上报异常并生成core文件。因此，core文件中的内存和寄存器数据可能并不准确。不过，PC寄存器的值通常会被修正。
