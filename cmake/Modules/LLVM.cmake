@@ -79,12 +79,13 @@ if(USE_PREBUILT_LLVM)
     # 预编译模式下构建全部 gtest 单测：LLDBUnitTests 聚合 target 依赖
     # 所有 add_lldb_unittest 生成的可执行。注意这些 target 为
     # EXCLUDE_FROM_ALL，需显式加入 BUILD_COMMAND。
+    # 预编译模式：通过 CMAKE_PROJECT_INCLUDE 注入安全编译选项 + UT 工具 stub。
+    # 源码模式由 llvm/CMakeLists.txt 的 MS_DEBUGGER 块处理，此处仅预编译模式需要。
+    list(APPEND LLDB_CONFIGURE_ARGS
+        -DCMAKE_PROJECT_INCLUDE=${ROOT_DIR}/cmake/Modules/MsdebugProjectInclude.cmake)
+
     set(LLDB_BUILD_TARGETS "lldb;lldb-server;runtime_stub")
     if(LLDB_INCLUDE_TESTS)
-        # lldb/test 基建无条件依赖 LLVM 二进制工具（llvm-nm/llvm-ar 等），
-        # 预编译模式无这些 tool target，注入 stub 满足 configure 依赖。
-        list(APPEND LLDB_CONFIGURE_ARGS
-            -DCMAKE_PROJECT_INCLUDE=${ROOT_DIR}/cmake/Modules/LLVMTestToolStubs.cmake)
         list(APPEND LLDB_BUILD_TARGETS LLDBUnitTests)
     endif()
 
