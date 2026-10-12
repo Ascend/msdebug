@@ -1,13 +1,29 @@
-// Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
- 
+/*
+ * -------------------------------------------------------------------------
+ * This file is part of the MindStudio project.
+ * Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+ *
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *          http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
+ */
+
 #ifndef CORE_HIJACKED_LAYER_MANAGER_H
 #define CORE_HIJACKED_LAYER_MANAGER_H
- 
+
 #include <list>
 #include <string>
- 
+
 #include "Singleton.h"
- 
+
 /** 劫持接口层级管理
  * CANN 软件栈中存在不同接口的层级调用，如 aclrtSetDevice -> rtSetDevice，劫持桩
  * 当前会同时对不同层级的接口做劫持。为了防止不同层级的接口上报相同的信息，
@@ -23,29 +39,29 @@ public:
      * @param func - [in] 要管理的高层函数
      */
     void Push(std::string const &func);
- 
+
     /** 将栈顶的函数出栈
      */
     void Pop(void);
- 
+
     /** 判断一个函数是否应该被掩掉
      * @param func - [in] 要校验的函数
      */
     bool InCallStack(std::string const &func) const;
- 
+
 private:
     std::list<std::string> layers_;
 };
- 
+
 /** 利用 RAII 实现自动出入栈
  */
 class LayerGuard {
 public:
     LayerGuard(HijackedLayerManager &manager, std::string const &func);
     ~LayerGuard(void);
- 
+
 private:
     HijackedLayerManager &manager_;
 };
- 
+
 #endif // CORE_HIJACKED_LAYER_MANAGER_H

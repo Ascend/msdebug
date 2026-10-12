@@ -1,5 +1,20 @@
 #!/bin/bash
-#Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+# -------------------------------------------------------------------------
+# This file is part of the MindStudio project.
+# Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+#
+# MindStudio is licensed under Mulan PSL v2.
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
+# You may obtain a copy of Mulan PSL v2 at:
+#
+#          http://license.coscl.org.cn/MulanPSL2
+#
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PSL v2 for more details.
+# -------------------------------------------------------------------------
+
 # ================================================================================
 # run包安装解析公共脚本
 # 解析filelist.csv文件，完成目录创建，文件复制，权限设置，文件删除等操作。
@@ -660,7 +675,7 @@ do_chmod_file_dir() {
     local install_path="$1"
     local filelist_path="$2"
     local package="$3"
-    
+
     foreach_filelist "NA" "change_mod_and_own_files" "$install_path" "copy del" "$filelist_path" "no" "concurrency"
     foreach_filelist "NA" "change_mod_and_own_dirs" "$install_path" "mkdir" "$filelist_path" "reverse" "normal"
 }
@@ -954,5 +969,3 @@ fi
 formal_commands_with_lock "$@"
 
 exit 0
-
-

@@ -1,6 +1,20 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
-*/
+ * -------------------------------------------------------------------------
+ * This file is part of the MindStudio project.
+ * Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+ *
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *          http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
+ */
 
 #ifdef MS_DEBUGGER
 #include "lldb/Interpreter/OptionValueMemoryType.h"
@@ -12,7 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void OptionValueMemoryType::DumpValue(const ExecutionContext *exe_ctx, 
+void OptionValueMemoryType::DumpValue(const ExecutionContext *exe_ctx,
                                       Stream &strm, uint32_t dump_mask) {
   if (dump_mask & eDumpOptionType)
     strm.Printf("(%s)", GetTypeAsCString());
@@ -24,7 +38,7 @@ void OptionValueMemoryType::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-Status OptionValueMemoryType::SetValueFromString(llvm::StringRef value, 
+Status OptionValueMemoryType::SetValueFromString(llvm::StringRef value,
                                                  VarSetOperationType op) {
   Status error;
   switch (op) {
