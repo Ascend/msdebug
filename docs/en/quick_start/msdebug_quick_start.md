@@ -7,7 +7,7 @@
 msDebug is an operator debugging tool designed for Ascend devices. It is used to debug operator programs executed on the NPU and provides key debugging capabilities for operator developers, including reading the memory and registers of Ascend devices, and pausing and resuming program running status.
 This document demonstrates the core functions of msDebug based on the simple addition operator developed in the introductory tutorial. It helps beginners intuitively experience the efficiency and convenience the tool brings to the operator development process.
 
-This document assumes that you have completed all operations in <a href="https://gitcode.com/Ascend/msot/blob/26.1.0/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
+This document assumes that you have completed all operations in <a href="https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
 
 ## 2. Operation
 
@@ -19,7 +19,7 @@ This tutorial **supports only** standardized CANN container environments. It is 
 #### 2.1.1 Installing a CANN Container Environment
 
 ✅ **Strictly follow the guide below to complete the environment installation:**  
-👉 **<a href="https://gitcode.com/Ascend/msot/blob/26.1.0/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a>**
+👉 **<a href="https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a>**
 
 > ⏱️ **Estimated time in an environment with external network access: about 3 minutes**  
 > After the installation, you will get a standardized container environment with all operator tools, sample code, and dependent libraries preinstalled.
@@ -37,7 +37,7 @@ Before the hands-on experience below, **copy the entire script below and paste i
 
 ### 2.2 [Prerequisite] Completing Operator Project Preparation
 
-Follow section 2.3 in <a href="https://gitcode.com/Ascend/msot/blob/26.1.0/docs/en/quick_start/op_tool_quick_start.md#23-development-building-the-operator-project-msopgen" target="_blank">Operator Development Toolchain Quick Start</a> to complete the operator project preparation.
+Follow section 2.3 in <a href="https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/op_tool_quick_start.md#23-development-building-the-operator-project-msopgen" target="_blank">Operator Development Toolchain Quick Start</a> to complete the operator project preparation.
 
 ### 2.3 [Debugging] Debugging Operator Code Using Breakpoints (msDebug)
 
@@ -46,9 +46,9 @@ If the operator function is abnormal, you can use msDebug to debug the operator 
 #### 2.3.1 Enabling Kernel Debugging
 
 > [!CAUTION]
-> 
+>
 > **msDebug requires the root permission.**
-> 
+>
 > msDebug can work properly only when the kernel debugging switch `/proc/debug_switch` is enabled. However, for security purposes, the switch is disabled by default and can be enabled only by the `root` user.
 > This may not be possible in many environments (such as shared development machines and containers). In this case, contact the system administrator to enable the function or experience it in a privileged container.
 
@@ -73,8 +73,8 @@ Insert a line of configuration to the first line of the `CMakeLists.txt` file on
 
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
-\cp -f op_kernel/CMakeLists.txt op_kernel/CMakeLists.txt.orig.bak
-sed -i "1i\\add_ops_compile_options(ALL OPTIONS -g -O0)" op_kernel/CMakeLists.txt
+\cp -f op_kernel/CMakeLists.txt op_kernel/CMakeLists.txt.bak
+printf '%s\n' "if(COMMAND add_ops_compile_options)" "  add_ops_compile_options(ALL OPTIONS -g -O0)" "elseif(COMMAND npu_op_kernel_options)" "  npu_op_kernel_options(ascendc_kernels ALL OPTIONS -g -O0)" "endif()" | cat - op_kernel/CMakeLists.txt > tmp && mv -f tmp op_kernel/CMakeLists.txt;
 ```
 
 **2. Re-compiling and deploying the operator.**
@@ -102,10 +102,11 @@ b add_custom.cpp:34
 ```
 
 > [!CAUTION]
-> 
+>
 > **If you perform operations in the directly applied container environment, pay attention to the fact that the `/proc/debug_switch = 1` may be in a false state.**
+>
 > If you perform operations in the container environment provided by the cloud service provider, even if the `/proc/debug_switch` is successfully set to 1 and queried in the container, the status may be false. For security purposes, the underlying host machine usually isolates the `/proc` directory through mechanisms such as copy-on-write (CoW), shadow files, or overlay mount. As a result, the settings do not take effect.
-> 
+>
 > In this case, setting breakpoints as described in the previous section will trigger a warning. When you run the `run` command according to the following sections, the following error message is displayed:
 >
 > ```text
@@ -205,15 +206,15 @@ Output example:
 
 ```text
 (msdebug) ascend info cores
-  CoreId  Type  Device Stream Task Block         PC               stop reason
-*   0     aiv      3     47     0     4     0x12c041200920         breakpoint 1.1
-    1     aiv      3     47     0     5     0x12c041200920         breakpoint 1.1
-    2     aiv      3     47     0     6     0x12c041200920         breakpoint 1.1
-    3     aiv      3     47     0     7     0x12c041200920         breakpoint 1.1
-   44     aiv      3     47     0     0     0x12c041200920         breakpoint 1.1
-   45     aiv      3     47     0     1     0x12c041200920         breakpoint 1.1
-   46     aiv      3     47     0     2     0x12c041200920         breakpoint 1.1
-   47     aiv      3     47     0     3     0x12c041200920         breakpoint 1.1
+  CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+*      0  aiv      3    47    0     4  0x12c041200920  breakpoint 1.1       NA   NA
+       1  aiv      3    47    0     5  0x12c041200920  breakpoint 1.1       NA   NA
+       2  aiv      3    47    0     6  0x12c041200920  breakpoint 1.1       NA   NA
+       3  aiv      3    47    0     7  0x12c041200920  breakpoint 1.1       NA   NA
+      44  aiv      3    47    0     0  0x12c041200920  breakpoint 1.1       NA   NA
+      45  aiv      3    47    0     1  0x12c041200920  breakpoint 1.1       NA   NA
+      46  aiv      3    47    0     2  0x12c041200920  breakpoint 1.1       NA   NA
+      47  aiv      3    47    0     3  0x12c041200920  breakpoint 1.1       NA   NA
 ```
 
 ##### 2.3.3.8 Querying Task Information of an Operator
@@ -278,5 +279,5 @@ Run the following commands:
 
 ```shell
 cd ~/ot_demo/workspace/src/AddCustom
-\cp -f op_kernel/CMakeLists.txt.orig.bak op_kernel/CMakeLists.txt
+\cp -f op_kernel/CMakeLists.txt.bak op_kernel/CMakeLists.txt
 ```

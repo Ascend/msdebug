@@ -8,7 +8,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
 **Preparations**
 
-- Obtain the [sample project](https://gitcode.com/Ascend/mstt/blob/br_26.0.0_beta1/sample/README.md).
+- Obtain the [sample project](https://atomgit.com/Ascend/mstt/blob/br_26.0.0_beta1/sample/README.md).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
@@ -26,7 +26,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     2. Compile the operator.
 
         > [!NOTE]
-        > 
+        >
         > In non-initial scenarios, you can run the `make clean && make` command instead of the `make` command.
 
         ```bash
@@ -80,15 +80,15 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
         ```bash
         (msdebug) ascend info cores
-          CoreId  Type  Device Stream Task Block         PC               Exception
-        *  13     aiv      0     3     0     0     0x1240c0034974         f0000000
-           14     aiv      0     3     0     1     0x1240c0034974         f0000000
-           15     aiv      0     3     0     2     0x1240c0034974         f0000000
-           20     aiv      0     3     0     3     0x1240c0034974         f0000000
-           21     aiv      0     3     0     4     0x1240c0034974         f0000000
-           22     aiv      0     3     0     5     0x1240c0034974         f0000000
-           23     aiv      0     3     0     6     0x1240c0034974         f0000000
-           24     aiv      0     3     0     7     0x1240c0034974         f0000000
+          CoreId Type Device Stream Task Block               PC    Exception Filename Line
+        *    13  aiv      0     3    0     0  0x1240c0034974     f0000000       NA   NA
+             14  aiv      0     3    0     1  0x1240c0034974     f0000000       NA   NA
+             15  aiv      0     3    0     2  0x1240c0034974     f0000000       NA   NA
+             20  aiv      0     3    0     3  0x1240c0034974     f0000000       NA   NA
+             21  aiv      0     3    0     4  0x1240c0034974     f0000000       NA   NA
+             22  aiv      0     3    0     5  0x1240c0034974     f0000000       NA   NA
+             23  aiv      0     3    0     6  0x1240c0034974     f0000000       NA   NA
+             24  aiv      0     3    0     7  0x1240c0034974     f0000000       NA   NA
         (msdebug)
         ```
 
@@ -103,7 +103,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         - Print the data stored in LocalTensor in the UB memory.
 
             > [!NOTE]
-            > 
+            >
             > For details about the start address for printing the UB memory, see the `bufferAddr` parameter in the `address_` field of the LocalTensor variable. The following uses the `xLocal` variable as an example. The start address of the memory is 0.
 
             ```bash
@@ -126,7 +126,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         - Print the data stored in GlobalTensor in the GM.
 
             > [!NOTE]
-            > 
+            >
             > For details about the start address for GM memory printing, see the `address_` field of the GlobalTensor variable. The following uses the `xGm` variable as an example. The start address of the memory is 0x00001240c0015000.
 
             ```bash
@@ -243,7 +243,7 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     }
     ```
 
-4. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md) section. <a id="step-4-operator-compilation"></a>
+4. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://atomgit.com/Ascend/msopgen/blob/26.2.0/docs/en/user_guide/msopgen_user_guide.md#building-and-deploying-an-operator) section. <a id="step-4-operator-compilation"></a>
 5. Go to the directory where the msOpGen script `install.sh` is located, compile the single-operator calling application by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md), and obtain the executable file `execute_add_op`. <a id="step-5"></a>
 
     ```bash
@@ -288,7 +288,7 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     ```
 
     > [!NOTE]
-    > 
+    >
     > For details about the subsequent debugging process, see [Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage), [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 ## Debugging the Operators Called by a PyTorch Interface
@@ -334,7 +334,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     }
     ```
 
-3. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md) section.
+3. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://atomgit.com/Ascend/msopgen/blob/26.2.0/docs/en/user_guide/msopgen_user_guide.md#building-and-deploying-an-operator) section.
 4. Go to the sample directory and download the sample code in CLI mode. Use PyTorch to call the AddCustom operator project and complete the compilation by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md).
 
     ```bash
@@ -342,7 +342,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     ```
 
     > [!NOTE]
-    > 
+    >
     > The sample project directory is as follows:
     >
     > ```text
@@ -425,7 +425,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     ```
 
     > [!NOTE]
-    > 
+    >
     > For details about other debugging operations, see [Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage), [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), [Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 9. Delete the breakpoint. For details, see [Setting Breakpoints](../user_guide/msdebug_user_guide.md#breakpoint-setting).
@@ -444,7 +444,7 @@ This section shows how to use msDebug to debug a template library operator (matm
 
 **Preparations** <a id="Preparations"></a>
 
-- Obtain the [sample project](https://gitcode.com/cann/catlass).
+- Obtain the [sample project](https://atomgit.com/cann/catlass).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
@@ -499,7 +499,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     ```
 
     > [!NOTE]
-    > 
+    >
     > `_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo` indicates the kernel name of the template library. Only the first 64 characters are displayed in the example.
 
 5. Review information.
@@ -508,11 +508,11 @@ This section shows how to use msDebug to debug a template library operator (matm
 
         ```bash
         (msdebug) ascend info cores
-          CoreId  Type  Device Stream Task Block         PC               stop reason
-        *  21     aic      0     48     0     0     0x12c0c00d6c38         breakpoint 1.1
-           22     aic      0     48     0     1     0x12c0c00d6c38         breakpoint 1.1
-           23     aic      0     48     0     2     0x12c0c00d6c38         breakpoint 1.1
-           24     aic      0     48     0     3     0x12c0c00d6c38         breakpoint 1.1
+          CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+        *    21  aic      0    48    0     0  0x12c0c00d6c38  breakpoint 1.1       NA   NA
+             22  aic      0    48    0     1  0x12c0c00d6c38  breakpoint 1.1       NA   NA
+             23  aic      0    48    0     2  0x12c0c00d6c38  breakpoint 1.1       NA   NA
+             24  aic      0    48    0     3  0x12c0c00d6c38  breakpoint 1.1       NA   NA
         (msdebug)
         ```
 
@@ -558,7 +558,7 @@ This section shows how to use msDebug to debug a template library operator (matm
         ```
 
     > [!NOTE]
-    > 
+    >
     > For details about other debugging operations, see [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), [Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 6. Query and delete breakpoints to resume program execution.

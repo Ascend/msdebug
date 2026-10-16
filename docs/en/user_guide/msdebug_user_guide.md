@@ -10,15 +10,15 @@ The following operator call scenarios are supported:
 
 - Kernel launch operator development: kernel launch
 
-    For details about the kernel launch scenario, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board).
+    For details about the kernel launch scenario, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board).
 
 - Project-based operator development: single-operator API calling
 
-    For details about the single-operator API execution scenario, see "Project-based Operator Development" > [Single-Operator API Execution](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/Aclnn%E7%AE%97%E5%AD%90%E5%B7%A5%E7%A8%8B%E5%8C%96%E5%BC%80%E5%8F%91/%E5%8D%95%E7%AE%97%E5%AD%90API%E8%B0%83%E7%94%A8.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator).
+    For details about the single-operator API execution scenario, see "Project-based Operator Development" > [Single-Operator API Execution](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/advanced_programming/aclnn_operator_development/invocation/single_operator_api_call.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator).
 
 - AI framework operator adaptation: PyTorch framework
 
-    For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md). For details about the operation, see [Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface).
+    For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/latest/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md). For details about the operation, see [Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface).
 
 **Additional Information**
 
@@ -32,7 +32,7 @@ msDebug also provides the following extension program. For details, see [**Table
 </th>
 </tr>
 </thead>
-<tbody><tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row535645615122"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p180175116563">msdebug-mi(msDebug Machine Interface)</p>
+<tbody><tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row535645615122"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p180175116563">msDebug Machine Interface (msdebug-mi)</p>
 </td>
 <td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p796410302155">Provides machine-to-machine interaction interfaces for data parsing, which users do not need to pay attention to.</p>
 </td>
@@ -52,7 +52,7 @@ msDebug also provides the following extension program. For details, see [**Table
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --full
         ```
 
-    - Method 2: Specify the `--debug` option during driver installation. For details, see [Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum) in *CANN Software Installation Guide*.
+    - Method 2: Specify the `--debug` option during driver installation. For details, see [Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum) in *CANN Software Installation Guide*.
 
         ```bash
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --debug
@@ -69,13 +69,13 @@ msDebug also provides the following extension program. For details, see [**Table
 
 The following products are supported:
 
-- Atlas A3 training products/Atlas A3 inference products
-- Atlas A2 training products/Atlas A2 inference products
+- Atlas A3 products
+- Atlas A2 products
 - Atlas inference products
-- Ascend 950 products
+- Atlas 950PR and 950DT products
 
 > [!NOTE]
-> 
+>
 >- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/en/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
 >- For details about the supported functions, see the documentation of the corresponding function module.
 
@@ -153,7 +153,7 @@ The following products are supported:
 <td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p191651552183115">Reads memory.</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen138271438203917">x -m GM -f float16[] 0x00001240c0037000 -c 2 -s 128 -E 0</pre>
-<ul id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_ul13312958144010"><li>-m: specifies the memory location. GM, UB, L0A, L0B, L0C, L1, FB, STACK, DCACHE, and ICACHE are supported. STACK, DCACHE, and ICACHE are used only when the dump file of an abnormal operator is parsed. </li><li>-s: specifies the number of bytes to be printed in each line. </li><li>-c: specifies the number of lines to be printed. </li><li>-f: specifies the type of data to be printed. </li><li>-E or --offset: skips the first x elements during printing. </li><li><em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i15451171161210">0x00001240c0037000</em>: indicates the memory address to be read. Replace it with the actual address.</li></ul>
+<ul id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_ul13312958144010"><li><code>-m</code>: Specifies the memory location. GM, UB, L0A, L0B, L0C, L1, FB, STACK, DCACHE, and ICACHE are supported. STACK, DCACHE, and ICACHE are used only when the dump file of an abnormal operator is parsed. </li><li><code>-s</code>: Specifies the number of bytes to be printed in each line. </li><li><code>-c</code>: Specifies the number of lines to be printed. </li><li><code>-f</code>: Specifies the type of data to be printed. </li><li><code>-E</code> or <code>--offset</code>: Skips the first x elements during printing. </li><li><em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i15451171161210">0x00001240c0037000</em>: Indicates the memory address to be read. Replace it with the actual address.</li></ul>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row19163171018502"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p6645289509">ascend info devices</p>
@@ -371,11 +371,29 @@ Command Options Usage:
 </div>
 </td>
 </tr>
+<tr id="zh-cn_topic_0000001979357376_row43201348105418"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p10320248205417">help</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p33205488545">-h</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_p771932814512">Displays help information.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="screen" id="zh-cn_topic_0000001979357376_screen919875915415">msdebug -h</pre>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000001979357376_row43201348105419"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p10320248205418">version</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p33205488546">-V</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_p771932814513">Queries related version information.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="screen" id="zh-cn_topic_0000001979357376_screen919875915416">msdebug -V</pre>
+</td>
+</tr>
 </tbody>
 </table>
 
 > [!NOTE]
-> 
+>
 > - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop_reason` is `CUBE_ERROR`, `CCU_ERROR`, `MTE_ERROR`, `VEC_ERROR`, and `FIXP_ERROR`.
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
@@ -396,7 +414,7 @@ Before debugging an operator, enable the debugging `-g -O0` option and recompile
 The msDebug tool can be started in either of the following ways.
 
 > [!NOTE]
-> 
+>
 > If `Cannot read termcap database; using dumb terminal settings` is displayed, configure `export TERMINFO=xx` to eliminate the message. `xx` indicates the local TERMINFO path.
 >
 > ```bash
@@ -412,8 +430,8 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]
-        > 
-        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> [Kernel Launch](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md) in *Ascend C Operator Development Guide*.
+        >
+        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in *Ascend C Operator Development Guide*.
         > - If the executable file has other input parameters, pass them as follows:
         >
         >    ```bash
@@ -436,8 +454,8 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]
-        > 
-        > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
+        >
+        > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://atomgit.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
 
 **Exiting Debugging**
 
@@ -449,7 +467,7 @@ Exit the debugger.
 ```
 
 > [!NOTE]
-> 
+>
 > The debugging channel cannot be disabled independently. To disable the debugging channel, you need to enable the overwrite mode. For details, see the NPU driver and firmware installation documents.
 
 **Specifying a Device ID (MC2 Operator Scenario)**
@@ -461,9 +479,9 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 - Issue isolation: If a performance or function issue occurs, you can specify different device IDs to check whether the issue is caused by a specific device, thereby making it easier to locate the issue.
 
 > [!NOTE]
-> 
+>
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
-> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > [HCCL Kernel APIs](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/ascendcopapi/docs/api/SIMD-API/%E9%AB%98%E9%98%B6API/HCCL%E9%80%9A%E4%BF%A1%E7%B1%BB/HCCL-Kernel%E4%BE%A7%E6%8E%A5%E5%8F%A3/HCCL%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md) in *Ascend C Operator Development API Reference*.
+> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see [HCCL Kernel APIs](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/ascendcopapi/docs/en/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md) in *Ascend C Operator Development API Reference*.
 
 ```tex
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
@@ -529,7 +547,7 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
     ...
     ```
 
-- In scenarios involving Ascend 950 products, simd vf functions and their subfunctions must be inlined, causing a large amount of code line information to be lost and making it impossible to resolve breakpoint information. You can add the `__asm__("NOP")` statement in the simd vf function and set a breakpoint on that line.
+- In scenarios involving Atlas 950PR and 950DT products, simd vf functions and their subfunctions must be inlined, causing a large amount of code line information to be lost and making it impossible to resolve breakpoint information. You can add the `__asm__("NOP")` statement in the simd vf function and set a breakpoint on that line.
 
     ```cpp
     __simd_vf__ inline void funcA () {
@@ -716,7 +734,7 @@ The actual values of `GlobalTensor` variables are stored in the GM. Run the foll
 ```
 
 > [!NOTE]
-> 
+>
 > - If you want to print other custom addresses, ensure the validity of the custom addresses. Otherwise, errors may occur during operator running.
 > - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
 > - Currently, GM memory can be read and displayed when the breakpoint stops on the Kernel side or the host side.
@@ -777,7 +795,8 @@ To understand the code execution details, you can run the `thread step-over` com
 
 ### Precautions
 
-During operator build, the build option of `--cce-ignore-always-inline=true` is used.
+- During operator build, the build option of `--cce-ignore-always-inline=true` is used.
+- The `step in` function is not supported for Triton operator scenarios.
 
 ### Example
 
@@ -822,14 +841,14 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
     ```cpp
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       12     aic      1     3     0     0     0x12c0c00f03b0         breakpoint 1.2
-    *  44     aiv      1     3     0     0     0x12c0c00f8048         step over               // * indicates the core that is currently running
-       45     aiv      1     3     0     0     0x12c0c00f801c         breakpoint 1.2
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          12  aic      1     3    0     0  0x12c0c00f03b0  breakpoint 1.2       NA   NA
+    *     44  aiv      1     3    0     0  0x12c0c00f8048       step over       NA   NA               // * indicates the core that is currently running
+          45  aiv      1     3    0     0  0x12c0c00f801c  breakpoint 1.2       NA   NA
     ```
 
     > [!NOTE]
-    > 
+    >
     > - If the current core is stopped due to both step-by-step debugging and breakpoints, "breakpoint" is displayed.
     > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows:
     >    - The user program itself has an infinite loop, which needs to be rectified by repairing the program.
@@ -884,15 +903,16 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
     ```cpp
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       13     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-    *  46     aiv      1     3     0     0     0x12c0c00f8ebc         step in          // * indicates the core that is currently running
-       47     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          13  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+    *     46  aiv      1     3    0     0  0x12c0c00f8ebc         step in       NA   NA          // * indicates the core that is currently running
+          47  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
     > [!NOTE]
-    > 
-    > If the current core is stopped due to both function debugging and breakpoints, `breakpoint` is displayed.
+    >
+    > - If the current core is stopped due to both function debugging and breakpoints, `breakpoint` is displayed.
+    > - During single-step debugging, you cannot debug directly from `main scalar` to `simd/simt vf`.
 
 4. After debugging the CopyOut function, run the `finish` command to exit the CopyOut function and return to the main program to continue execution.
 
@@ -984,10 +1004,10 @@ Switch the current core to the specified core. After the core is switched, the p
 
     ```bash
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       17     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-        2     aiv      1     3     0     0     0x12c0c00f8fbc         breakpoint 1.1
-    *   3     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          17  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+           2  aiv      1     3    0     0  0x12c0c00f8fbc  breakpoint 1.1       NA   NA
+    *      3  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
 - Assume that the running core is core 3 of the AIV, and the core to be switched is core 17 of the AIC.
@@ -1010,10 +1030,10 @@ Switch the current core to the specified core. After the core is switched, the p
 
     ```bash
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-    *  17     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-        2     aiv      1     3     0     0     0x12c0c00f8fbc         breakpoint 1.1
-        3     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+    *    17  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+          2  aiv      1     3    0     0  0x12c0c00f8fbc  breakpoint 1.1       NA   NA
+          3  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
 ## Program Status Checking
@@ -1110,7 +1130,7 @@ Run the following command to query the information about the device where the op
 ```
 
 > [!NOTE]
-> 
+>
 > In the MC2 operator scenario, multiple device IDs are displayed.
 
 For details about the command output, see the following table.
@@ -1157,10 +1177,10 @@ Run the following command to query the information about the core where the oper
 
 ```bash
 (msdebug) ascend info cores
-  CoreId  Type  Device Stream Task Block         PC               stop reason
-   16     aic      1     3     0     0     0x12c0c00f1fc0         breakpoint 1.1
-*   0     aiv      1     3     0     0     0x12c0c00f8fcc         breakpoint 1.1
-    1     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+  CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+      16  aic      1     3    0     0  0x12c0c00f1fc0  breakpoint 1.1       NA   NA
+*      0  aiv      1     3    0     0  0x12c0c00f8fcc  breakpoint 1.1       NA   NA
+       1  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
 ```
 
 For details about the command output, see the following table.
@@ -1319,9 +1339,9 @@ For details about the key information, see the following table.
 | ThreadIDx To ThreadIDx | From thread to thread, the active threads |
 | ActiveCount | Number of threads |
 | PC | Program counter |
-| ActiveMask | Indicates which threads among the ActiveCount threads are active. A bit value of 1 indicates an active thread |
-| Filename | Indicates the code file where the thread is located |
-| Line | Indicates the line number where the thread is located |
+| ActiveMask | Indicates which threads among the ActiveCount threads are active. A bit value of 1 indicates an active thread. |
+| Filename | Indicates the code file where the thread is located. |
+| Line | Indicates the line number where the thread is located. |
 
 **`ascend thread <thread id>`**
 
@@ -1371,19 +1391,19 @@ If you enable the dump function for abnormal operators, you cannot use other fun
 
 ### Example
 
-1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581) in *Application Development Guide (C&C++)*.
+1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581) in *Application Development Guide (C&C++)*.
 
     > [!NOTE]
-    > 
+    >
     > Use either of the following methods:
-    > 
+    >
     > 1. Run the following command to set the `dump_scene` parameter to `aic_err_detail_dump` and configure the `dump_path` parameter to the path for exporting the core file of the abnormal operator.
-    > 
+    >
     >     ```bash
     >     export ASCEND_DUMP_SCENE="aic_err_detail_dump"
     >     export ASCEND_DUMP_PATH="output"
     >     ```
-    > 
+    >
     > 2. In the `acl.json` configuration file, set the `dump_scene` parameter to `aic_err_detail_dump` and configure the `dump_path` parameter to the path for exporting the core file of the abnormal operator.
 
 2. When an aic_error exception occurs during operator running (for example, out-of-bounds memory access), a core file of the abnormal operator is generated. The file name ends with `.core`.
@@ -1400,7 +1420,7 @@ If you enable the dump function for abnormal operators, you cannot use other fun
     ```
 
     > [!NOTE]
-    > 
+    >
     > To view the call stack, use the `-O2/O3 + -g` option to compile and generate the `kernel.o` file that contains debugging information, or generate the ELF file of the fatbin structure.
     >
     > Cause: During operator execution, if a hardware exception occurs due to instruction execution, the hardware usually continues to execute several instructions before reporting the exception and generating a core file. Therefore, the memory and register data in the core file may be inaccurate. However, the value of the PC register is usually corrected.

@@ -1,84 +1,80 @@
-# MindStudio Debugger Development Environment Setup, Build, and UT Methods
+# msDebug Development Guide
 
 <br>
 
-## 1. Background Knowledge Required
+This document describes how to set up the development environment for msDebug, build the project, and run UT unit tests.
 
-For details about the code framework and core process, see the [msDebug Architecture Design Specifications](./architecture.md).
+## 1. Prerequisites
 
-## 2. Development Environment Setup
+### 1.1 Prerequisite Knowledge
 
-Set up the environment by referring to the [Operator Tool Development Environment Setup Guide](https://gitcode.com/Ascend/msot/blob/master/docs/en/common/dev_env_setup.md).
+Before starting development, read [MindStudio Debugger Architecture Design Specifications](./architecture.md) to learn about the code framework and core processes.
 
-## 3. Building and Packaging
+### 1.2 Environment Preparation
 
-There are two methods, each with its own advantages and disadvantages:
+Follow [msDebug Installation Guide — Source Installation](../install_guide/msdebug_install_guide.md#231-preparing-the-environment) to set up the build and test environment.
 
-| Method| Application Scenario| Advantages| Disadvantages|
-|------|---------|------|------|
-| One-click script| Initial build and CI/CD pipeline| Zero configuration, one-step setup| Steps cannot be executed independently.|
-| Step-by-step script| Routine development and incremental build| Flexibility and efficiency| Multiple steps are required.|
+> **Note:** The environment image build method and the supporting software versions are maintained by the *MindStudio Unified Build Image Creation Guide* and are not redefined in this repository.
 
-### 3.1 Method 1: One-Click Script
+## 2. Build
 
-```shell
-python build.py
+Choose one of the following build methods as needed:
+
+| Method | Application Scenario | Features |
+|------|---------|------|
+| One-click script | Initial build and CI/CD pipeline | Zero configuration, completes the entire process in one step. |
+| Step-by-step build | Routine development and incremental build | Executes individual steps as needed, which is more efficient. |
+
+### 2.1 One-Click Script
+
+Run the following command in the project root directory:
+
+```bash
+python3 build.py
 ```
 
-### 3.2 Method 2: Step-by-Step Script
+The script automatically completes the entire process of downloading dependencies, building, and packaging.
 
-#### 3.2.1 Downloading Dependencies
+### 2.2 Step-by-Step Build
 
-```shell
-python download_dependencies.py
+#### Downloading Dependencies
+
+```bash
+python3 download_dependencies.py
 ```
 
-#### 3.2.2 Building and Packaging
+#### Building
 
-##### 3.2.2.1 Starting Build
-
-Run the following commands to start the build:
-
-```shell
-mkdir build
-cd build
-cmake -G Ninja .. && ninja or cmake .. && make -j$(nproc)
+```bash
+python3 build.py local
 ```
 
-If the generation time of the `mindstudio-debugger_<version>_<arch>.run --run` file in the `output` directory is updated to the current build time, the building and packaging are successful.
+#### Build Artifacts
 
-##### 3.2.2.2 Build Result Description
+After a successful build, the output is generated in the `artifacts` directory.
 
-The build result is generated in the `output` directory:
+#### Build Cleanup
 
-```text
-output/
-|-- mindstudio-debugger_<version>_<arch>.run --run       # Installation package
-|-- bin                                                  # Executable bin file, which can directly call the debugging function
-|-- lib64                                                # Various dynamic and static libraries
-|-- scene.info                                           # Environment information
-|-- version.info                                         # Version information
-```
+To perform a full rebuild, delete the build directory and run the preceding steps again:
 
-#### 3.2.3 Cleanup/Rebuild
-
-Delete the build directory and perform [3.2.2.1](#3221-starting-build).
-
-```shell
+```bash
 rm -rf build
 ```
 
-## 4. Running UT
+## 3. Unit Tests
 
-```shell
-python build.py test
+### 3.1 Running Tests
+
+```bash
+python3 build.py test
 ```
 
-## 5. FAQ
+A command return code of 0 with no failed test cases indicates that the unit tests pass. If any `FAILED` case exists, locate the cause of the failure from the logs.
 
-### 5.1 Why Is No `.run` Package Generated When I Run the `make` Command During Building?
+### 3.2 Cleaning the Test Environment
 
-It is possible that `cmake ..` is used when running the `cmake` command. The `cmake` command is described as follows:
+Delete the UT build directory and run the tests again:
 
-- `cmake ..`: Only the current project is built. The `make install` command installs the project to the `output/` directory, but does not call `makeself`. Therefore, no `mindstudio-debugger_<version>_<arch>.run` file is generated.
-- `cmake ../cmake`: The "super build" of `cmake/CMakeLists.txt` is used. The project is built and installed first, and then `parser.py` and `makeself` are executed to generate the .run file in the `output/` directory.
+```bash
+rm -rf build_ut
+```
