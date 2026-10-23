@@ -72,7 +72,7 @@ The following products are supported:
 - Atlas A3 products
 - Atlas A2 products
 - Atlas inference products
-- Atlas 950PR and 950DT products
+- Ascend 950PR and 950DT products
 
 > [!NOTE]
 >
@@ -234,7 +234,7 @@ The following products are supported:
 </td>
 <td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p1885133164612">Queries information about the block where the operator runs.</p>
 </td>
-<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><div class="p" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p15705153812317">Prints information about the running blocks.<pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen638314402">ascend info blocks </pre>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><div class="p" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p15705153812317">Prints information about the running blocks.<pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen638314402">ascend info blocks</pre>
 </div>
 <div class="p" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p1186153124616">Prints the code of the running blocks at the current interrupt.<pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen11980104664011">ascend info blocks -d</pre>
 </div>
@@ -398,7 +398,7 @@ Command Options Usage:
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
 >    ```bash
->    setting set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}{{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}{:${line.column}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\n"
+>    settings set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}{{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}{:${line.column}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\n"
 >    ```
 >
 > - After the `run` command is executed, run the `image add` command to import the debugging information. Then, run the `image load` command for the imported debugging information to take effect.
@@ -483,7 +483,7 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
 > - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see [HCCL Kernel APIs](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/ascendcopapi/docs/en/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md) in *Ascend C Operator Development API Reference*.
 
-```tex
+```text
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
 msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
 The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
@@ -547,10 +547,10 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
     ...
     ```
 
-- In scenarios involving Atlas 950PR and 950DT products, simd vf functions and their subfunctions must be inlined, causing a large amount of code line information to be lost and making it impossible to resolve breakpoint information. You can add the `__asm__("NOP")` statement in the simd vf function and set a breakpoint on that line.
+- In scenarios involving Ascend 950PR and 950DT products, simd vf functions and their subfunctions must be inlined, causing a large amount of code line information to be lost and making it impossible to resolve breakpoint information. You can add the `__asm__("NOP")` statement in the simd vf function and set a breakpoint on that line.
 
     ```cpp
-    __simd_vf__ inline void funcA () {
+    __simd_vf__ inline void funcA() {
         for(uint16_t i = 0; i < repeatTimes; ++i) {
             AscendC::Reg::LoadAlign<>(xxxx);
             __asm__("NOP"); // After adding this line, you can set a breakpoint on this line

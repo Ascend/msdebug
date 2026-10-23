@@ -76,7 +76,7 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
 
 > [!NOTE]
 >
->- 昇腾产品的具体型号，请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
+>- 昇腾产品的具体型号，请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/Glossary/productform/hardwaredesc_0001.html)》。
 >- 具体功能支持范围可前往对应功能模块资料进行查看。
 
 ## 注意事项
@@ -398,7 +398,7 @@ Command Options Usage:
 > - 对于bt的展示，如果函数名过长，可以参考[链接](https://lldb.llvm.org/use/formatting.html)进行设置：
 >
 >    ```bash
->    setting set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}{{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}{:${line.column}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\n"
+>    settings set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}{{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}{:${line.column}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\n"
 >    ```
 >
 > - 当程序执行run命令后，需先执行image add命令导入调试信息。然后再执行image load命令使导入的调试信息生效。
@@ -483,7 +483,7 @@ msDebug工具支持以下两种启动方式：
 > - 如果不指定，则仅对用户程序运行时首次设置的Device ID进行调试。
 > - Hccl接口不支持单步调试功能，具体接口明细请参见《Ascend C算子开发接口》中的“[Hccl Kernel侧接口](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/API/ascendcopapi/docs/zh/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md)”章节。
 
-```tex
+```text
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
 msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
 The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
@@ -550,7 +550,7 @@ Process 2625643 stopped
 - Ascend 950PR&950DT系列产品的场景中，simd vf函数及其子函数必须inline，导致大量代码行信息丢失，无法解析出断点信息。可通过在simd vf内添加`__asm__("NOP")`语句，并在该行设置断点。
 
     ```cpp
-    __simd_vf__ inline void funcA () {
+    __simd_vf__ inline void funcA() {
         for(uint16_t i = 0; i < repeatTimes; ++i) {
             AscendC::Reg::LoadAlign<>(xxxx);
             __asm__("NOP"); // 增加这一行后，断点可以设置这行

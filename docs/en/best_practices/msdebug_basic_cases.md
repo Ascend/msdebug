@@ -67,7 +67,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         frame #0: 0x0000000000004974 device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x000000000019a930, progress=0) at add_kernel.cpp:69:9
        66              // call Add instr for computation
        67              Add(zLocal, xLocal, yLocal, TILE_LENGTH);
-       68              // enque the output tensor to VECOUT queue
+       68              // enqueue the output tensor to VECOUT queue
     -> 69              outQueueZ.EnQue<int16_t>(zLocal);  # Breakpoint position
        70              // free input tensors for reuse
        71              inQueueX.FreeTensor(xLocal);
@@ -155,7 +155,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
             frame #0: 0x0000000000004974 device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x00000000001c6930, progress=0) at add_kernel.cpp:69:9
            66              // call Add instr for computation
            67              Add(zLocal, xLocal, yLocal, TILE_LENGTH);
-           68              // enque the output tensor to VECOUT queue
+           68              // enqueue the output tensor to VECOUT queue
         -> 69              outQueueZ.EnQue<int16_t>(zLocal);
                         ^
            70              // free input tensors for reuse
@@ -478,7 +478,7 @@ This section shows how to use msDebug to debug a template library operator (matm
 
 4. Run the operator program and wait until the breakpoint is hit.
 
-    The program starts to run until the first breakpoint (`basic_matmul.hpp:127`) is hit. msDebug detects that the NPU core function starts to run on device 0.
+    The program starts to run until the first breakpoint (`basic_matmul.hpp:121`) is hit. msDebug detects that the NPU core function starts to run on device 0.
 
     ```cpp
     (msdebug) run

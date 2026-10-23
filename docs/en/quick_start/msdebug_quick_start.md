@@ -97,7 +97,7 @@ msdebug execute_add_op
 
 After the (msdebug) prompt is displayed, set a breakpoint at line 34 in `add_custom.cpp`.
 
-```text
+```shell
 b add_custom.cpp:34
 ```
 
@@ -119,7 +119,7 @@ b add_custom.cpp:34
 
 Enter `run` to start the program and wait for the breakpoint to be hit.
 
-```text
+```shell
 run
 ```
 
@@ -145,7 +145,7 @@ Process 163027 stopped
 
 Run the following command at the breakpoint to display all local variables in the current scope:
 
-```text
+```shell
 var
 ```
 
@@ -163,7 +163,7 @@ Output example:
 
 ##### 2.3.3.5 Viewing the Register Value
 
-```text
+```shell
 register read -a
 ```
 
@@ -184,7 +184,7 @@ Output example:
 
 ##### 2.3.3.6 Querying Device Information
 
-```text
+```shell
 ascend info devices
 ```
 
@@ -198,7 +198,7 @@ Output example:
 
 ##### 2.3.3.7 Querying AI Core Information of an Operator
 
-```text
+```shell
 ascend info cores
 ```
 
@@ -268,7 +268,7 @@ Output example:
 
 ##### 2.3.3.11 Exiting the Debugger
 
-```text
+```shell
 q
 y
 ```

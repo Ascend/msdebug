@@ -115,7 +115,7 @@ ld.lld: error: undefined symbol: g_opSystemRunCfg
 
 **解决方案**
 
-需要去掉编译选项`- DL2_CACHE_HINT`。
+需要去掉编译选项`-DL2_CACHE_HINT`。
 
 ## 命中断点的代码位置与预期不符
 

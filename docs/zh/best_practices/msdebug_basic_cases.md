@@ -478,7 +478,7 @@
 
 4. 运行算子程序，等待直到命中断点。
 
-    程序会开始运行直到命中第一个断点（basic_matmul.hpp:127）后停下，msDebug检测到NPU核函数开始运行，运行在Device 0。
+    程序会开始运行直到命中第一个断点（basic_matmul.hpp:121）后停下，msDebug检测到NPU核函数开始运行，运行在Device 0。
 
     ```cpp
     (msdebug) run

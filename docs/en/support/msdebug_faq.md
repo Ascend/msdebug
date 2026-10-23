@@ -28,7 +28,7 @@ void Foo(const LocalTensor<float> &a); // The variable a can be printed normally
 
 **Symptom**
 
-The message `msdebug failed to initialize. please install HDK with –debug before debugging` is displayed.
+The message `msdebug failed to initialize. please install HDK with –-debug before debugging` is displayed.
 
 **Possible Causes**
 
