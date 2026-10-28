@@ -190,7 +190,11 @@ public:
     if (bytes != nullptr && length > 0) {
       m_type = eTypeBytes;
       m_data.inst.length = length;
+#ifdef MS_DEBUGGER
+      assert(length <= sizeof(m_data.inst.bytes));
+#else
       assert(length < sizeof(m_data.inst.bytes));
+#endif
       memcpy(m_data.inst.bytes, bytes, length);
       m_byte_order = lldb::eByteOrderInvalid;
     } else {
@@ -267,8 +271,12 @@ protected:
     uint32_t inst32;
     uint64_t inst64;
     struct {
+#ifdef MS_DEBUGGER
+      uint8_t bytes[32]; // 昇腾指令最长为 32 字节。
+#else
       uint8_t bytes[16]; // This must be big enough to handle any opcode for any
                          // supported target.
+#endif
       uint8_t length;
     } inst;
   } m_data;

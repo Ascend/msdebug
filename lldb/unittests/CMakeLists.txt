@@ -34,6 +34,11 @@ function(add_lldb_unittest test_name)
     COMMAND "${CMAKE_COMMAND}" -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Inputs)
 
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
+  if(MS_DEBUGGER)
+    # Module destruction calls AscendObjdumpText, including in tests that only
+    # depend on lldbCore indirectly. Keep the provider after lldbCore.
+    target_link_libraries(${test_name} PRIVATE lldbCore lldbPluginDisassemblerLLVMC)
+  endif()
 endfunction()
 
 function(add_unittest_inputs test_name inputs)

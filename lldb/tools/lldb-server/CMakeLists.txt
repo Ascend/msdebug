@@ -67,3 +67,8 @@ add_dependencies(lldb-server
 )
 target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
+
+if(MS_DEBUGGER)
+  # Resolve Module's AscendObjdumpText references after loading lldbCore.
+  target_link_libraries(lldb-server PRIVATE lldbCore lldbPluginDisassemblerLLVMC)
+endif()

@@ -75,7 +75,7 @@ The following products are supported:
 - Ascend 950 products
 
 > [!NOTE]
-> 
+>
 >- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/en/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
 >- For details about the supported functions, see the documentation of the corresponding function module.
 
@@ -375,7 +375,7 @@ Command Options Usage:
 </table>
 
 > [!NOTE]
-> 
+>
 > - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop_reason` is `CUBE_ERROR`, `CCU_ERROR`, `MTE_ERROR`, `VEC_ERROR`, and `FIXP_ERROR`.
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
@@ -396,7 +396,7 @@ Before debugging an operator, enable the debugging `-g -O0` option and recompile
 The msDebug tool can be started in either of the following ways.
 
 > [!NOTE]
-> 
+>
 > If `Cannot read termcap database; using dumb terminal settings` is displayed, configure `export TERMINFO=xx` to eliminate the message. `xx` indicates the local TERMINFO path.
 >
 > ```bash
@@ -412,7 +412,7 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]
-        > 
+        >
         > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> [Kernel Launch](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md) in *Ascend C Operator Development Guide*.
         > - If the executable file has other input parameters, pass them as follows:
         >
@@ -436,7 +436,7 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]
-        > 
+        >
         > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
 
 **Exiting Debugging**
@@ -449,7 +449,7 @@ Exit the debugger.
 ```
 
 > [!NOTE]
-> 
+>
 > The debugging channel cannot be disabled independently. To disable the debugging channel, you need to enable the overwrite mode. For details, see the NPU driver and firmware installation documents.
 
 **Specifying a Device ID (MC2 Operator Scenario)**
@@ -461,7 +461,7 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 - Issue isolation: If a performance or function issue occurs, you can specify different device IDs to check whether the issue is caused by a specific device, thereby making it easier to locate the issue.
 
 > [!NOTE]
-> 
+>
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
 > - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > [HCCL Kernel APIs](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/ascendcopapi/docs/api/SIMD-API/%E9%AB%98%E9%98%B6API/HCCL%E9%80%9A%E4%BF%A1%E7%B1%BB/HCCL-Kernel%E4%BE%A7%E6%8E%A5%E5%8F%A3/HCCL%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md) in *Ascend C Operator Development API Reference*.
 
@@ -716,7 +716,7 @@ The actual values of `GlobalTensor` variables are stored in the GM. Run the foll
 ```
 
 > [!NOTE]
-> 
+>
 > - If you want to print other custom addresses, ensure the validity of the custom addresses. Otherwise, errors may occur during operator running.
 > - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
 > - Currently, GM memory can be read and displayed when the breakpoint stops on the Kernel side or the host side.
@@ -829,7 +829,7 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
     ```
 
     > [!NOTE]
-    > 
+    >
     > - If the current core is stopped due to both step-by-step debugging and breakpoints, "breakpoint" is displayed.
     > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows:
     >    - The user program itself has an infinite loop, which needs to be rectified by repairing the program.
@@ -891,7 +891,7 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
     ```
 
     > [!NOTE]
-    > 
+    >
     > If the current core is stopped due to both function debugging and breakpoints, `breakpoint` is displayed.
 
 4. After debugging the CopyOut function, run the `finish` command to exit the CopyOut function and return to the main program to continue execution.
@@ -1110,7 +1110,7 @@ Run the following command to query the information about the device where the op
 ```
 
 > [!NOTE]
-> 
+>
 > In the MC2 operator scenario, multiple device IDs are displayed.
 
 For details about the command output, see the following table.
@@ -1374,16 +1374,16 @@ If you enable the dump function for abnormal operators, you cannot use other fun
 1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581) in *Application Development Guide (C&C++)*.
 
     > [!NOTE]
-    > 
+    >
     > Use either of the following methods:
-    > 
+    >
     > 1. Run the following command to set the `dump_scene` parameter to `aic_err_detail_dump` and configure the `dump_path` parameter to the path for exporting the core file of the abnormal operator.
-    > 
+    >
     >     ```bash
     >     export ASCEND_DUMP_SCENE="aic_err_detail_dump"
     >     export ASCEND_DUMP_PATH="output"
     >     ```
-    > 
+    >
     > 2. In the `acl.json` configuration file, set the `dump_scene` parameter to `aic_err_detail_dump` and configure the `dump_path` parameter to the path for exporting the core file of the abnormal operator.
 
 2. When an aic_error exception occurs during operator running (for example, out-of-bounds memory access), a core file of the abnormal operator is generated. The file name ends with `.core`.
@@ -1400,7 +1400,7 @@ If you enable the dump function for abnormal operators, you cannot use other fun
     ```
 
     > [!NOTE]
-    > 
+    >
     > To view the call stack, use the `-O2/O3 + -g` option to compile and generate the `kernel.o` file that contains debugging information, or generate the ELF file of the fatbin structure.
     >
     > Cause: During operator execution, if a hardware exception occurs due to instruction execution, the hardware usually continues to execute several instructions before reporting the exception and generating a core file. Therefore, the memory and register data in the core file may be inaccurate. However, the value of the PC register is usually corrected.

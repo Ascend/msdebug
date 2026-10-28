@@ -64,8 +64,10 @@ public:
   uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
 #ifdef MS_DEBUGGER
+  // 完整 Address 同时提供所属模块和 FileAddress，用于选择表及指令边界。
   static uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
-                            const ArchSpec &arch, uint64_t &flag);
+                            const ArchSpec &arch, uint64_t &flag,
+                            const Address &address);
   static bool CanBranch(uint64_t flags);
   static bool IsCall(uint64_t flags);
 #endif
@@ -465,6 +467,22 @@ public:
       const ArchSpec &arch = disasm->GetArchitecture();
       const lldb::ByteOrder byte_order = data.GetByteOrder();
 
+#ifdef MS_DEBUGGER
+      if (arch.GetTriple().getArchName() == "hiipu64") {
+        uint64_t flags = 0;
+        const size_t inst_size = DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
+            data.PeekData(data_offset, 1), data.BytesLeft(data_offset), arch,
+            flags, m_address);
+        if (inst_size == 0)
+          return 0;
+        // 解析时确定全部指令边界和机器码，打印阶段不再修改长度。
+        m_opcode.SetOpcodeBytes(data.PeekData(data_offset, inst_size),
+                                inst_size);
+        m_is_valid = true;
+        return inst_size;
+      }
+#endif
+
       const uint32_t min_op_byte_size = arch.GetMinimumOpcodeByteSize();
       const uint32_t max_op_byte_size = arch.GetMaximumOpcodeByteSize();
       if (min_op_byte_size == max_op_byte_size) {
@@ -532,25 +550,11 @@ public:
           const addr_t pc = m_address.GetFileAddress();
           llvm::MCInst inst;
 #ifdef MS_DEBUGGER
-          size_t inst_size {0U};
-          auto disasm_wp = m_disasm_wp.lock();
-          if (disasm_wp && !disasm_wp->IsValid()) {
-            uint64_t flags{};
-            const ArchSpec &arch = disasm->GetArchitecture();
-            inst_size = DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
-                opcode_data, opcode_data_len, arch, flags);
-          } else {
-            if (!mc_disasm_ptr) {
-              Log *log = GetLog(LLDBLog::Process);
-              LLDB_LOGF(log, "GetDisasmToUse failed. mc_disasm_ptr is nullptr");
-              return 0;
-            }
-            inst_size = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-          }
-#else
-          const size_t inst_size =
-            mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
+          if (!mc_disasm_ptr)
+            return 0;
 #endif
+          const size_t inst_size =
+              mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
           if (inst_size == 0) {
             m_opcode.Clear();
           } else {
@@ -632,16 +636,49 @@ public:
         const uint8_t *opcode_data = data.GetDataStart();
         const size_t opcode_data_len = data.GetByteSize();
         llvm::MCInst inst;
+
 #ifdef MS_DEBUGGER
-        auto disasm_wp = m_disasm_wp.lock();
-        if (disasm_wp && !disasm_wp->IsValid() || !mc_disasm_ptr) {
-          Log *log = GetLog(LLDBLog::Process);
-          LLDB_LOGF(log, "can not use disassembly raw logical in function CalculateMnemonicOperandsAndComment");
+        // hiipu64：标准 MC 无此后端 → objdump 文本查表
+        // mc_disasm_ptr 对 hiipu64 恒为空（lookupTarget 找不到 Ascend MC
+        // 目标）， 不能走标准 MC 流程。改用 AscendObjdumpText 离线查表。
+        // 查表键 = FileAddress（与 objdump 输出地址天然同键）
+        const addr_t objdump_fa = m_address.GetFileAddress();
+        if (disasm->GetArchitecture().GetTriple().getArchName() == "hiipu64" &&
+            objdump_fa != LLDB_INVALID_ADDRESS) {
+          std::string text = AscendObjdumpText::Lookup(m_address);
+          if (!text.empty()) {
+            // 命中：填助记符 + 操作数 + markup 版本
+            const size_t sp = text.find(' ');
+            const std::string mn =
+                (sp == std::string::npos) ? text : text.substr(0, sp);
+            const std::string op =
+                (sp == std::string::npos) ? std::string() : text.substr(sp + 1);
+            m_opcode_name.assign(mn);
+            m_mnemonics.assign(op);
+            m_markup_opcode_name.assign(mn);
+            m_markup_mnemonics.assign(op);
+            return; // 只填充显示文本，不改变解析阶段确定的指令边界。
+          }
+          // 未命中时不借用其他架构的 MC 解码器。
+        }
+        // ===== 非 hiipu64 或查表未命中的架构 → 标准流程 =====
+        // 守卫：mc_disasm_ptr 为空时不可调 GetMCInst（会段错误）
+        if (!mc_disasm_ptr) {
+          LLDB_LOGF(GetLog(LLDBLog::Process),
+                    "mc_disasm_ptr is null, cannot decode at pc=0x%llx",
+                    (unsigned long long)pc);
           return;
         }
 #endif
         size_t inst_size =
             mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
+
+#ifdef MS_DEBUGGER
+        if (inst_size == 0) {
+          LLDB_LOGF(GetLog(LLDBLog::Process), "unknown opcode at pc=0x%llx",
+                    (unsigned long long)pc);
+        }
+#endif
 
         if (inst_size > 0) {
           mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
@@ -1254,7 +1291,7 @@ protected:
         uint64_t flags {0};
         const ArchSpec &arch = disasm->GetArchitecture();
         if (DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
-                opcode_data, opcode_data_len, arch, flags) == 0) {
+                opcode_data, opcode_data_len, arch, flags, m_address) == 0) {
           return;
         }
         m_has_visited_instruction = true;
@@ -1425,10 +1462,20 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 #ifdef MS_DEBUGGER
 uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
     const uint8_t *opcode_data, size_t opcode_data_len, const ArchSpec &arch,
-    uint64_t &flags) {
-  uint64_t inst_size;
+    uint64_t &flags, const Address &address) {
+  // 表中记录的机器码长度是唯一边界来源；未命中或缓冲不足就停止解析。
+  const uint64_t inst_size = AscendObjdumpText::GetInstructionSize(address);
+  if (inst_size == 0 || inst_size > opcode_data_len) {
+    LLDB_LOG(GetLog(LLDBLog::Process),
+             "cannot decode device instruction at {0:x}: table size={1}, "
+             "available bytes={2}",
+             address.GetFileAddress(), inst_size, opcode_data_len);
+    return 0;
+  }
+  // SoC 表仅提供 Branch/Call/Ret 标志，不使用其基于 POS 类型推测的长度。
+  uint64_t ignored_size = 0;
   AscendDisassemblerHelper::GetInstruction(opcode_data, opcode_data_len, arch,
-                                           flags, inst_size);
+                                           flags, ignored_size);
   return inst_size;
 }
 #endif

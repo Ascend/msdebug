@@ -27,10 +27,7 @@
 
 #include <memory>
 #include <optional>
-#ifdef MS_DEBUGGER
-#include "llvm/Support/SHA256.h"
-#include <iomanip>
-#endif
+#include <sstream>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -426,14 +423,6 @@ static bool LoadModuleFromDeviceBinary(const DeviceBinaryInfo &info, ModuleSP &d
   static size_t device_module_num = 0;
   DataBufferSP data_buf;
   data_buf.reset(new DataBufferHeap(info.binary.data(), info.binary.size()));
-  llvm::SHA256 hasher;
-  std::array<uint8_t, 32> result = hasher.hash(data_buf->GetData());
-  std::stringstream ss;
-  for (const uint8_t byte : result) {
-    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned int>(byte);
-  }
-  LLDB_LOG(log, "device binary hash={0}", ss.str());
-
   FileSpec fspec("device_debugdata_" + std::to_string(device_module_num));
   auto device_module_spec = std::make_shared<ModuleSpec>(fspec, UUID(), data_buf);
 

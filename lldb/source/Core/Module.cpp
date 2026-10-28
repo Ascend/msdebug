@@ -8,6 +8,10 @@
 
 #include "lldb/Core/Module.h"
 
+#ifdef MS_DEBUGGER
+#include "Plugins/Disassembler/LLVMC/AscendDisassemblerHelper.h"
+#endif
+
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/AddressResolverFileLine.h"
 #include "lldb/Core/DataFileCache.h"
@@ -261,6 +265,10 @@ Module::Module() : m_file_has_changed(false), m_first_file_changed_log(false) {
 }
 
 Module::~Module() {
+#ifdef MS_DEBUGGER
+  // 在获取 Module 锁之前清理，避免与查表时的锁顺序相反。
+  AscendObjdumpText::RemoveExpiredModules();
+#endif
   // Lock our module down while we tear everything down to make sure we don't
   // get any access to the module while it is being destroyed
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -740,7 +748,7 @@ bool Module::LookupInfo::NameMatchesLookupInfo(
     return true;
 
   // If function_name is mangled, we'll need to demangle it.
-  // In the pathologial case where the function name "looks" mangled but is
+  // In the pathological case where the function name "looks" mangled but is
   // actually demangled (e.g. a method named _Zonk), this operation should be
   // relatively inexpensive since no demangling is actually occuring. See
   // Mangled::SetValue for more context.

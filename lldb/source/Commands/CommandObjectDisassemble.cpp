@@ -21,6 +21,12 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#ifdef MS_DEBUGGER
+#include "lldb/Target/Process.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/MessageDefines.h"
+#endif
 
 static constexpr unsigned default_disasm_byte_size = 32;
 static constexpr unsigned default_disasm_num_ins = 4;
@@ -440,6 +446,33 @@ CommandObjectDisassemble::GetRangesForSelectedMode(
 void CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
   Target *target = &GetSelectedTarget();
+
+#ifdef MS_DEBUGGER
+  // 设备停驻时使用 hiipu64，并带上 SOC/POS 类型，避免按宿主架构解码设备代码。
+  ProcessSP process = target->GetProcessSP();
+  if (process && process->IsStopInDevice()) {
+    DeviceStopInfo stop_info;
+    process->GetDeviceStopInfoCached(stop_info);
+    if (!m_options.arch.IsValid())
+      m_options.arch = ArchSpec("hiipu64");
+    if (m_options.arch.GetTriple().getArchName() == "hiipu64") {
+      m_options.arch.SetSocType(stop_info.soc_type);
+      m_options.arch.SetPosType(stop_info.pos_type);
+      Log *log = GetLog(LLDBLog::Process);
+      LLDB_LOG(log,
+               "dis: stopped in device, arch={0}, soc_type={1}, pos_type={2}",
+               m_options.arch.GetArchitectureName(),
+               GetSocName(m_options.arch.GetSocType()),
+               GetPosName(m_options.arch.GetPosType()));
+    } else {
+      Log *log = GetLog(LLDBLog::Process);
+      LLDB_LOG(log,
+               "dis: stopped in device but arch is {0}, device code will be "
+               "decoded with the wrong instruction set",
+               m_options.arch.GetArchitectureName());
+    }
+  }
+#endif
 
   if (!m_options.arch.IsValid())
     m_options.arch = target->GetArchitecture();
