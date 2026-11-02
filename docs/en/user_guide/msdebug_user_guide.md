@@ -277,6 +277,25 @@ The following products are supported:
 re r $PC</pre>
 </td>
 </tr>
+<tr id="row_disassemble"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p>disassemble</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p>dis</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p>View the disassembly. </p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap">dis
+dis -c 8
+dis -p
+dis -b
+dis -m</pre>
+<ul>
+<li>-c/--count N: Specify the instruction count for disassembly.</li>
+<li>-p/--pc: Displays instructions starting at the current PC. </li>
+<li>-b/--bytes: Displays opcode bytes alongside assembly code.</li>
+<li>-m/--mixed: Displays source code and assembly code together.</li>
+</ul>
+</td>
+</tr>
 <tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row7330039457"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p8508131103816">thread step-over</p>
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p19509121153810">next or n</p>
@@ -911,6 +930,104 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
        87   }
     ```
 
+## Disassembly
+
+### Function
+
+Use the `disassemble` (abbreviated as `dis`) command to view the current function's disassembly when paused within a device operator, aiding in source-to-instruction analysis. This command also works after loading an exception operator dump file containing device ELF and readable code.
+
+### Precautions
+
+CANN 9.2.0 or later is required.
+
+### Example
+
+**Viewing Disassembly**
+
+After the program stops at a device breakpoint, enter `dis` to view the device disassembly.
+
+```text
+(msdebug) dis
+device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+    0x12004cc00560 <+0>:    S2R                 R3, WARP_STACK_SIZE wait:0b0000001 stall:9
+    0x12004cc00568 <+8>:    SHFI.R.u32          R3, R3, #5 wait:0b0000000 stall:2
+    0x12004cc00570 <+16>:   IADD                R2, R3, #-32 wait:0b0000000 stall:1
+    0x12004cc00580 <+32>:   IADD                R4, S32, #31 wait:0b0000000 stall:1
+    0x12004cc00590 <+48>:   S2R                 R8, BLOCK_DIM_X wait:0b0000000 stall:1
+    0x12004cc00598 <+56>:   MOV                 R11, S10 wait:0b0000000 stall:1
+    0x12004cc005a0 <+64>:   S2R                 R10, TID_X wait:0b0000000 stall:1
+    0x12004cc005a8 <+72>:   SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:1
+    0x12004cc005b0 <+80>:   S2R                 R15, LANE_ID wait:0b0000000 stall:1
+    0x12004cc005b8 <+88>:   SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+->  0x12004cc005c0 <+96>:   IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+    0x12004cc005c8 <+104>:  IADD                R4, R4, R5 wait:0b0000000 stall:3
+...
+```
+
+The arrow indicates the current PC. By default, all disassembled instructions of the current kernel are displayed. Use `-c` to set the number of instructions to display.
+
+**Viewing Instructions Around the Current PC**
+
+Enter `dis -p` to view device instructions near the current PC.
+
+```text
+(msdebug) dis -p
+device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
+    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
+    0x12004cc005d8 <+120>: SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:2
+```
+
+Four instructions are displayed by default. Use `-c` to set the number of instructions to display.
+
+**Displaying Source Code and Disassembly Together**
+
+Enter `dis -m` to view source code and disassembled instructions together.
+
+```text
+(msdebug) dis -m
+...
+** 42       int tiles_x = (width + warpSize - 1) / warpSize; // Number of warp-sized tiles across the image width (32 columns per tile)
+
+    0x12004cc005b8 <+88>:  SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+
+-> 39       uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+
+** 42       int tiles_x = (width + warpSize - 1) / warpSize; // Number of warp-sized tiles across the image width (32 columns per tile)
+
+    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
+    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
+...
+```
+
+By default, source code and disassembly for the entire kernel are displayed. Use `-c` to set the number of instructions to display.
+
+**Displaying Opcode Bytes and Disassembly Together**
+
+Enter `dis -b` to view opcode bytes and disassembled instructions together.
+
+```text
+(msdebug) dis -b
+device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+    0x12004cc00560 <+0>:    5c 06 9e 02 00 2e 00 06                          S2R                 R3, WARP_STACK_SIZE wait:0b0000001 stall:9
+    0x12004cc00568 <+8>:    9c 00 0e 12 08 0a 06 06                          SHFI.R.u32          R3, R3, #5 wait:0b0000000 stall:2
+    0x12004cc00570 <+16>:   5d 00 0e 00 00 00 06 04 01 00 00 00 e0 ff ff ff  IADD                R2, R3, #-32 wait:0b0000000 stall:1
+    0x12004cc00580 <+32>:   5d 00 0e 00 00 00 40 09 01 00 00 00 1f 00 00 00  IADD                R4, S32, #31 wait:0b0000000 stall:1
+    0x12004cc00590 <+48>:   5c 00 9e 02 00 04 00 10                          S2R                 R8, BLOCK_DIM_X wait:0b0000000 stall:1
+    0x12004cc00598 <+56>:   5c 00 9e 00 00 00 14 17                          MOV                 R11, S10 wait:0b0000000 stall:1
+    0x12004cc005a0 <+64>:   5c 00 9e 02 00 0a 00 14                          S2R                 R10, TID_X wait:0b0000000 stall:1
+    0x12004cc005a8 <+72>:   5c 00 0e 12 18 3e 08 0a                          SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:1
+    0x12004cc005b0 <+80>:   5c 00 9e 02 00 10 00 1e                          S2R                 R15, LANE_ID wait:0b0000000 stall:1
+    0x12004cc005b8 <+88>:   9c 01 0e 12 08 36 0a 0a                          SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+->  0x12004cc005c0 <+96>:   5c 00 06 50 00 16 10 10                          IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+...
+```
+
+By default, opcode bytes and disassembly for the entire kernel are displayed. Use `-c` to set the number of instructions to display.
+
 ## Interrupting Execution
 
 ### Function
@@ -1460,11 +1577,22 @@ If you enable the dump function for abnormal operators, you cannot use other fun
        8            STACK                    GM/DCACHE                0xff000240000                  32768             47         AIV        NA
        9            ARGS                     GM/DCACHE               0x12c100000000                   24               NA          NA        NA
 
-     (msdebug)
+    (msdebug) dis
+    device_debugdata`add_demo:
+        0x124000000000 <+0>:   MOV                 X29, #32672
 
+    device_debugdata`add_demo:
+        0x124000000004 <+4>:   MOVK                X29, #16, #1
+
+    device_debugdata`add_demo:
+        0x124000000008 <+8>:   MOV                 X15, SYS_VA_BASE
+        0x12400000000c <+12>:  ADD.s64             X29, X29, X15
+        0x124000000010 <+16>:  MOV                 X15, COREID
+        0x124000000014 <+20>:  MOV                 X16, #32767
+    ...
     ```
 
-5. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), [Memory and Variable Printing](#memory-and-variable-printing), and [SIMT Thread Switching](#simt-thread-switching).
+5. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), [Memory and Variable Printing](#memory-and-variable-printing), and [Disassembly](#disassembly).
 6. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash

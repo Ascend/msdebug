@@ -277,6 +277,25 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
 re r $PC</pre>
 </td>
 </tr>
+<tr id="row_disassemble"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p>disassemble</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p>dis</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p>查看反汇编指令。</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap">dis
+dis -c 8
+dis -p
+dis -b
+dis -m</pre>
+<ul>
+<li>-c/--count N：指定指令条数。</li>
+<li>-p/--pc：从当前pc开始显示。</li>
+<li>-b/--bytes：同时显示操作码字节和汇编代码。</li>
+<li>-m/--mixed：同时显示源码和汇编代码。</li>
+</ul>
+</td>
+</tr>
 <tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row7330039457"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p8508131103816">thread step-over</p>
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p19509121153810">next或n</p>
@@ -931,6 +950,104 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
        87   }
     ```
 
+## 反汇编功能介绍
+
+### 功能说明
+
+当程序暂停在设备算子内部时，可使用disassemble（缩写dis）命令查看当前函数的反汇编指令，以辅助分析源码与指令的对应关系。此外，在加载包含设备ELF及可读取代码的异常算子dump文件后，也可使用该命令查看反汇编指令。
+
+### 注意事项
+
+需要保证cann版本>=9.2.0
+
+### 使用示例
+
+**查看反汇编代码**
+
+程序停在设备断点后，输入`dis`查看设备反汇编指令
+
+```text
+(msdebug) dis
+device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+    0x12004cc00560 <+0>:    S2R                 R3, WARP_STACK_SIZE wait:0b0000001 stall:9
+    0x12004cc00568 <+8>:    SHFI.R.u32          R3, R3, #5 wait:0b0000000 stall:2
+    0x12004cc00570 <+16>:   IADD                R2, R3, #-32 wait:0b0000000 stall:1
+    0x12004cc00580 <+32>:   IADD                R4, S32, #31 wait:0b0000000 stall:1
+    0x12004cc00590 <+48>:   S2R                 R8, BLOCK_DIM_X wait:0b0000000 stall:1
+    0x12004cc00598 <+56>:   MOV                 R11, S10 wait:0b0000000 stall:1
+    0x12004cc005a0 <+64>:   S2R                 R10, TID_X wait:0b0000000 stall:1
+    0x12004cc005a8 <+72>:   SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:1
+    0x12004cc005b0 <+80>:   S2R                 R15, LANE_ID wait:0b0000000 stall:1
+    0x12004cc005b8 <+88>:   SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+->  0x12004cc005c0 <+96>:   IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+    0x12004cc005c8 <+104>:  IADD                R4, R4, R5 wait:0b0000000 stall:3
+...
+```
+
+箭头指示的是当前pc，默认展示当前kernel的所有反汇编代码，可使用`-c`设置页大小。
+
+**查看当前PC附近的指令**
+
+输入`dis -p`查看当前pc附近的设备反汇编指令。
+
+```text
+(msdebug) dis -p
+device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
+    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
+    0x12004cc005d8 <+120>: SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:2
+```
+
+默认展示4条反汇编指令，可使用`-c`设置页大小。
+
+**显示源码的反汇编**
+
+输入 `dis -m` 命令
+
+```text
+(msdebug) dis -m
+...
+** 42       int tiles_x = (width + warpSize - 1) / warpSize; // 图像宽度方向按warp分块的块数（每块32列）
+
+    0x12004cc005b8 <+88>:  SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+
+-> 39       uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+
+** 42       int tiles_x = (width + warpSize - 1) / warpSize; // 图像宽度方向按warp分块的块数（每块32列）
+
+    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
+    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
+...
+```
+
+默认展示整个kernel的源码和反汇编代码，可使用`-c`设置页大小。
+
+**显示操作字节码的反汇编**
+
+输入 `dis -b` 命令
+
+```text
+(msdebug) dis -b
+device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+    0x12004cc00560 <+0>:    5c 06 9e 02 00 2e 00 06                          S2R                 R3, WARP_STACK_SIZE wait:0b0000001 stall:9
+    0x12004cc00568 <+8>:    9c 00 0e 12 08 0a 06 06                          SHFI.R.u32          R3, R3, #5 wait:0b0000000 stall:2
+    0x12004cc00570 <+16>:   5d 00 0e 00 00 00 06 04 01 00 00 00 e0 ff ff ff  IADD                R2, R3, #-32 wait:0b0000000 stall:1
+    0x12004cc00580 <+32>:   5d 00 0e 00 00 00 40 09 01 00 00 00 1f 00 00 00  IADD                R4, S32, #31 wait:0b0000000 stall:1
+    0x12004cc00590 <+48>:   5c 00 9e 02 00 04 00 10                          S2R                 R8, BLOCK_DIM_X wait:0b0000000 stall:1
+    0x12004cc00598 <+56>:   5c 00 9e 00 00 00 14 17                          MOV                 R11, S10 wait:0b0000000 stall:1
+    0x12004cc005a0 <+64>:   5c 00 9e 02 00 0a 00 14                          S2R                 R10, TID_X wait:0b0000000 stall:1
+    0x12004cc005a8 <+72>:   5c 00 0e 12 18 3e 08 0a                          SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:1
+    0x12004cc005b0 <+80>:   5c 00 9e 02 00 10 00 1e                          S2R                 R15, LANE_ID wait:0b0000000 stall:1
+    0x12004cc005b8 <+88>:   9c 01 0e 12 08 36 0a 0a                          SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+->  0x12004cc005c0 <+96>:   5c 00 06 50 00 16 10 10                          IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+...
+```
+
+默认展示整个kernel的操作字节码和反汇编代码，可使用`-c`设置页大小。
+
 ## 中断运行功能介绍
 
 ### 功能说明
@@ -1480,11 +1597,22 @@ Current stop state of all blocks:
        8            STACK                    GM/DCACHE                0xff000240000                  32768             47         AIV        NA
        9            ARGS                     GM/DCACHE               0x12c100000000                   24               NA          NA        NA
 
-     (msdebug)
+    (msdebug) dis
+    device_debugdata`add_demo:
+        0x124000000000 <+0>:   MOV                 X29, #32672
 
-     ```
+    device_debugdata`add_demo:
+        0x124000000004 <+4>:   MOVK                X29, #16, #1
 
-5. 请参考[核切换功能介绍](#核切换功能介绍)、[检查程序状态功能介绍](#检查程序状态功能介绍)、[内存与变量打印功能介绍](#内存与变量打印功能介绍)以及[SIMT线程切换功能介绍](#simt线程切换功能介绍)章节的内存打印相关操作定位硬件异常。
+    device_debugdata`add_demo:
+        0x124000000008 <+8>:   MOV                 X15, SYS_VA_BASE
+        0x12400000000c <+12>:  ADD.s64             X29, X29, X15
+        0x124000000010 <+16>:  MOV                 X15, COREID
+        0x124000000014 <+20>:  MOV                 X16, #32767
+    ...
+    ```
+
+5. 请参考[核切换功能介绍](#核切换功能介绍)、[检查程序状态功能介绍](#检查程序状态功能介绍)、[内存与变量打印功能介绍](#内存与变量打印功能介绍)、[反汇编功能介绍](#反汇编功能介绍)以及[SIMT线程切换功能介绍](#simt线程切换功能介绍)章节的相关操作定位硬件异常。
 6. 调试完以后，执行`q`命令并输入Y或y结束调试。
 
     ```bash

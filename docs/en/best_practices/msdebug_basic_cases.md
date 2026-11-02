@@ -26,7 +26,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     2. Compile the operator.
 
         > [!NOTE]
-        > 
+        >
         > In non-initial scenarios, you can run the `make clean && make` command instead of the `make` command.
 
         ```bash
@@ -67,7 +67,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         frame #0: 0x0000000000004974 device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x000000000019a930, progress=0) at add_kernel.cpp:69:9
        66              // call Add instr for computation
        67              Add(zLocal, xLocal, yLocal, TILE_LENGTH);
-       68              // enque the output tensor to VECOUT queue
+       68              // enqueue the output tensor to VECOUT queue
     -> 69              outQueueZ.EnQue<int16_t>(zLocal);  # Breakpoint position
        70              // free input tensors for reuse
        71              inQueueX.FreeTensor(xLocal);
@@ -103,7 +103,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         - Print the data stored in LocalTensor in the UB memory.
 
             > [!NOTE]
-            > 
+            >
             > For details about the start address for printing the UB memory, see the `bufferAddr` parameter in the `address_` field of the LocalTensor variable. The following uses the `xLocal` variable as an example. The start address of the memory is 0.
 
             ```bash
@@ -126,7 +126,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         - Print the data stored in GlobalTensor in the GM.
 
             > [!NOTE]
-            > 
+            >
             > For details about the start address for GM memory printing, see the `address_` field of the GlobalTensor variable. The following uses the `xGm` variable as an example. The start address of the memory is 0x00001240c0015000.
 
             ```bash
@@ -155,7 +155,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
             frame #0: 0x0000000000004974 device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x00000000001c6930, progress=0) at add_kernel.cpp:69:9
            66              // call Add instr for computation
            67              Add(zLocal, xLocal, yLocal, TILE_LENGTH);
-           68              // enque the output tensor to VECOUT queue
+           68              // enqueue the output tensor to VECOUT queue
         -> 69              outQueueZ.EnQue<int16_t>(zLocal);
                         ^
            70              // free input tensors for reuse
@@ -288,7 +288,7 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     ```
 
     > [!NOTE]
-    > 
+    >
     > For details about the subsequent debugging process, see [Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage), [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 ## Debugging the Operators Called by a PyTorch Interface
@@ -342,7 +342,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     ```
 
     > [!NOTE]
-    > 
+    >
     > The sample project directory is as follows:
     >
     > ```text
@@ -425,7 +425,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     ```
 
     > [!NOTE]
-    > 
+    >
     > For details about other debugging operations, see [Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage), [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), [Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 9. Delete the breakpoint. For details, see [Setting Breakpoints](../user_guide/msdebug_user_guide.md#breakpoint-setting).
@@ -499,7 +499,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     ```
 
     > [!NOTE]
-    > 
+    >
     > `_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo` indicates the kernel name of the template library. Only the first 64 characters are displayed in the example.
 
 5. Review information.
@@ -557,8 +557,19 @@ This section shows how to use msDebug to debug a template library operator (matm
         (uint32_t) $1 = 0
         ```
 
+    - Show disassembly around the current breakpoint.
+
+        ```cpp
+        (msdebug) dis -p
+        device_debugdata_0`void Catlass::Gemm::Kernel::BasicMatmul<Catlass::Gemm::Block::BlockMmad<Catlass::Gemm::MmadAtlasA2Pingpong<true>, Catlass::GemmShape<128u, 256u, 256u>, Catlass::GemmShape<128u, 256u, 64u>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void, Catlass::Gemm::Tile::TileCopy<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, Catlass::Gemm::Tile::TileMmad<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, void>, void, Catlass::Gemm::Block::GemmIdentityBlockSwizzle<3u, 0u>>::operator()<1>(Catlass::Gemm::Kernel::BasicMatmul<Catlass::Gemm::Block::BlockMmad<Catlass::Gemm::MmadAtlasA2Pingpong<true>, Catlass::GemmShape<128u, 256u, 256u>, Catlass::GemmShape<128u, 256u, 64u>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void, Catlass::Gemm::Tile::TileCopy<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, Catlass::Gemm::Tile::TileMmad<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, void>, void, Catlass::Gemm::Block::GemmIdentityBlockSwizzle<3u, 0u>>::Params const&) (.cube):
+        ->  0x12c041400de4 <+556>: LD.b32                        X1, [X30], #-1508, #0
+            0x12c041400de8 <+560>: BAR.ALL                       <_ZN7AscendCL23CheckLoadData2dDatatypeIDhEEvv.cube+0x6>
+            0x12c041400dec <+564>: ST.b64                        X2, [X30], #-1808, #0
+            0x12c041400df0 <+568>: ADD.s64                       X0, X30, #352
+        ```
+
     > [!NOTE]
-    > 
+    >
     > For details about other debugging operations, see [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), [Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
 6. Query and delete breakpoints to resume program execution.

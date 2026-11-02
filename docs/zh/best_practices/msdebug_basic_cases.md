@@ -26,9 +26,9 @@
     2. 执行以下命令完成算子编译。
 
         > [!NOTE]
-        > 
+        >
         > 非首次场景，可以使用make clean && make命令替代make命令。
-        
+
         ```bash
         cd ./mstt/sample/normal_sample/vec_only/
         make clean && make
@@ -103,7 +103,7 @@
         - 打印位于UB内存上的LocalTensor中存放的数据。
 
             > [!NOTE]
-            > 
+            >
             > UB内存打印起始地址需参考LocalTensor变量展示的**address_**字段中的bufferAddr参数。此处以变量**xLocal**为例，其内存起始地址为**0**。
 
             ```bash
@@ -126,7 +126,7 @@
         - 打印位于GM内存上的GlobalTensor中存放的数据。
 
             > [!NOTE]
-            > 
+            >
             > GM内存打印的起始地址需参考GlobalTensor变量展示的**address_**字段。此处以变量**xGm**为例，其内存起始地址为**0x00001240c0015000**。
 
             ```bash
@@ -288,7 +288,7 @@
     ```
 
     > [!NOTE]
-    > 
+    >
     > 后续调试过程可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 ## 调试PyTorch接口调用的算子
@@ -342,7 +342,7 @@
     ```
 
     > [!NOTE]
-    > 
+    >
     > PyTorch接入工程的样例工程目录如下：
     >
     > ```text
@@ -425,7 +425,7 @@
     ```
 
     > [!NOTE]
-    > 
+    >
     > 其他调试操作可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 9. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
@@ -478,7 +478,7 @@
 
 4. 运行算子程序，等待直到命中断点。
 
-    程序会开始运行直到命中第一个断点（basic_matmul.hpp:127）后停下，msDebug检测到NPU核函数开始运行，运行在Device 0。
+    程序会开始运行直到命中第一个断点（basic_matmul.hpp:121）后停下，msDebug检测到NPU核函数开始运行，运行在Device 0。
 
     ```cpp
     (msdebug) run
@@ -499,7 +499,7 @@
     ```
 
     > [!NOTE]
-    > 
+    >
     > **_ZN7Catlass13KernelAdapterINS_4Gemm6Kernel11BasicMatmulINS1_5Blo**为模板库的kernel名字，示例仅显示前面64位。
 
 5. 检视信息。
@@ -557,8 +557,19 @@
         (uint32_t) $1 = 0
         ```
 
+    - 查看当前断点附近的反汇编代码。
+
+        ```cpp
+        (msdebug) dis -p
+        device_debugdata_0`void Catlass::Gemm::Kernel::BasicMatmul<Catlass::Gemm::Block::BlockMmad<Catlass::Gemm::MmadAtlasA2Pingpong<true>, Catlass::GemmShape<128u, 256u, 256u>, Catlass::GemmShape<128u, 256u, 64u>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void, Catlass::Gemm::Tile::TileCopy<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, Catlass::Gemm::Tile::TileMmad<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, void>, void, Catlass::Gemm::Block::GemmIdentityBlockSwizzle<3u, 0u>>::operator()<1>(Catlass::Gemm::Kernel::BasicMatmul<Catlass::Gemm::Block::BlockMmad<Catlass::Gemm::MmadAtlasA2Pingpong<true>, Catlass::GemmShape<128u, 256u, 256u>, Catlass::GemmShape<128u, 256u, 64u>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void, Catlass::Gemm::Tile::TileCopy<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, Catlass::Gemm::Tile::TileMmad<Catlass::Arch::AtlasA2, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, Catlass::Gemm::GemmType<half, Catlass::layout::RowMajor, (AscendC::TPosition)0>, void>, void>, void, Catlass::Gemm::Block::GemmIdentityBlockSwizzle<3u, 0u>>::Params const&) (.cube):
+        ->  0x12c041400de4 <+556>: LD.b32                        X1, [X30], #-1508, #0
+            0x12c041400de8 <+560>: BAR.ALL                       <_ZN7AscendCL23CheckLoadData2dDatatypeIDhEEvv.cube+0x6>
+            0x12c041400dec <+564>: ST.b64                        X2, [X30], #-1808, #0
+            0x12c041400df0 <+568>: ADD.s64                       X0, X30, #352
+        ```
+
     > [!NOTE]
-    > 
+    >
     > 其他调试操作可参考[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
 6. 查询并删除断点，恢复程序运行。
