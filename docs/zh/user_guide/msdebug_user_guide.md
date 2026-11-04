@@ -285,17 +285,13 @@ re r $PC</pre>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap">dis
 dis -b -s 0x12c041200270 -e 0x12c041200284
-dis -b -n vec_add_demo -c 8
 dis -b -p -c 8
-dis -b -f -c 8
 dis -b -a 0x12c041200270 --force</pre>
 <ul>
 <li>-c/--count N：指定指令条数。</li>
 <li>-s/--start-address &lt;addr&gt;：起始地址。</li>
 <li>-e/--end-address &lt;addr&gt;：结束地址。</li>
-<li>-n/--name &lt;name&gt;：。</li>
 <li>-p/--pc：从当前pc开始显示。</li>
-<li>-f/--frame：显示当前栈帧函数反汇编。</li>
 <li>-b/--bytes：显示机器码。</li>
 <li>-a/--address &lt;addr&gt;：显示包含该地址的函数反汇编。</li>
 <li>--force：强制反汇编大函数。</li>
@@ -990,11 +986,11 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 ...
 ```
 
-箭头指示的是当前pc，默认展示当前kernel的所有反汇编代码，可使用`-c`设置页大小。
+箭头指示的是当前pc，默认展示当前函数的所有反汇编代码，可使用`-c`指定显示的指令条数。
 
 **查看指定范围的反汇编区域**
 
-- 输入`dis -p`查看当前pc附近的设备反汇编指令。
+- 输入`dis -p`，从当前 PC 开始查看设备反汇编指令。
 
     ```text
     (msdebug) dis -p
@@ -1005,7 +1001,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
         0x12004cc005d8 <+120>: SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:2
     ```
 
-    默认展示4条反汇编指令，可使用`-c`设置页大小。
+    默认展示4条反汇编指令，可使用`-c`指定显示的指令条数。
 
 - 输入`dis -s <addr> -e <addr>`查看指定范围的反汇编指令。
 
@@ -1018,26 +1014,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
         0x12c041200280 <+640>: BAR.ALL             <_Z12vec_add_demoILj2048EEvPfS0_S0_+0x6>
     ```
 
-    `-s`指定的地址必须存在。
-
-- 输入`dis -f`查看当前栈帧函数反汇编指令。
-
-    ```text
-    (msdebug) dis -f
-    device_debugdata_0`vec_add_demo<2048u>:
-        0x12c041200000 <+0>:  MOV                 X0, #1
-
-    device_debugdata_0`vec_add_demo<2048u>:
-        0x12c041200004 <+4>:  NEG.s64             X0, X0
-
-    device_debugdata_0`vec_add_demo<2048u>:
-        0x12c041200008 <+8>:  MOVEMASK            MASK[0], X0 <_Z12vec_add_demoILj2048EEvPfS0_S0_>
-        0x12c04120000c <+12>: MOVEMASK            MASK[1], X0 <_Z12vec_add_demoILj2048EEvPfS0_S0_+0x1>
-        0x12c041200010 <+16>: MOV                 X29, #65440
-    ...
-    ```
-
-    默认展示整个函数的反汇编代码，可使用`-c`设置页大小。
+    起始地址应为当前设备模块中可读取代码区域的有效指令起点；结束地址必须大于起始地址，显示范围不包含结束地址。
 
 - 输入`dis -a <addr>`查看包含该地址的函数的反汇编指令。
 
@@ -1053,7 +1030,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
     ...
     ```
 
-    默认展示整个函数的反汇编代码，可使用`-c`设置页大小。
+    默认展示整个函数的反汇编代码，可使用`-c`指定显示的指令条数。
 
 **显示操作字节码的反汇编**
 
@@ -1076,7 +1053,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 ...
 ```
 
-默认展示整个kernel的操作字节码和反汇编代码，可使用`-c`设置页大小。
+默认展示当前函数的操作字节码和反汇编代码，可使用`-c`指定显示的指令条数。
 
 ## 中断运行功能介绍
 
