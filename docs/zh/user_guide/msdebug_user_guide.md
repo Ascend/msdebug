@@ -284,15 +284,21 @@ re r $PC</pre>
 <td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p>查看反汇编指令。</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap">dis
-dis -c 8
-dis -p
-dis -b
-dis -m</pre>
+dis -b -s 0x12c041200270 -e 0x12c041200284
+dis -b -n vec_add_demo -c 8
+dis -b -p -c 8
+dis -b -f -c 8
+dis -b -a 0x12c041200270 --force</pre>
 <ul>
 <li>-c/--count N：指定指令条数。</li>
+<li>-s/--start-address &lt;addr&gt;：起始地址。</li>
+<li>-e/--end-address &lt;addr&gt;：结束地址。</li>
+<li>-n/--name &lt;name&gt;：。</li>
 <li>-p/--pc：从当前pc开始显示。</li>
-<li>-b/--bytes：同时显示操作码字节和汇编代码。</li>
-<li>-m/--mixed：同时显示源码和汇编代码。</li>
+<li>-f/--frame：显示当前栈帧函数反汇编。</li>
+<li>-b/--bytes：显示机器码。</li>
+<li>-a/--address &lt;addr&gt;：显示包含该地址的函数反汇编。</li>
+<li>--force：强制反汇编大函数。</li>
 </ul>
 </td>
 </tr>
@@ -986,44 +992,68 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 
 箭头指示的是当前pc，默认展示当前kernel的所有反汇编代码，可使用`-c`设置页大小。
 
-**查看当前PC附近的指令**
+**查看指定范围的反汇编区域**
 
-输入`dis -p`查看当前pc附近的设备反汇编指令。
+- 输入`dis -p`查看当前pc附近的设备反汇编指令。
 
-```text
-(msdebug) dis -p
-device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
-->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
-    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
-    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
-    0x12004cc005d8 <+120>: SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:2
-```
+    ```text
+    (msdebug) dis -p
+    device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+    ->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+        0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
+        0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
+        0x12004cc005d8 <+120>: SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:2
+    ```
 
-默认展示4条反汇编指令，可使用`-c`设置页大小。
+    默认展示4条反汇编指令，可使用`-c`设置页大小。
 
-**显示源码的反汇编**
+- 输入`dis -s <addr> -e <addr>`查看指定范围的反汇编指令。
 
-输入 `dis -m` 命令
+    ```text
+    (msdebug) dis -s 0x12c041200274 -e 0x12c041200284
+    device_debugdata_0`vec_add_demo<2048u>:
+        0x12c041200274 <+628>: LD.b64              X2, [X30], #-1864, #0
+        0x12c041200278 <+632>: LD.b64              X3, [X30], #-1856, #0
+    ->  0x12c04120027c <+636>: BAR.ALL             <_Z12vec_add_demoILj2048EEvPfS0_S0_+0x6>
+        0x12c041200280 <+640>: BAR.ALL             <_Z12vec_add_demoILj2048EEvPfS0_S0_+0x6>
+    ```
 
-```text
-(msdebug) dis -m
-...
-** 42       int tiles_x = (width + warpSize - 1) / warpSize; // 图像宽度方向按warp分块的块数（每块32列）
+    `-s`指定的地址必须存在。
 
-    0x12004cc005b8 <+88>:  SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+- 输入`dis -f`查看当前栈帧函数反汇编指令。
 
--> 39       uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    ```text
+    (msdebug) dis -f
+    device_debugdata_0`vec_add_demo<2048u>:
+        0x12c041200000 <+0>:  MOV                 X0, #1
 
-->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+    device_debugdata_0`vec_add_demo<2048u>:
+        0x12c041200004 <+4>:  NEG.s64             X0, X0
 
-** 42       int tiles_x = (width + warpSize - 1) / warpSize; // 图像宽度方向按warp分块的块数（每块32列）
+    device_debugdata_0`vec_add_demo<2048u>:
+        0x12c041200008 <+8>:  MOVEMASK            MASK[0], X0 <_Z12vec_add_demoILj2048EEvPfS0_S0_>
+        0x12c04120000c <+12>: MOVEMASK            MASK[1], X0 <_Z12vec_add_demoILj2048EEvPfS0_S0_+0x1>
+        0x12c041200010 <+16>: MOV                 X29, #65440
+    ...
+    ```
 
-    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
-    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
-...
-```
+    默认展示整个函数的反汇编代码，可使用`-c`设置页大小。
 
-默认展示整个kernel的源码和反汇编代码，可使用`-c`设置页大小。
+- 输入`dis -a <addr>`查看包含该地址的函数的反汇编指令。
+
+    ```text
+    (msdebug) dis -a 0x12c0412005a0
+    device_debugdata_0`void AscendC::DataCopy<float>(AscendC::LocalTensor<float> const&, AscendC::GlobalTensor<float> const&, unsigned int) (.vector):
+        0x12c041200598 <+0>:   ST.b64              X31, [X30], #-1944, #0
+        0x12c04120059c <+4>:   ST.b64              X29, [X30], #-1952, #0
+        0x12c0412005a0 <+8>:   MOV                 X17, #1952
+        0x12c0412005a4 <+12>:  SUB.s64             X29, X30, X17
+        0x12c0412005a8 <+16>:  MOV                 X17, #72
+        0x12c0412005ac <+20>:  SUB.s64             X30, X30, X17
+    ...
+    ```
+
+    默认展示整个函数的反汇编代码，可使用`-c`设置页大小。
 
 **显示操作字节码的反汇编**
 
