@@ -8,7 +8,7 @@
 
 ### 1.1 知识准备
 
-开发前请先阅读《[MindStudio Debugger 架构设计文档](./architecture.md)》，了解代码框架及核心流程。
+开发前请先阅读《[MindStudio Debugger 架构设计文档](https://gitcode.com/Ascend/msdebug/wiki/design%2Farchitecture.md)》，了解代码框架及核心流程。
 
 ### 1.2 环境准备
 

@@ -10,7 +10,7 @@
 
 ### 2.1 代码架构说明
 
-介绍工具的整体架构、代码框架及核心设计思路等，详细请参见《[msDebug架构设计方案](../development_guide/architecture.md)》。
+介绍工具的整体架构、代码框架及核心设计思路等，详细请参见《[msDebug架构设计方案](https://gitcode.com/Ascend/msdebug/wiki/design%2Farchitecture.md)》。
 
 ### 2.2 开发环境与编译测试
 
