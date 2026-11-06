@@ -206,7 +206,7 @@
 
 **前期准备**
 
-单击[链接](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom)获取算子样例工程，为进行算子调试做准备。
+单击[链接](https://gitcode.com/cann/cann-learning-hub/tree/master/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04)获取算子样例工程，为进行算子调试做准备。
 
 > [!NOTE]
 >
@@ -214,76 +214,88 @@
 >- 下载代码样例时，需执行以下命令指定分支版本。
 >
 >    ```bash
->    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
+>    git clone https://gitcode.com/cann/cann-learning-hub.git -b 8.5.0
 >    ```
 
 **操作步骤**
 
-1. 切换到msOpGen脚本install.sh所在目录。
+1. 切换到自定义算子编译目录。
 
     ```bash
-    cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04
     ```
 
-2. 执行以下命令，生成自定义算子工程，并进行Host侧和Kernel侧的算子实现。
+2. 在`op_kernel/CMakeLists.txt`中添加kernel侧调试编译选项，使能kernel编译器调试功能。
+
+    > [!NOTE]
+    >
+    > `-DCMAKE_BUILD_TYPE=Debug`仅影响Host侧C++编译，kernel侧需通过`npu_op_kernel_options`显式添加`-g -O0`选项。
+
+    ```cmake
+    # op_kernel/CMakeLists.txt 中 npu_op_kernel_sources 之前添加
+    if ("${CMAKE_BUILD_TYPE}x" STREQUAL "Debugx")
+        npu_op_kernel_options(ascendc_kernels ALL OPTIONS -g -O0)
+    endif()
+    ```
+
+3. 执行以下命令，以Debug模式编译算子并部署。<a id="步骤3算子编译"></a>
 
     ```bash
-    bash install.sh -v Ascendxxxyy    # xxxyy为用户实际使用的具体芯片类型
+    source $ASCEND_HOME_PATH/bin/setenv.bash
+    mkdir -p build && cd build
+    cmake -DCMAKE_BUILD_TYPE=Debug .. && make -j binary package
+    bash custom_opp_*.run -q
+    source $ASCEND_HOME_PATH/opp/vendors/customize/bin/set_env.bash
     ```
 
-3. 在${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/CustomOp目录下修改CMakePresets.json文件的cacheVariables的配置项，将`"Release"`修改为`"Debug"`。
+4. 切换到单算子调用应用目录，编译并得到可执行文件**execute_add_op**。<a id="步骤4"></a>
 
     ```bash
-    "cacheVariables": {
-           "CMAKE_BUILD_TYPE": {
-                "type": "STRING",
-                "value": "Debug"
-      },
-    ...
-    }
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04/test
+    export DDK_PATH=$ASCEND_HOME_PATH
+    export NPU_HOST_LIB=$ASCEND_HOME_PATH/lib64
+    mkdir -p build && cd build
+    cmake .. && make -j
     ```
 
-4. 参考[算子编译部署](https://gitcode.com/Ascend/msopgen/blob/master/docs/zh/user_guide/msopgen_user_guide.md#%E7%AE%97%E5%AD%90%E7%BC%96%E8%AF%91%E9%83%A8%E7%BD%B2)完成算子的编译部署。<a id="步骤4算子编译"></a>
-5. 切换到msOpGen脚本install.sh所在目录，并参考[README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md)编译单算子调用应用并得到可执行文件**execute_add_op**。<a id="步骤5"></a>
-
-    ```bash
-    cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation
-    ```
-
-6. 使用msDebug工具加载[5](#步骤5)中得到的单算子可执行文件execute_add_op。
+5. 使用msDebug工具加载[4](#步骤4)中得到的单算子可执行文件execute_add_op。
 
     ```bash
     export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/opp/vendors/customize/op_api/lib:$LD_LIBRARY_PATH
-    cd AclNNInvocation/output
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04/test/build
     msdebug execute_add_op
     (msdebug) target create "execute_add_op"
-    Current executable set to '/home/AclNNInvocation/output/execute_add_op' (aarch64).
+    Current executable set to '.../custom_op_04/test/build/execute_add_op' (aarch64).
     (msdebug)
     ```
 
-7. 断点设置。
+6. 断点设置。
 
     ```bash
-    b add_custom.cpp:55
+    (msdebug) b add_custom_template.cpp:78
+    Breakpoint 1: no locations (pending on future shared library load).
+    WARNING:  Unable to resolve breakpoint to any actual locations.
     ```
 
-8. 运行算子程序，等待直到命中断点。
+7. 运行算子程序，等待直到命中断点。
 
     ```bash
     (msdebug) r
-    Process 1385976 launched: '$HOME/shelltest/test/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocationNaive/build/execute_add_op' (aarch64)
-    [Launch of Kernel anonymous on Device 0]
-    Process 1385976 stopped
-    [Switching to focus on Kernel anonymous, CoreId 24, Type aiv]
-    * thread #1, name = 'execute_add_op', stop reason = breakpoint 1.1
-        frame #0: 0x0000000000001564 AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`KernelAdd::Compute(this=0x000000000028f8a8, progress=0) (.vector) at add_custom.cpp:55:19
-       52           LocalTensor<DTYPE_Y> yLocal = inQueueY.DeQue<DTYPE_Y>();
-       53           LocalTensor<DTYPE_Z> zLocal = outQueueZ.AllocTensor<DTYPE_Z>();
-       54           Add(zLocal, xLocal, yLocal, this->tileLength);
-    -> 55           outQueueZ.EnQue<DTYPE_Z>(zLocal);
-       56           inQueueX.FreeTensor(xLocal);
-       57           inQueueY.FreeTensor(yLocal);
-       58       }
+    Process 82475 launched: '.../custom_op_04/test/build/execute_add_op' (aarch64)
+    1 location added to breakpoint 1
+    [Launch of Kernel AddCustomTemplate_862645f6bafeab7b8e397662e7e517c2_0 on Device 0]
+    1 location added to breakpoint 1
+    Process 82475 stopped
+    [Switching to focus on Kernel AddCustomTemplate_862645f6bafeab7b8e397662e7e517c2_0, CoreId 0, Type aiv]
+    * thread #1, name = 'execute_add_op', stop reason = breakpoint 1.3
+        frame #0: 0x000012c041201cd0 device_debugdata_0`KernelAdd<half, half, half>::Compute(this=0x00000000001cf840, progress=0) (.vector) at add_custom_template.cpp:78:17
+       75           AscendC::LocalTensor<TYPE_Y> yLocal = inQueueY.DeQue<TYPE_Y>();
+       76           AscendC::LocalTensor<TYPE_Z> zLocal = outQueueZ.AllocTensor<DTYPE_Z>();
+       77           AscendC::Add(zLocal, xLocal, yLocal, this->processDataNum);
+    -> 78           outQueueZ.EnQue<TYPE_Z>(zLocal);
+       79           inQueueX.FreeTensor(xLocal);
+       80           inQueueY.FreeTensor(yLocal);
+       81       }
     (msdebug)
     ```
 
@@ -299,16 +311,16 @@
 
 **前期准备**
 
-- 单击[链接](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom)获取样例工程，为进行算子调试做准备。
+- 单击[链接](https://gitcode.com/cann/cann-learning-hub/tree/6dfac1dad4b8eb9a3cd08322c76f98039480ea31/tutorials/ascendc_operator_development_light/02_AscendC_basic/src/02.06/kernel_pytorch_call)获取样例工程，为进行算子调试做准备。
 
     > [!NOTE]
     >
-    > - 此样例工程仅支持Python3.9，若要在其他Python版本上运行，需要修改${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation目录下run_op_plugin.sh文件中的Python版本。
+    > - 此样例使用torch.library机制将Ascend C Kernel注册为PyTorch自定义算子，编译为独立动态库，无需重编torch_npu。
     > - 此样例工程不支持Atlas A3 系列产品。
     > - 下载代码样例时，需执行以下命令指定分支版本。
->
+    >
     >    ```bash
-    >    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
+    >    git clone https://gitcode.com/cann/cann-learning-hub.git && cd cann-learning-hub && git checkout 6dfac1dad4b8
     >    ```
 
 - 已参考《[TorchNPU软件安装](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/zh/installation_guide/installation_description.md)》，完成PyTorch框架和torch_npu插件的安装。
@@ -316,29 +328,10 @@
 
 **操作步骤**
 
-1. 执行以下命令，可生成自定义算子工程，并进行Host侧和Kernel侧的算子实现。
+1. 进入到样例目录，该样例使用torch.library机制将add_custom Kernel注册为PyTorch自定义算子。
 
     ```bash
-    bash install.sh -v Ascendxxxyy    # xxxyy为用户实际使用的具体芯片类型
-    ```
-
-2. 在${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/CustomOp目录下修改CMakePresets.json文件的cacheVariables的配置项，将`"Release"`修改为`"Debug"`。
-
-    ```bash
-    "cacheVariables": {
-           "CMAKE_BUILD_TYPE": {
-               "type": "STRING",
-               "value": "Debug"
-           },
-    ...
-    }
-    ```
-
-3. 参考[算子编译部署](https://gitcode.com/Ascend/msopgen/blob/master/docs/zh/user_guide/msopgen_user_guide.md#%E7%AE%97%E5%AD%90%E7%BC%96%E8%AF%91%E9%83%A8%E7%BD%B2)，完成算子的编译部署。
-4. 进入到样例目录，以命令行方式下载样例代码。参考[README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md)使用PyTorch调用方式调用AddCustom算子工程，并按照指导完成编译。
-
-    ```bash
-    cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development_light/02_AscendC_basic/src/02.06/kernel_pytorch_call/torch_library
     ```
 
     > [!NOTE]
@@ -346,81 +339,93 @@
     > PyTorch接入工程的样例工程目录如下：
     >
     > ```text
-    > PytorchInvocation
-    > ├── op_plugin_patch
-    > ├── README.md        //使用PyTorch调用方式调用AddCustom算子工程的注册样例
-    > ├── run_op_plugin.sh      //  执行样例时，需要使用
-    > └── test_ops_custom.py    //  启动工具时,需要使用
-    > └── test_ops_custom_register_in_graph.py  // 执行torch.compile模式下用例脚本
+    > torch_library
+    > ├── CMakeLists.txt        // 编译工程文件
+    > ├── torch_binding.cpp     // torch.library封装与算子注册
+    > ├── add_custom_test.py    // PyTorch调用与精度校验脚本
+    > └── README.md             // 样例说明文档
     > ```
+    >
+    > Kernel实现位于上级目录 `../common/add_custom.asc`。
 
-5. 执行样例，样例执行过程中会自动生成测试数据，然后运行PyTorch样例，最后检验运行结果。
+2. 在CMakeLists.txt中添加调试编译选项，使能kernel编译器和host编译器的调试功能。
 
-    ```bash
-    bash run_op_plugin.sh
-    -- CMAKE_CCE_COMPILER: ${INSTALL_DIR}/toolkit/tools/ccec_compiler/bin/ccec
-    -- CMAKE_CURRENT_LIST_DIR: ${INSTALL_DIR}/AddKernelInvocation/cmake/Modules
-    -- ASCEND_PRODUCT_TYPE:
-      Ascendxxxyy
-    -- ASCEND_CORE_TYPE:
-      VectorCore
-    -- ASCEND_INSTALL_PATH:
-      /usr/local/Ascend/cann
-    -- The CXX compiler identification is GNU 10.3.1
-    -- Detecting CXX compiler ABI info
-    -- Detecting CXX compiler ABI info - done
-    -- Check for working CXX compiler: /usr/bin/c++ - skipped
-    -- Detecting CXX compile features
-    -- Detecting CXX compile features - done
-    -- Configuring done
-    -- Generating done
-    -- Build files have been written to: ${INSTALL_DIR}/AddKernelInvocation/build
-    Scanning dependencies of target add_npu
-    ...
-    [100%] Built target add_npu
-    INFO: Ascend C Add Custom SUCCESS
-    ...
-    INFO: Ascend C Add Custom  in torch.compile graph SUCCESS
+    > [!NOTE]
+    >
+    > 不添加调试编译选项时，编译产物不含调试信息，msdebug无法命中源码断点。
+
+    ```cmake
+    # kernel侧（ASC编译器）添加 -O0 -g --cce-ignore-always-inline=true
+    target_compile_options(ascendc_kernels PRIVATE
+        $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES} -O0 -g --cce-ignore-always-inline=true>
+    )
+
+    # host侧（C++编译器）添加 -O0 -g
+    target_compile_options(ascendc_ops PRIVATE
+        ${TORCH_CXX_FLAGS}
+        -O0 -g
+    )
     ```
 
-6. 启动msDebug工具拉起Python程序，进入调试界面。
+3. 执行以下命令，编译算子并生成动态库。
 
     ```bash
-    msdebug python3 test_ops_custom.py
+    source ${install_path}/cann/set_env.sh
+    mkdir -p build && cd build
+    cmake -DCMAKE_ASC_ARCHITECTURES=dav-2201 ..
+    make -j
+    ```
+
+    编译完成后，在build目录下生成`libascendc_kernels.so`和`libascendc_ops.so`。
+
+4. 执行样例，验证算子功能正确性。
+
+    ```bash
+    python3 ../add_custom_test.py
+    Ran 1 test in 1.341s
+    OK
+    ```
+
+5. 启动msDebug工具拉起Python程序，进入调试界面。
+
+    ```bash
+    msdebug python3 ../add_custom_test.py
     (msdebug) target create "python3"
-    Current executable set to '/home/mindstudio/miniconda3/envs/py39/bin/python3' (aarch64).
-    (msdebug) settings set -- target.run-args  "test_ops_custom.py"
+    Current executable set to '/opt/buildtools/Python-3.11.4/bin/python3' (aarch64).
+    (msdebug) settings set -- target.run-args  "add_custom_test.py"
     (msdebug)
     ```
 
-7. 设置断点。
+6. 设置断点。
 
     根据指定源码文件与对应行号，在核函数中设置NPU断点。
 
     ```bash
-    (msdebug) b add_custom.cpp:60
-    Breakpoint 1: where = AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`::AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b_1(uint8_t *, uint8_t *, uint8_t *, uint8_t *, uint8_t *) + 9912 [inlined] KernelAdd::Compute(int) + 3400 at add_custom.cpp:60:9, address = 0x00000000000026b8
+    (msdebug) b add_custom.asc:34
+    Breakpoint 1: no locations (pending on future shared library load).
+    WARNING:  Unable to resolve breakpoint to any actual locations.
     ```
 
-8. 运行程序，等待直到命中断点。
+7. 运行程序，等待直到命中断点。
 
     ```bash
     (msdebug) r
-    Process 197189 launched: '/home/miniconda3/envs/py39/bin/python3' (aarch64)
-    Process 197189 stopped and restarted: thread 1 received signal: SIGCHLD
-    ...
-    [Launch of Kernel anonymous on Device 0]
-    Process 197189 stopped
-    [Switching to focus on Kernel anonymous, CoreId 8, Type aiv]
-    * thread #1, name = 'python3', stop reason = breakpoint 2.1
-        frame #0: 0x00000000000026b8 AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`::AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b_1(uint8_t *, uint8_t *, uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x000000000020efb8, progress=1) at add_custom.cpp:60:9
-       57              LocalTensor<DTYPE_Y> yLocal = inQueueY.DeQue<DTYPE_Y>();
-       58              LocalTensor<DTYPE_Z> zLocal = outQueueZ.AllocTensor<DTYPE_Z>();
-       59              Add(zLocal, xLocal, yLocal, this->tileLength);
-    -> 60              outQueueZ.EnQue<DTYPE_Z>(zLocal);
-       61              inQueueX.FreeTensor(xLocal);
-       62              inQueueY.FreeTensor(yLocal);
-       63          }
+    Process 74664 launched: '/opt/buildtools/Python-3.11.4/bin/python3' (aarch64)
+    Process 74664 stopped and restarted: thread 2 received signal: SIGCHLD
+    Process 74664 stopped and restarted: thread 1 received signal: SIGCHLD
+    1 location added to breakpoint 1
+    [Launch of Kernel _Z10add_customPhS_S_j on Device 0]
+    1 location added to breakpoint 1
+    Process 74664 stopped
+    [Switching to focus on Kernel _Z10add_customPhS_S_j, CoreId 8, Type aiv]
+    * thread #1, name = 'python3', stop reason = breakpoint 1.2
+        frame #0: 0x000012c041400604 device_debugdata_0`add_custom(x=0x12c041200000, y=0x12c041208200, z=0x12c041210400, totalLength=16384) at add_custom.asc:34:15
+       31       yLocal = inQueueY.DeQue<half>();
+       32       AscendC::LocalTensor<half> zLocal = outQueueZ.AllocTensor<half>();
+       33       AscendC::Add(zLocal, xLocal, yLocal, blockLength);
+    -> 34       outQueueZ.EnQue<half>(zLocal);
+       35       inQueueX.FreeTensor(xLocal);
+       36       inQueueY.FreeTensor(yLocal);
     (msdebug)
     ```
 
@@ -428,8 +433,8 @@
     >
     > 其他调试操作可参考[导入调试信息](../user_guide/msdebug_user_guide.md#工具使用)、[内存与变量打印功能介绍](../user_guide/msdebug_user_guide.md#内存与变量打印功能介绍)、[调试信息展示功能介绍](../user_guide/msdebug_user_guide.md#调试信息展示功能介绍)及[核切换功能介绍](../user_guide/msdebug_user_guide.md#核切换功能介绍)等，与其操作一致。
 
-9. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
-10. 调试完以后，执行q命令并输入Y或y结束调试。
+8. 删除断点，具体操作请参见[断点设置功能介绍](../user_guide/msdebug_user_guide.md#断点设置功能介绍)。
+9. 调试完以后，执行q命令并输入Y或y结束调试。
 
     ```bash
     (msdebug) q
