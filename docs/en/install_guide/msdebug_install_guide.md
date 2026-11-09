@@ -28,8 +28,8 @@ To use the functions of the latest code or modify the source code to enhance fun
 
 Source compilation consistently uses the MindStudio standard build environment.
 
-- For daily development or use of the released image, refer to [MindStudio Tool Development Environment Installation Guide](https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/common/dev_env_setup.md).
-- If you need to reproduce the environment from a base operating system or run source build verification or unit test verification, you must refer to [MindStudio Unified Build Image Guide](https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/common/docker_image_build_guide.md) and build an environment image on site from the openEuler base image.
+- For daily development or use of the released image, refer to [MindStudio Tool Development Environment Installation Guide](https://gitcode.com/Ascend/msot/blob/26.2.0/docs/en/common/dev_env_setup.md).
+- If you need to reproduce the environment from a base operating system or run source build verification or unit test verification, you must refer to [MindStudio Unified Build Image Guide](https://gitcode.com/Ascend/msot/blob/26.2.0/docs/en/common/docker_image_build_guide.md) and build an environment image on site from the openEuler base image.
 
 Run the source compilation and unit test commands in the remainder of this guide in the container of the aforementioned specified image or in the container of the environment image built on site. For the CANN package, GCC, and Python versions, refer to the unified image building guide. This repository does not maintain them separately.
 
@@ -39,7 +39,7 @@ After you enter the interactive container shell opened by `ctr_in.py`, run the f
 
 ```bash
 cd ~
-git clone https://atomgit.com/Ascend/msdebug.git -b 26.2.0
+git clone https://gitcode.com/Ascend/msdebug.git -b 26.2.0
 ```
 
 #### 2.3.2 Building
@@ -140,4 +140,4 @@ To uninstall the tool, perform the following steps:
 
 Upgrades follow the "uninstall first, then install" process. Simply run the installation command. The tool will automatically remove the previous version and guide you through the upgrade process.
 
-You can run the `msdebug --version` command to view the version information of the current environment, and then select the version to upgrade. When upgrading, pay attention to the version compatibility. For details, see the [Release Notes](https://atomgit.com/Ascend/release-management/blob/master/MindStudio/26.2.0/release_notes.md).
+You can run the `msdebug --version` command to view the version information of the current environment, and then select the version to upgrade. When upgrading, pay attention to the version compatibility. For details, see the [Release Notes](https://gitcode.com/Ascend/release-management/blob/master/MindStudio/26.2.0/release_notes_en.md).

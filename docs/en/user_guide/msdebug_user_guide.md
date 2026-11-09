@@ -10,11 +10,11 @@ The following operator call scenarios are supported:
 
 - Kernel launch operator development: kernel launch
 
-    For details about the kernel launch scenario, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board).
+    For details about the kernel launch scenario, see [Completing Kernel Launch Based on the Sample Project](https://gitcode.com/cann/asc-devkit/blob/9.2.0/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board).
 
 - Project-based operator development: single-operator API calling
 
-    For details about the single-operator API execution scenario, see "Project-based Operator Development" > [Single-Operator API Execution](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/advanced_programming/aclnn_operator_development/invocation/single_operator_api_call.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator).
+    For details about the single-operator API execution scenario, see "Project-based Operator Development" > [Single-Operator API Execution](https://gitcode.com/cann/asc-devkit/blob/9.2.0/docs/en/guide/programming_guide/advanced_programming/aclnn_operator_development/invocation/single_operator_api_call.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator).
 
 - AI framework operator adaptation: PyTorch framework
 
@@ -52,7 +52,7 @@ msDebug also provides the following extension program. For details, see [**Table
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --full
         ```
 
-    - Method 2: Specify the `--debug` option during driver installation. For details, see [Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum) in *CANN Software Installation Guide*.
+    - Method 2: Specify the `--debug` option during driver installation. For details, see [Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/920/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum) in *CANN Software Installation Guide*.
 
         ```bash
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --debug
@@ -431,7 +431,7 @@ The msDebug tool can be started in either of the following ways.
 
         > [!NOTE]
         >
-        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in *Ascend C Operator Development Guide*.
+        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see [Completing Kernel Launch Based on the Sample Project](https://gitcode.com/cann/asc-devkit/blob/9.2.0/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in *Ascend C Operator Development Guide*.
         > - If the executable file has other input parameters, pass them as follows:
         >
         >    ```bash
@@ -455,7 +455,7 @@ The msDebug tool can be started in either of the following ways.
 
         > [!NOTE]
         >
-        > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://atomgit.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
+        > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
 
 **Exiting Debugging**
 
@@ -481,7 +481,7 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 > [!NOTE]
 >
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
-> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see [HCCL Kernel APIs](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/ascendcopapi/docs/en/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md) in *Ascend C Operator Development API Reference*.
+> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see [HCCL Kernel APIs](https://gitcode.com/cann/asc-devkit/blob/9.2.0/docs/en/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md) in *Ascend C Operator Development API Reference*.
 
 ```text
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
@@ -1391,7 +1391,7 @@ If you enable the dump function for abnormal operators, you cannot use other fun
 
 ### Example
 
-1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581) in *Application Development Guide (C&C++)*.
+1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/en-sg/document/detail/en/CANNCommunityEdition/910/API/runtimeapi/aclcppdevg_03_0022.html) in *Application Development Guide (C&C++)*.
 
     > [!NOTE]
     >

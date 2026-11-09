@@ -7,7 +7,7 @@
 msDebug is an operator debugging tool designed for Ascend devices. It is used to debug operator programs executed on the NPU and provides key debugging capabilities for operator developers, including reading the memory and registers of Ascend devices, and pausing and resuming program running status.
 This document demonstrates the core functions of msDebug based on the simple addition operator developed in the introductory tutorial. It helps beginners intuitively experience the efficiency and convenience the tool brings to the operator development process.
 
-This document assumes that you have completed all operations in <a href="https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
+This document assumes that you have completed all operations in <a href="https://gitcode.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/op_tool_quick_start.md" target="_blank">Operator Development Toolchain Quick Start</a>. If you have not done so, complete that guide first for a better learning experience.
 
 ## 2. Operation
 
@@ -19,7 +19,7 @@ This tutorial **supports only** standardized CANN container environments. It is 
 #### 2.1.1 Installing a CANN Container Environment
 
 ✅ **Strictly follow the guide below to complete the environment installation:**  
-👉 **<a href="https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a>**
+👉 **<a href="https://gitcode.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/installation_guide.md" target="_blank">Ascend AI Operator Development Toolchain Learning Environment Installation Guide</a>**
 
 > ⏱️ **Estimated time in an environment with external network access: about 3 minutes**  
 > After the installation, you will get a standardized container environment with all operator tools, sample code, and dependent libraries preinstalled.
@@ -37,7 +37,7 @@ Before the hands-on experience below, **copy the entire script below and paste i
 
 ### 2.2 [Prerequisite] Completing Operator Project Preparation
 
-Follow section 2.3 in <a href="https://atomgit.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/op_tool_quick_start.md#23-development-building-the-operator-project-msopgen" target="_blank">Operator Development Toolchain Quick Start</a> to complete the operator project preparation.
+Follow section 2.3 in <a href="https://gitcode.com/Ascend/msot/blob/26.2.0/docs/en/quick_start/op_tool_quick_start.md#23-development-building-the-operator-project-msopgen" target="_blank">Operator Development Toolchain Quick Start</a> to complete the operator project preparation.
 
 ### 2.3 [Debugging] Debugging Operator Code Using Breakpoints (msDebug)
 

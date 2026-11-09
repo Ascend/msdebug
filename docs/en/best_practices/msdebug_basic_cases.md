@@ -8,7 +8,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
 **Preparations**
 
-- Obtain the [sample project](https://atomgit.com/Ascend/mstt/blob/br_26.0.0_beta1/sample/README.md).
+- Obtain the [sample project](https://gitcode.com/Ascend/mstt/blob/br_26.0.0_beta1/sample/README.md).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
@@ -243,7 +243,7 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
     }
     ```
 
-4. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://atomgit.com/Ascend/msopgen/blob/26.2.0/docs/en/user_guide/msopgen_user_guide.md#building-and-deploying-an-operator) section. <a id="step-4-operator-compilation"></a>
+4. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.2.0/docs/en/user_guide/msopgen_user_guide.md#building-and-deploying-an-operator) section. <a id="step-4-operator-compilation"></a>
 5. Go to the directory where the msOpGen script `install.sh` is located, compile the single-operator calling application by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md), and obtain the executable file `execute_add_op`. <a id="step-5"></a>
 
     ```bash
@@ -311,7 +311,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     >    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
     >    ```
 
-- Install the PyTorch framework and `torch_npu` plugin by referring to [TorchNPU Software Installation](https://www.hiascend.com/document/detail/en/Pytorch/910/installguide/swinstall/docs/en/installation_guide/installation_description.md).
+- Install the PyTorch framework and `torch_npu` plugin by referring to [TorchNPU Software Installation](https://www.hiascend.com/en-sg/document/detail/en/Pytorch/2610/installguide/swinstall/docs/en/installation_guide/installation_description.md).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
@@ -334,7 +334,7 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     }
     ```
 
-3. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://atomgit.com/Ascend/msopgen/blob/26.2.0/docs/en/user_guide/msopgen_user_guide.md#building-and-deploying-an-operator) section.
+3. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.2.0/docs/en/user_guide/msopgen_user_guide.md#building-and-deploying-an-operator) section.
 4. Go to the sample directory and download the sample code in CLI mode. Use PyTorch to call the AddCustom operator project and complete the compilation by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md).
 
     ```bash
@@ -444,7 +444,7 @@ This section shows how to use msDebug to debug a template library operator (matm
 
 **Preparations** <a id="Preparations"></a>
 
-- Obtain the [sample project](https://atomgit.com/cann/catlass).
+- Obtain the [sample project](https://gitcode.com/cann/catlass).
 - Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
