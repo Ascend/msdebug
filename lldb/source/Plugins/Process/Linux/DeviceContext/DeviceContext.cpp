@@ -28,6 +28,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errno.h"
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -80,85 +81,37 @@ static std::map<CmdType, std::string> CMD_TO_STRING = {
     {CmdType::TASK_KILL, "TASK_KILL"}
 };
 
-static const std::map<std::string, SocType> SOC_STRING_TO_TYPE = {
-    {"Ascend910B1", SocType::ASCEND910B},
-    {"Ascend910B2", SocType::ASCEND910B},
-    {"Ascend910B3", SocType::ASCEND910B},
-    {"Ascend910B4", SocType::ASCEND910B},
-    {"Ascend910B2C", SocType::ASCEND910B},
-    {"Ascend910B4-1", SocType::ASCEND910B},
-    {"Ascend910_9391", SocType::ASCEND910B},
-    {"Ascend910_9392", SocType::ASCEND910B},
-    {"Ascend910_9381", SocType::ASCEND910B},
-    {"Ascend910_9382", SocType::ASCEND910B},
-    {"Ascend910_9372", SocType::ASCEND910B},
-    {"Ascend910_9362", SocType::ASCEND910B},
-    {"Ascend910_9363", SocType::ASCEND910B},
-    {"Ascend310P1", SocType::ASCEND310P},
-    {"Ascend310P2", SocType::ASCEND310P},
-    {"Ascend310P3", SocType::ASCEND310P},
-    {"Ascend310P3Vir01", SocType::ASCEND310P},
-    {"Ascend310P3Vir02", SocType::ASCEND310P},
-    {"Ascend310P3Vir03", SocType::ASCEND310P},
-    {"Ascend310P3Vir04", SocType::ASCEND310P},
-    {"Ascend310P4", SocType::ASCEND310P},
-    {"Ascend950DT_950x", SocType::ASCEND950DT},
-    {"Ascend950DT_950y", SocType::ASCEND950DT},
-    {"Ascend950DT_9571", SocType::ASCEND950DT},
-    {"Ascend950DT_9572", SocType::ASCEND950DT},
-    {"Ascend950DT_9573", SocType::ASCEND950DT},
-    {"Ascend950DT_9574", SocType::ASCEND950DT},
-    {"Ascend950DT_9575", SocType::ASCEND950DT},
-    {"Ascend950DT_9576", SocType::ASCEND950DT},
-    {"Ascend950DT_9577", SocType::ASCEND950DT},
-    {"Ascend950DT_9578", SocType::ASCEND950DT},
-    {"Ascend950DT_9581", SocType::ASCEND950DT},
-    {"Ascend950DT_9582", SocType::ASCEND950DT},
-    {"Ascend950DT_9583", SocType::ASCEND950DT},
-    {"Ascend950DT_9584", SocType::ASCEND950DT},
-    {"Ascend950DT_9585", SocType::ASCEND950DT},
-    {"Ascend950DT_9586", SocType::ASCEND950DT},
-    {"Ascend950DT_9587", SocType::ASCEND950DT},
-    {"Ascend950DT_9588", SocType::ASCEND950DT},
-    {"Ascend950DT_9591", SocType::ASCEND950DT},
-    {"Ascend950DT_9592", SocType::ASCEND950DT},
-    {"Ascend950DT_9595", SocType::ASCEND950DT},
-    {"Ascend950DT_9596", SocType::ASCEND950DT},
-    {"Ascend950DT_95A1", SocType::ASCEND950DT},
-    {"Ascend950DT_95A2", SocType::ASCEND950DT},
-    {"Ascend950PR_950z", SocType::ASCEND950},
-    {"Ascend950PR_9579", SocType::ASCEND950},
-    {"Ascend950PR_957b", SocType::ASCEND950},
-    {"Ascend950PR_957c", SocType::ASCEND950},
-    {"Ascend950PR_957d", SocType::ASCEND950},
-    {"Ascend950PR_9589", SocType::ASCEND950},
-    {"Ascend950PR_958b", SocType::ASCEND950},
-    {"Ascend950PR_9599", SocType::ASCEND950},
+// Reject these prefixes before matching supported SoC families.
+static const StringRef UNSUPPORTED_SOC_PREFIXES[] = {
+    "Ascend910A",
 };
 
 std::shared_ptr<DeviceContext> DeviceContext::Factory::GetDeviceContext(
     const std::string &soc_version, ::pid_t pid, int device_id, int virtual_device_id) {
   Log *log = GetLog(LLDBLog::Process);
-  const auto &it = SOC_STRING_TO_TYPE.find(soc_version);
-  if (it == SOC_STRING_TO_TYPE.end()) {
-    LLDB_LOG(log, "unsupported soc version: {0}", soc_version);
-    return nullptr;
+  StringRef soc(soc_version);
+  for (StringRef prefix : UNSUPPORTED_SOC_PREFIXES) {
+    if (soc.starts_with(prefix)) {
+      LLDB_LOG(log, "unsupported soc version: {0}", soc_version);
+      return nullptr;
+    }
   }
 
-  const SocType soc_type = it->second;
-  switch (soc_type) {
-    case SocType::ASCEND910B:
-      return std::make_shared<Ascend910BDeviceContext>(pid, device_id, virtual_device_id);
-    case SocType::ASCEND310P:
-      return std::make_shared<Ascend310PDeviceContext>(pid, device_id, virtual_device_id);
-    case SocType::ASCEND950:
-      return std::make_shared<Ascend950DeviceContext>(pid, device_id, virtual_device_id);
-    case SocType::ASCEND950DT:
-      return std::make_shared<Ascend950DTDeviceContext>(pid, device_id, virtual_device_id);
-    default:
-      LLDB_LOG(log, "unsupported soc type: {0}", (int)soc_type);
-      return nullptr;
-  };
+  if (soc.starts_with("Ascend310P"))
+    return std::make_shared<Ascend310PDeviceContext>(pid, device_id,
+                                                     virtual_device_id);
+  if (soc.starts_with("Ascend910_") || soc.starts_with("Ascend910B"))
+    return std::make_shared<Ascend910BDeviceContext>(pid, device_id,
+                                                     virtual_device_id);
+  if (soc.starts_with("Ascend950DT"))
+    return std::make_shared<Ascend950DTDeviceContext>(pid, device_id,
+                                                      virtual_device_id);
+  if (soc.starts_with("Ascend950PR"))
+    return std::make_shared<Ascend950DeviceContext>(pid, device_id,
+                                                    virtual_device_id);
+
+  LLDB_LOG(log, "unsupported soc version: {0}", soc_version);
+  return nullptr;
 }
 
 struct DebugSendInfo {
