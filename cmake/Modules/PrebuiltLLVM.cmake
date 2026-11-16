@@ -27,6 +27,28 @@ endif()
 set(LLVM_PREBUILT_LIB_DIR "${LLVM_PREBUILT_ROOT}/${LLVM_PREBUILT_ARCH}/lib")
 set(LLVM_PREBUILT_INCLUDE_DIR "${LLVM_PREBUILT_ROOT}/${LLVM_PREBUILT_ARCH}/include")
 
+# local 模式只使用本地资源；缺少预编译包时转为源码构建。
+if(MSOT_NO_GIT)
+    set(_prebuilt_required_files
+        "${LLVM_PREBUILT_LIB_DIR}/libLLVMSupport.a"
+        "${LLVM_PREBUILT_LIB_DIR}/libclangAST.a"
+        "${LLVM_PREBUILT_LIB_DIR}/cmake/llvm/LLVMConfig.cmake"
+        "${LLVM_PREBUILT_LIB_DIR}/cmake/clang/ClangConfig.cmake"
+        "${LLVM_PREBUILT_ROOT}/${LLVM_PREBUILT_ARCH}/bin/llvm-tblgen"
+        "${LLVM_PREBUILT_ROOT}/${LLVM_PREBUILT_ARCH}/prebuilt_meta.json"
+    )
+
+    foreach(_prebuilt_file IN LISTS _prebuilt_required_files)
+        if(NOT EXISTS "${_prebuilt_file}")
+            message(STATUS
+                "Local prebuilt LLVM file missing: ${_prebuilt_file}; "
+                "falling back to source build")
+            set(USE_PREBUILT_LLVM OFF)
+            return()
+        endif()
+    endforeach()
+endif()
+
 # ---------- 验证 ----------
 if(NOT IS_DIRECTORY "${LLVM_PREBUILT_LIB_DIR}")
     message(FATAL_ERROR "Prebuilt library directory not found: ${LLVM_PREBUILT_LIB_DIR}")

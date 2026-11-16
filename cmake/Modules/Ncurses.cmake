@@ -24,12 +24,16 @@ file(GLOB_RECURSE NCURSES_TAR_FILE_GLOB ${NCURSES_SOURCE_DIR}/ncurses-*.tar.gz)
 list(GET NCURSES_TAR_FILE_GLOB 0 NCURSES_TAR_FILE)
 message(STATUS "Use ncurses tar file: ${NCURSES_TAR_FILE}")
 
+set(MSOT_LFS_CMDS "")
+if(NOT MSOT_NO_GIT)
+    set(MSOT_LFS_CMDS COMMAND git lfs install COMMAND git lfs pull)
+endif()
+
 add_custom_command(
     OUTPUT ${NCURSES_SOURCE_DIR}/configure
     COMMENT "Extract ncurses component from ${NCURSES_TAR_FILE}"
     # 跳过最外层目录，直接将内容解压到当前目录
-    COMMAND git lfs install
-    COMMAND git lfs pull
+    ${MSOT_LFS_CMDS}
     COMMAND tar xf ${NCURSES_TAR_FILE} --strip-components=1
     DEPENDS ${NCURSES_TAR_FILE}
     WORKING_DIRECTORY ${NCURSES_SOURCE_DIR}
