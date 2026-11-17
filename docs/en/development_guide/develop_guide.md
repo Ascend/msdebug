@@ -8,7 +8,7 @@ This document describes how to set up the development environment for msDebug, b
 
 ### 1.1 Prerequisite Knowledge
 
-Before starting development, read [MindStudio Debugger Architecture Design Specifications](./architecture.md) to learn about the code framework and core processes.
+Before starting development, read [MindStudio Debugger Architecture Design Specifications](https://gitcode.com/Ascend/msdebug/wiki/design%2Farchitecture.md) to learn about the code framework and core processes.
 
 ### 1.2 Environment Preparation
 

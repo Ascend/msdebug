@@ -6,7 +6,7 @@
  [![Quick Start](https://badgen.net/badge/Quick%20Start/QuickStart/blue)](./docs/en/quick_start/msdebug_quick_start.md)
  [![AI Q&A (DeepWiki)](https://badgen.net/badge/AI%20Q%26A/DeepWiki/blue)](https://deepwiki.com/mindstudio-docs/master)
  [![AI Q&A (ZRead)](https://badgen.net/badge/AI%20Q%26A/ZRead/blue)](https://zread.ai/mindstudio-docs/master)
- [![Exact Search](https://badgen.net/badge/Exact%20Search/ReadTheDocs/blue)](https://mindstudio-operator-tools-docs.readthedocs.io/zh-cn/latest/)
+ [![Precise Search](https://badgen.net/badge/Precise%20Search/ReadTheDocs/blue)](https://mindstudio-operator-tools-docs.readthedocs.io/zh-cn/latest/)
  [![Ascend Community](https://badgen.net/badge/Ascend%20Community/Community/blue)](https://www.hiascend.com/eng/developer/software/mindstudio)
  [![Report Issues](https://badgen.net/badge/Report%20Issues/Issues/blue)](https://gitcode.com/Ascend/msdebug/issues)
 
@@ -27,9 +27,9 @@ English | [简体中文](README.md)
 MindStudio Debugger (msDebug) is an operator debugging tool built on the LLVM compiler infrastructure for Ascend devices. It is used to debug operator programs running on the NPU and provides developers with key debugging capabilities, including reading the memory and registers of Ascend devices, and pausing and resuming the program execution.
 
 <div align="center">
-  <h4>▶️ Quick demo</h4>
+  <h4>▶️ Quick Demo</h4>
   <img src="./docs/en/figures/demo-msdebug.gif" alt="Quick demo" width="600">
-  <p><sup>Figure: Demonstrates operations such as setting breakpoints for board debugging, printing variables, and step-by-step debugging of operators.</sup></p>
+  <p><sup>Figure: Demonstrates operations such as setting breakpoints for board debugging, printing variables, and step-by-step debugging of operators</sup></p>
 </div>
 
 ## ⚙️ Functions
@@ -47,24 +47,17 @@ msDebug can debug all Ascend operators, including Ascend C operators (Vector, Cu
 |**Debugging information displaying**|Query information about the device where the operator runs.|
 |**Core dump file parsing**|By parsing the dump files of abnormal operators, you can collect sufficient data for problem analysis even without a stress test.|
 
-## 🌌 Intelligent Search
-
-To improve documentation search efficiency, we provide multiple efficient search methods:  
-🔹 [AI Q&A (DeepWiki)](https://deepwiki.com/mindstudio-docs/master): Natural language Q&A that helps you quickly grasp the project architecture and module relationships.  
-🔹 [AI Q&A (ZRead)](https://zread.ai/mindstudio-docs/master): Provides a better Chinese Q&A experience and precisely locates feature usage and details.  
-🔹 [Precise Search (ReadTheDocs)](https://mindstudio-operator-tools-docs.readthedocs.io/zh-cn/latest/): Keyword-based full-text search that takes you directly to interfaces, parameters, and error messages.
-
 ## 🚀 Quick Start
 
 For details, see [msDebug Quick Start](docs/en/quick_start/msdebug_quick_start.md).
 
 ## 📦 Installation Guide
 
-For details about the environment dependencies and installation methods of the tool, see [msDebug Installation Guide](docs/en/install_guide/msdebug_install_guide.md).
+For details about the environment dependencies and installation methods of the tool, see the [msDebug Installation Guide](docs/en/install_guide/msdebug_install_guide.md).
 
 ## 📘 User Guide
 
-For details about how to use the tool, see [msDebug User Guide](docs/en/user_guide/msdebug_user_guide.md).
+For details about how to use the tool, see the [msDebug User Guide](docs/en/user_guide/msdebug_user_guide.md).
 
 ## 💡 Typical Cases
 
@@ -74,9 +67,16 @@ For details about how to use the tool in typical scenarios, see [msDebug Typical
 
 For details about frequently asked questions and solutions, see [msDebug FAQs](docs/en/support/msdebug_faq.md).
 
+## 🌌 Intelligent Search
+
+To improve documentation search efficiency, we provide multiple efficient search methods:  
+🔹 [AI Q&A (DeepWiki)](https://deepwiki.com/mindstudio-docs/master): Natural language Q&A that helps you quickly grasp the project architecture and module relationships.  
+🔹 [AI Q&A (ZRead)](https://zread.ai/mindstudio-docs/master): Provides a better Chinese Q&A experience and precisely locates feature usage and details.  
+🔹 [Precise Search (ReadTheDocs)](https://mindstudio-operator-tools-docs.readthedocs.io/zh-cn/latest/): Keyword-based full-text search that takes you directly to interfaces, parameters, and error messages.
+
 ## 🛠️ Contribution Guide
 
-You are welcome to contribute to the project. For details, see [Contribution Guide](./docs/en/contributing/contributing_guide.md).
+You are welcome to contribute to the project. For details, see the [Contribution Guide](./docs/en/contributing/contributing_guide.md).
 
 ## ⚖️ Related Information
 
@@ -95,6 +95,6 @@ You are welcome to contribute to the community. If you have any questions or sug
 
 ## 🙏 Acknowledgements
 
-This tool is jointly contributed by Huawei Technologies Co., Ltd. and developers.
+This tool is jointly developed by Huawei Technologies Co., Ltd. and developers.
 
-Thanks for every PR from the community, and contributions are welcome.
+Thank you for every PR from the community. We welcome your contributions.

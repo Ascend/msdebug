@@ -8,8 +8,8 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
 **Preparations**
 
-- Obtain the [sample project](https://gitcode.com/Ascend/mstt/blob/br_26.0.0_beta1/sample/README.md).
-- Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
+- Obtain the [sample project](https://gitcode.com/Ascend/mstt/tree/7.0.RC3/sample).
+- Configure related environment variables. For details, see the [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
 
@@ -65,11 +65,11 @@ This section shows how to use msDebug to debug a vector operator on the board. T
     [Switching to focus on Kernel add_custom, CoreId 13, Type aiv]
     * thread #1, name = 'add.fatbin', stop reason = breakpoint 2.1
         frame #0: 0x0000000000004974 device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x000000000019a930, progress=0) at add_kernel.cpp:69:9
-       66              // call Add instr for computation
+       66              // Call Add instr for computation
        67              Add(zLocal, xLocal, yLocal, TILE_LENGTH);
-       68              // enqueue the output tensor to VECOUT queue
+       68              // Enqueue the output tensor to VECOUT queue
     -> 69              outQueueZ.EnQue<int16_t>(zLocal);  # Breakpoint position
-       70              // free input tensors for reuse
+       70              // Free input tensors for reuse
        71              inQueueX.FreeTensor(xLocal);
        72              inQueueY.FreeTensor(yLocal);
     (msdebug)
@@ -80,15 +80,15 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
         ```bash
         (msdebug) ascend info cores
-          CoreId  Type  Device Stream Task Block         PC               Exception
-        *  13     aiv      0     3     0     0     0x1240c0034974         f0000000
-           14     aiv      0     3     0     1     0x1240c0034974         f0000000
-           15     aiv      0     3     0     2     0x1240c0034974         f0000000
-           20     aiv      0     3     0     3     0x1240c0034974         f0000000
-           21     aiv      0     3     0     4     0x1240c0034974         f0000000
-           22     aiv      0     3     0     5     0x1240c0034974         f0000000
-           23     aiv      0     3     0     6     0x1240c0034974         f0000000
-           24     aiv      0     3     0     7     0x1240c0034974         f0000000
+          CoreId Type Device Stream Task Block               PC    Exception Filename Line
+        *    13  aiv      0     3    0     0  0x1240c0034974     f0000000       NA   NA
+             14  aiv      0     3    0     1  0x1240c0034974     f0000000       NA   NA
+             15  aiv      0     3    0     2  0x1240c0034974     f0000000       NA   NA
+             20  aiv      0     3    0     3  0x1240c0034974     f0000000       NA   NA
+             21  aiv      0     3    0     4  0x1240c0034974     f0000000       NA   NA
+             22  aiv      0     3    0     5  0x1240c0034974     f0000000       NA   NA
+             23  aiv      0     3    0     6  0x1240c0034974     f0000000       NA   NA
+             24  aiv      0     3    0     7  0x1240c0034974     f0000000       NA   NA
         (msdebug)
         ```
 
@@ -100,11 +100,11 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         ```
 
     - Run the `print` and `memory read` commands together to print values stored in the tensor variables.
-        - Print the data stored in LocalTensor in the UB memory.
+        - Print the data stored in `LocalTensor` in the UB memory.
 
             > [!NOTE]
             >
-            > For details about the start address for printing the UB memory, see the `bufferAddr` parameter in the `address_` field of the LocalTensor variable. The following uses the `xLocal` variable as an example. The start address of the memory is 0.
+            > For details about the start address for printing the UB memory, see the `bufferAddr` parameter in the `address_` field of the `LocalTensor` variable. The following uses the `xLocal` variable as an example. The start address of the memory is 0.
 
             ```bash
             (msdebug) print xLocal
@@ -123,11 +123,11 @@ This section shows how to use msDebug to debug a vector operator on the board. T
             (msdebug)
             ```
 
-        - Print the data stored in GlobalTensor in the GM.
+        - Print the data stored in `GlobalTensor` in the GM.
 
             > [!NOTE]
             >
-            > For details about the start address for GM memory printing, see the `address_` field of the GlobalTensor variable. The following uses the `xGm` variable as an example. The start address of the memory is 0x00001240c0015000.
+            > For details about the start address for GM memory printing, see the `address_` field of the `GlobalTensor` variable. The following uses the `xGm` variable as an example. The start address of the memory is 0x00001240c0015000.
 
             ```bash
             (msdebug) print xGm
@@ -153,12 +153,12 @@ This section shows how to use msDebug to debug a vector operator on the board. T
         [Switching to focus on Kernel add_custom, CoreId 24, Type aiv]
         * thread #1, name = 'add.fatbin', stop reason = breakpoint 2.1
             frame #0: 0x0000000000004974 device_debugdata`::add_custom(uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x00000000001c6930, progress=0) at add_kernel.cpp:69:9
-           66              // call Add instr for computation
+           66              // Call Add instr for computation
            67              Add(zLocal, xLocal, yLocal, TILE_LENGTH);
-           68              // enqueue the output tensor to VECOUT queue
+           68              // Enqueue the output tensor to VECOUT queue
         -> 69              outQueueZ.EnQue<int16_t>(zLocal);
                         ^
-           70              // free input tensors for reuse
+           70              // Free input tensors for reuse
            71              inQueueX.FreeTensor(xLocal);
            72              inQueueY.FreeTensor(yLocal);
         (msdebug) p xLocal
@@ -206,7 +206,7 @@ This section shows how to use msDebug to debug a vector operator on the board. T
 
 **Preparations**
 
-Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom).
+Obtain the [sample project](https://gitcode.com/cann/cann-learning-hub/tree/master/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04) for operator debugging.
 
 > [!NOTE]
 >
@@ -214,76 +214,88 @@ Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operato
 >- When downloading the code sample, run the following command to specify the branch version:
 >
 >    ```bash
->    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
+>    git clone https://gitcode.com/cann/cann-learning-hub.git -b 8.5.0
 >    ```
 
 **Procedure**
 
-1. Go to the directory where the msOpGen script **install.sh** is located.
+1. Go to the custom operator compilation directory.
 
     ```bash
-    cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04
     ```
 
-2. Run the following command to generate a custom operator project and implement the operator on the host and kernel:
+2. Add the kernel-side debugging compilation option in `op_kernel/CMakeLists.txt` to enable the debugging function of the kernel compiler.
+
+    > [!NOTE]
+    >
+    > `-DCMAKE_BUILD_TYPE=Debug` affects only host-side C++ compilation. For the kernel side, explicitly add the `-g -O0` option through `npu_op_kernel_options`.
+
+    ```cmake
+    # Add the following content before npu_op_kernel_sources in op_kernel/CMakeLists.txt
+    if ("${CMAKE_BUILD_TYPE}x" STREQUAL "Debugx")
+        npu_op_kernel_options(ascendc_kernels ALL OPTIONS -g -O0)
+    endif()
+    ```
+
+3. Run the following commands to compile and deploy the operator in Debug mode. <a id="step-3-operator-compilation"></a>
 
     ```bash
-    bash install.sh -v Ascendxxxyy    # xxxyy indicates the type of the chip used by the user
+    source $ASCEND_HOME_PATH/bin/setenv.bash
+    mkdir -p build && cd build
+    cmake -DCMAKE_BUILD_TYPE=Debug .. && make -j binary package
+    bash custom_opp_*.run -q
+    source $ASCEND_HOME_PATH/opp/vendors/customize/bin/set_env.bash
     ```
 
-3. In the `${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/CustomOp` directory, change the value of `"Release"` to `"Debug"` in `cacheVariables` of the `CMakePresets.json` file.
+4. Go to the single-operator calling application directory, and compile the application to obtain the executable file `execute_add_op`. <a id="step-4"></a>
 
     ```bash
-    "cacheVariables": {
-           "CMAKE_BUILD_TYPE": {
-                "type": "STRING",
-                "value": "Debug"
-      },
-    ...
-    }
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04/test
+    export DDK_PATH=$ASCEND_HOME_PATH
+    export NPU_HOST_LIB=$ASCEND_HOME_PATH/lib64
+    mkdir -p build && cd build
+    cmake .. && make -j
     ```
 
-4. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md) section. <a id="step-4-operator-compilation"></a>
-5. Go to the directory where the msOpGen script `install.sh` is located, compile the single-operator calling application by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation/README.md), and obtain the executable file `execute_add_op`. <a id="step-5"></a>
-
-    ```bash
-    cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocation
-    ```
-
-6. Use msDebug to load the single-operator executable file `execute_add_op` obtained in [5](#step-5).
+5. Use msDebug to load the single-operator executable file `execute_add_op` obtained in [4](#step-4).
 
     ```bash
     export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/opp/vendors/customize/op_api/lib:$LD_LIBRARY_PATH
-    cd AclNNInvocation/output
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04/test/build
     msdebug execute_add_op
     (msdebug) target create "execute_add_op"
-    Current executable set to '/home/AclNNInvocation/output/execute_add_op' (aarch64).
+    Current executable set to '.../custom_op_04/test/build/execute_add_op' (aarch64).
     (msdebug)
     ```
 
-7. Set a breakpoint.
+6. Set a breakpoint.
 
     ```bash
-    b add_custom.cpp:55
+    (msdebug) b add_custom_template.cpp:78
+    Breakpoint 1: no locations (pending on future shared library load).
+    WARNING:  Unable to resolve breakpoint to any actual locations.
     ```
 
-8. Run the operator program and wait until the breakpoint is hit.
+7. Run the operator program and wait until the breakpoint is hit.
 
     ```bash
     (msdebug) r
-    Process 1385976 launched: '$HOME/shelltest/test/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/AclNNInvocationNaive/build/execute_add_op' (aarch64)
-    [Launch of Kernel anonymous on Device 0]
-    Process 1385976 stopped
-    [Switching to focus on Kernel anonymous, CoreId 24, Type aiv]
-    * thread #1, name = 'execute_add_op', stop reason = breakpoint 1.1
-        frame #0: 0x0000000000001564 AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`KernelAdd::Compute(this=0x000000000028f8a8, progress=0) (.vector) at add_custom.cpp:55:19
-       52           LocalTensor<DTYPE_Y> yLocal = inQueueY.DeQue<DTYPE_Y>();
-       53           LocalTensor<DTYPE_Z> zLocal = outQueueZ.AllocTensor<DTYPE_Z>();
-       54           Add(zLocal, xLocal, yLocal, this->tileLength);
-    -> 55           outQueueZ.EnQue<DTYPE_Z>(zLocal);
-       56           inQueueX.FreeTensor(xLocal);
-       57           inQueueY.FreeTensor(yLocal);
-       58       }
+    Process 82475 launched: '.../custom_op_04/test/build/execute_add_op' (aarch64)
+    1 location added to breakpoint 1
+    [Launch of Kernel AddCustomTemplate_862645f6bafeab7b8e397662e7e517c2_0 on Device 0]
+    1 location added to breakpoint 1
+    Process 82475 stopped
+    [Switching to focus on Kernel AddCustomTemplate_862645f6bafeab7b8e397662e7e517c2_0, CoreId 0, Type aiv]
+    * thread #1, name = 'execute_add_op', stop reason = breakpoint 1.3
+        frame #0: 0x000012c041201cd0 device_debugdata_0`KernelAdd<half, half, half>::Compute(this=0x00000000001cf840, progress=0) (.vector) at add_custom_template.cpp:78:17
+       75           AscendC::LocalTensor<TYPE_Y> yLocal = inQueueY.DeQue<TYPE_Y>();
+       76           AscendC::LocalTensor<TYPE_Z> zLocal = outQueueZ.AllocTensor<DTYPE_Z>();
+       77           AscendC::Add(zLocal, xLocal, yLocal, this->processDataNum);
+    -> 78           outQueueZ.EnQue<TYPE_Z>(zLocal);
+       79           inQueueX.FreeTensor(xLocal);
+       80           inQueueY.FreeTensor(yLocal);
+       81       }
     (msdebug)
     ```
 
@@ -299,128 +311,121 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
 
 **Preparations**
 
-- Obtain the [sample project](https://gitee.com/ascend/samples/tree/master/operator/ascendc/0_introduction/1_add_frameworklaunch/AddCustom).
+- Obtain the [sample project](https://gitcode.com/cann/cann-learning-hub/tree/6dfac1dad4b8eb9a3cd08322c76f98039480ea31/tutorials/ascendc_operator_development_light/02_AscendC_basic/src/02.06/kernel_pytorch_call) for operator debugging.
 
     > [!NOTE]
     >
-    > - This sample project supports only Python 3.9. If you want to run the project in other Python versions, change the Python version in the `run_op_plugin.sh` file in the `${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation` directory.
+    > - This sample uses the `torch.library` mechanism to register the Ascend C kernel as a PyTorch custom operator and compiles it into a separate dynamic library. Therefore, you do not need to recompile `torch_npu`.
     > - This sample project does not support <term>Atlas A3 training products</term>.
     > - When downloading the code sample, run the following command to specify the branch version:
     >
     >    ```bash
-    >    git clone https://gitee.com/ascend/samples.git -b v0.2-8.0.0.beta1
+    >    git clone https://gitcode.com/cann/cann-learning-hub.git && cd cann-learning-hub && git checkout 6dfac1dad4b8
     >    ```
 
-- Install the PyTorch framework and `torch_npu` plugin by referring to [TorchNPU Software Installation](https://www.hiascend.com/document/detail/en/Pytorch/910/installguide/swinstall/docs/en/installation_guide/installation_description.md).
-- Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
+- Install the PyTorch framework and TorchNPU plugin by referring to [TorchNPU Software Installation](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.1.0/docs/en/installation_guide/installation_description.md).
+- Configure related environment variables. For details, see the [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
 
-1. Run the following command to generate a custom operator project and implement the operator on the host and kernel:
+1. Go to the sample directory. This sample uses the `torch.library` mechanism to register the `add_custom` kernel as a PyTorch custom operator.
 
     ```bash
-    bash install.sh -v Ascendxxxyy    # xxxyy indicates the type of the chip used by the user
-    ```
-
-2. In the `${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/CustomOp` directory, change the value of `"Release"` to "Debug" in `cacheVariables` of the `CMakePresets.json` file.
-
-    ```bash
-    "cacheVariables": {
-           "CMAKE_BUILD_TYPE": {
-               "type": "STRING",
-               "value": "Debug"
-           },
-    ...
-    }
-    ```
-
-3. Compile and deploy the operator by referring to the [Operator Compilation and Deployment](https://gitcode.com/Ascend/msopgen/blob/26.1.0/docs/zh/user_guide/msopgen_user_guide.md) section.
-4. Go to the sample directory and download the sample code in CLI mode. Use PyTorch to call the AddCustom operator project and complete the compilation by referring to [README](https://gitee.com/ascend/samples/blob/master/operator/ascendc/0_introduction/1_add_frameworklaunch/README.md).
-
-    ```bash
-    cd ${git_clone_path}/samples/operator/ascendc/0_introduction/1_add_frameworklaunch/PytorchInvocation
+    cd ${git_clone_path}/cann-learning-hub/tutorials/ascendc_operator_development_light/02_AscendC_basic/src/02.06/kernel_pytorch_call/torch_library
     ```
 
     > [!NOTE]
     >
-    > The sample project directory is as follows:
+    > The sample project directory of the PyTorch integration project is as follows:
     >
     > ```text
-    > PytorchInvocation
-    > ├── op_plugin_patch
-    > ├── README.md        // Registration sample of calling the AddCustom operator project in PyTorch mode
-    > ├── run_op_plugin.sh      // Required for executing the sample
-    > └── test_ops_custom.py    // Required for starting the tool
-    > └── test_ops_custom_register_in_graph.py  // Executes the test case script in torch.compile mode
+    > torch_library
+    > ├── CMakeLists.txt        // Build project file
+    > ├── torch_binding.cpp     // torch.library encapsulation and operator registration
+    > ├── add_custom_test.py    // PyTorch invocation and accuracy verification script
+    > └── README.md             // Sample description
     > ```
+    >
+    > The kernel implementation is located in the `../common/add_custom.asc` file in the parent directory.
 
-5. Execute the sample. During the sample execution, test data is automatically generated. Run the PyTorch sample, and verify the running result.
+2. Add debugging compilation options in `CMakeLists.txt` to enable the debugging function of the kernel compiler and the host compiler.
 
-    ```bash
-    bash run_op_plugin.sh
-    -- CMAKE_CCE_COMPILER: ${INSTALL_DIR}/toolkit/tools/ccec_compiler/bin/ccec
-    -- CMAKE_CURRENT_LIST_DIR: ${INSTALL_DIR}/AddKernelInvocation/cmake/Modules
-    -- ASCEND_PRODUCT_TYPE:
-      Ascendxxxyy
-    -- ASCEND_CORE_TYPE:
-      VectorCore
-    -- ASCEND_INSTALL_PATH:
-      /usr/local/Ascend/cann
-    -- The CXX compiler identification is GNU 10.3.1
-    -- Detecting CXX compiler ABI info
-    -- Detecting CXX compiler ABI info - done
-    -- Check for working CXX compiler: /usr/bin/c++ - skipped
-    -- Detecting CXX compile features
-    -- Detecting CXX compile features - done
-    -- Configuring done
-    -- Generating done
-    -- Build files have been written to: ${INSTALL_DIR}/AddKernelInvocation/build
-    Scanning dependencies of target add_npu
-    ...
-    [100%] Built target add_npu
-    INFO: Ascend C Add Custom SUCCESS
-    ...
-    INFO: Ascend C Add Custom  in torch.compile graph SUCCESS
+    > [!NOTE]
+    >
+    > If you do not add the debugging compilation options, the compilation output does not contain debugging information, and msDebug cannot hit source breakpoints.
+
+    ```cmake
+    # Add -O0 -g --cce-ignore-always-inline=true on the kernel side (ASC compiler)
+    target_compile_options(ascendc_kernels PRIVATE
+        $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${CMAKE_ASC_ARCHITECTURES} -O0 -g --cce-ignore-always-inline=true>
+    )
+
+    # Add -O0 -g on the host side (C++ compiler)
+    target_compile_options(ascendc_ops PRIVATE
+        ${TORCH_CXX_FLAGS}
+        -O0 -g
+    )
     ```
 
-6. Start msDebug to start the Python program and enter the debugging page.
+3. Run the following commands to compile the operator and generate the dynamic library.
 
     ```bash
-    msdebug python3 test_ops_custom.py
+    source ${install_path}/cann/set_env.sh
+    mkdir -p build && cd build
+    cmake -DCMAKE_ASC_ARCHITECTURES=dav-2201 ..
+    make -j
+    ```
+
+    After the compilation is complete, `libascendc_kernels.so` and `libascendc_ops.so` are generated in the `build` directory.
+
+4. Run the sample to verify that the operator functions correctly.
+
+    ```bash
+    python3 ../add_custom_test.py
+    Ran 1 test in 1.341s
+    OK
+    ```
+
+5. Start msDebug to start the Python program and enter the debugging page.
+
+    ```bash
+    msdebug python3 ../add_custom_test.py
     (msdebug) target create "python3"
-    Current executable set to '/home/mindstudio/miniconda3/envs/py39/bin/python3' (aarch64).
-    (msdebug) settings set -- target.run-args  "test_ops_custom.py"
+    Current executable set to '/opt/buildtools/Python-3.11.4/bin/python3' (aarch64).
+    (msdebug) settings set -- target.run-args  "add_custom_test.py"
     (msdebug)
     ```
 
-7. Set a breakpoint.
+6. Set a breakpoint.
 
     Set an NPU breakpoint in the kernel function based on the specified source code file and corresponding line number.
 
     ```bash
-    (msdebug) b add_custom.cpp:60
-    Breakpoint 1: where = AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`::AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b_1(uint8_t *, uint8_t *, uint8_t *, uint8_t *, uint8_t *) + 9912 [inlined] KernelAdd::Compute(int) + 3400 at add_custom.cpp:60:9, address = 0x00000000000026b8
+    (msdebug) b add_custom.asc:34
+    Breakpoint 1: no locations (pending on future shared library load).
+    WARNING:  Unable to resolve breakpoint to any actual locations.
     ```
 
-8. Run the program and wait until the breakpoint is hit.
+7. Run the program and wait until the breakpoint is hit.
 
     ```bash
     (msdebug) r
-    Process 197189 launched: '/home/miniconda3/envs/py39/bin/python3' (aarch64)
-    Process 197189 stopped and restarted: thread 1 received signal: SIGCHLD
-    ...
-    [Launch of Kernel anonymous on Device 0]
-    Process 197189 stopped
-    [Switching to focus on Kernel anonymous, CoreId 8, Type aiv]
-    * thread #1, name = 'python3', stop reason = breakpoint 2.1
-        frame #0: 0x00000000000026b8 AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b.o`::AddCustom_1e04ee05ab491cc5ae9c3d5c9ee8950b_1(uint8_t *, uint8_t *, uint8_t *, uint8_t *, uint8_t *) [inlined] KernelAdd::Compute(this=0x000000000020efb8, progress=1) at add_custom.cpp:60:9
-       57              LocalTensor<DTYPE_Y> yLocal = inQueueY.DeQue<DTYPE_Y>();
-       58              LocalTensor<DTYPE_Z> zLocal = outQueueZ.AllocTensor<DTYPE_Z>();
-       59              Add(zLocal, xLocal, yLocal, this->tileLength);
-    -> 60              outQueueZ.EnQue<DTYPE_Z>(zLocal);
-       61              inQueueX.FreeTensor(xLocal);
-       62              inQueueY.FreeTensor(yLocal);
-       63          }
+    Process 74664 launched: '/opt/buildtools/Python-3.11.4/bin/python3' (aarch64)
+    Process 74664 stopped and restarted: thread 2 received signal: SIGCHLD
+    Process 74664 stopped and restarted: thread 1 received signal: SIGCHLD
+    1 location added to breakpoint 1
+    [Launch of Kernel _Z10add_customPhS_S_j on Device 0]
+    1 location added to breakpoint 1
+    Process 74664 stopped
+    [Switching to focus on Kernel _Z10add_customPhS_S_j, CoreId 8, Type aiv]
+    * thread #1, name = 'python3', stop reason = breakpoint 1.2
+        frame #0: 0x000012c041400604 device_debugdata_0`add_custom(x=0x12c041200000, y=0x12c041208200, z=0x12c041210400, totalLength=16384) at add_custom.asc:34:15
+       31       yLocal = inQueueY.DeQue<half>();
+       32       AscendC::LocalTensor<half> zLocal = outQueueZ.AllocTensor<half>();
+       33       AscendC::Add(zLocal, xLocal, yLocal, blockLength);
+    -> 34       outQueueZ.EnQue<half>(zLocal);
+       35       inQueueX.FreeTensor(xLocal);
+       36       inQueueY.FreeTensor(yLocal);
     (msdebug)
     ```
 
@@ -428,8 +433,8 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
     >
     > For details about other debugging operations, see [Importing Debugging Information](../user_guide/msdebug_user_guide.md#tool-usage), [Memory and Variable Printing](../user_guide/msdebug_user_guide.md#memory-and-variable-printing), [Debugging Information Display](../user_guide/msdebug_user_guide.md#debugging-information-display), and [Core Switching](../user_guide/msdebug_user_guide.md#core-switching).
 
-9. Delete the breakpoint. For details, see [Setting Breakpoints](../user_guide/msdebug_user_guide.md#breakpoint-setting).
-10. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
+8. Delete the breakpoint. For details, see [Setting Breakpoints](../user_guide/msdebug_user_guide.md#breakpoint-setting).
+9. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash
     (msdebug) q
@@ -442,14 +447,14 @@ This section shows how to use msDebug to debug the add operator called by a PyTo
 
 This section shows how to use msDebug to debug a template library operator (matmul) on the board. The operator can multiply two matrices and output the result.
 
-**Preparations** <a id="Preparations"></a>
+**Preparations** <a id="preparations"></a>
 
 - Obtain the [sample project](https://gitcode.com/cann/catlass).
-- Configure related environment variables. For details, see [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
+- Configure related environment variables. For details, see the [MindStudio Debugger User Guide](../user_guide/msdebug_user_guide.md).
 
 **Procedure**
 
-1. Compile the operator based on the sample project obtained in [Preparations](#Preparations) to generate the executable file `00_basic_matmul`.
+1. Compile the operator based on the sample project obtained in [Preparations](#preparations) to generate the executable file `00_basic_matmul`.
 
     Run the following command to compile the operator. After the compilation is complete, the executable file `00_basic_matmul` is generated in the `output/bin` directory.
 
@@ -466,7 +471,7 @@ This section shows how to use msDebug to debug a template library operator (matm
     (msdebug)
     ```
 
-3. Sets a breakpoint.
+3. Set a breakpoint.
 
     In this test case, the code implementation of the kernel function is located in `basic_matmul.hpp`. In this file, set an NPU breakpoint for the required code line.
 
@@ -478,7 +483,7 @@ This section shows how to use msDebug to debug a template library operator (matm
 
 4. Run the operator program and wait until the breakpoint is hit.
 
-    The program starts to run until the first breakpoint (`basic_matmul.hpp:127`) is hit. msDebug detects that the NPU core function starts to run on device 0.
+    The program starts to run until the first breakpoint (`basic_matmul.hpp:121`) is hit. msDebug detects that the NPU core function starts to run on device 0.
 
     ```cpp
     (msdebug) run
@@ -508,11 +513,11 @@ This section shows how to use msDebug to debug a template library operator (matm
 
         ```bash
         (msdebug) ascend info cores
-          CoreId  Type  Device Stream Task Block         PC               stop reason
-        *  21     aic      0     48     0     0     0x12c0c00d6c38         breakpoint 1.1
-           22     aic      0     48     0     1     0x12c0c00d6c38         breakpoint 1.1
-           23     aic      0     48     0     2     0x12c0c00d6c38         breakpoint 1.1
-           24     aic      0     48     0     3     0x12c0c00d6c38         breakpoint 1.1
+          CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+        *    21  aic      0    48    0     0  0x12c0c00d6c38  breakpoint 1.1       NA   NA
+             22  aic      0    48    0     1  0x12c0c00d6c38  breakpoint 1.1       NA   NA
+             23  aic      0    48    0     2  0x12c0c00d6c38  breakpoint 1.1       NA   NA
+             24  aic      0    48    0     3  0x12c0c00d6c38  breakpoint 1.1       NA   NA
         (msdebug)
         ```
 
@@ -557,7 +562,7 @@ This section shows how to use msDebug to debug a template library operator (matm
         (uint32_t) $1 = 0
         ```
 
-    - Show disassembly around the current breakpoint.
+    - View the disassembly code near the current breakpoint.
 
         ```cpp
         (msdebug) dis -p

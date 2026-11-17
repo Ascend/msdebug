@@ -10,15 +10,15 @@ The following operator call scenarios are supported:
 
 - Kernel launch operator development: kernel launch
 
-    For details about the kernel launch scenario, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board).
+    For details about the kernel launch scenario, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in Ascend C Operator Development Guide. For details about the operation, see [Debugging a Vector Operator on the Board](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board).
 
 - Project-based operator development: single-operator API calling
 
-    For details about the single-operator API execution scenario, see "Project-based Operator Development" > [Single-Operator API Execution](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/Aclnn%E7%AE%97%E5%AD%90%E5%B7%A5%E7%A8%8B%E5%8C%96%E5%BC%80%E5%8F%91/%E5%8D%95%E7%AE%97%E5%AD%90API%E8%B0%83%E7%94%A8.md) in *Ascend C Operator Development Guide*. For details about the operation, see [Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator).
+    For details about the single-operator API execution scenario, see "Project-based Operator Development" > [Single-Operator API Execution](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/advanced_programming/aclnn_operator_development/invocation/single_operator_api_call.md) in Ascend C Operator Development Guide. For details about the operation, see [Calling AscendCL Single-Operator](../best_practices/msdebug_basic_cases.md#calling-ascendcl-single-operator).
 
 - AI framework operator adaptation: PyTorch framework
 
-    For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md). For details about the operation, see [Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface).
+    For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/latest/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md). For details about the operation, see [Debugging the Operators Called by a PyTorch Interface](../best_practices/msdebug_basic_cases.md#debugging-the-operators-called-by-a-pytorch-interface).
 
 **Additional Information**
 
@@ -32,9 +32,9 @@ msDebug also provides the following extension program. For details, see [**Table
 </th>
 </tr>
 </thead>
-<tbody><tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row535645615122"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p180175116563">msdebug-mi(msDebug Machine Interface)</p>
+<tbody><tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row535645615122"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p180175116563">msDebug Machine Interface (msdebug-mi)</p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p796410302155">Provides machine-to-machine interaction interfaces for data parsing, which users do not need to pay attention to.</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p796410302155">Provides machine-to-machine interaction interfaces for data parsing, which you do not need to pay attention to.</p>
 </td>
 </tr>
 </tbody>
@@ -44,7 +44,7 @@ msDebug also provides the following extension program. For details, see [**Table
 
 **Environment Setup**
 
-- Install msDebug by referring to [MindStudio Debugger Installation Guide](../install_guide/msdebug_install_guide.md).
+- Install msDebug by referring to the [MindStudio Debugger Installation Guide](../install_guide/msdebug_install_guide.md).
 - To enable msDebug, install the NPU driver and firmware using either of the following methods (method 1 is recommended for CANN 8.1.RC1 and later, and driver 25.0.RC1 and later):
     - Method 1: Specify the `--full` option during driver installation, and then run the `echo 1 > /proc/debug_switch` command as the `root` user to enable the debugging channel. Then the msDebug tool can be used.
 
@@ -52,7 +52,7 @@ msDebug also provides the following extension program. For details, see [**Table
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --full
         ```
 
-    - Method 2: Specify the `--debug` option during driver installation. For details, see [Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/900/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum) in *CANN Software Installation Guide*.
+    - Method 2: Specify the `--debug` option during driver installation. For details, see [Installing the NPU Driver and Firmware](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/softwareinst/instg/instg_0107.html?OS=openEuler&InstallType=netyum) in CANN Software Installation Guide.
 
         ```bash
         ./Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run --debug
@@ -69,19 +69,19 @@ msDebug also provides the following extension program. For details, see [**Table
 
 The following products are supported:
 
-- Atlas A3 training products/Atlas A3 inference products
-- Atlas A2 training products/Atlas A2 inference products
+- Atlas A3 products
+- Atlas A2 products
 - Atlas inference products
-- Ascend 950 products
+- Ascend 950PR/950DT products
 
 > [!NOTE]
->
+> 
 >- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/en/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
 >- For details about the supported functions, see the documentation of the corresponding function module.
 
 ## Precautions
 
-- You can run the `help` command to view all the commands supported by msDebug. Commands excluded in [command reference](#command-reference) are implemented by the open-source debugger LLDB. Pay attention to related risks when using LLDB. For details about how to use LLDB, see its [official document](https://lldb.llvm.org/).
+- You can run the `help` command to view all the commands supported by msDebug. Commands excluded in [Command Reference](#command-reference) are implemented by the open-source debugger LLDB. Pay attention to related risks when using LLDB. For details about how to use LLDB, see its [official document](https://lldb.llvm.org/).
 - You need to ensure the execution security of executable files or applications.
     - You are advised to restrict the operation permission on executable files or applications to avoid privilege escalation risks.
     - Avoid high-risk operations (such as deleting files, deleting directories, changing passwords, and running privilege escalation commands) to prevent security risks.
@@ -105,7 +105,7 @@ The following products are supported:
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p1363192845018">b</p>
 </td>
-<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p863132855016">Adds breakpoints.<em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i677164519161">f</em><em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i21605617108">ilename</em> indicates the operator implementation code file *.cpp.<em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i1905837141113">linenum</em> indicates the specific line number of the code file.</p>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p863132855016">Adds breakpoints. <em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i677164519161">f</em><em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i21605617108">ilename</em> indicates the operator implementation code file *.cpp. <em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i1905837141113">linenum</em> indicates the specific line number of the code file.</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen87724714399">b add_custom.cpp:85</pre>
 </td>
@@ -153,7 +153,7 @@ The following products are supported:
 <td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p191651552183115">Reads memory.</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen138271438203917">x -m GM -f float16[] 0x00001240c0037000 -c 2 -s 128 -E 0</pre>
-<ul id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_ul13312958144010"><li>-m: specifies the memory location. GM, UB, L0A, L0B, L0C, L1, FB, STACK, DCACHE, and ICACHE are supported. STACK, DCACHE, and ICACHE are used only when the dump file of an abnormal operator is parsed. </li><li>-s: specifies the number of bytes to be printed in each line. </li><li>-c: specifies the number of lines to be printed. </li><li>-f: specifies the type of data to be printed. </li><li>-E or --offset: skips the first x elements during printing. </li><li><em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i15451171161210">0x00001240c0037000</em>: indicates the memory address to be read. Replace it with the actual address.</li></ul>
+<ul id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_ul13312958144010"><li><code>-m</code>: Specifies the memory location. GM, UB, L0A, L0B, L0C, L1, FB, STACK, DCACHE, and ICACHE are supported. STACK, DCACHE, and ICACHE are used only when the dump file of an abnormal operator is parsed. </li><li><code>-s</code>: Specifies the number of bytes to be printed in each line. </li><li><code>-c</code>: Specifies the number of lines to be printed. </li><li><code>-f</code>: Specifies the type of data to be printed. </li><li><code>-E</code> or <code>--offset</code>: Skips the first x elements during printing. </li><li><em id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_i15451171161210">0x00001240c0037000</em>: Indicates the memory address to be read. Replace it with the actual address.</li></ul>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row19163171018502"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p6645289509">ascend info devices</p>
@@ -258,7 +258,7 @@ The following products are supported:
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen145218134118">ascend aiv 5</pre>
 </td>
 </tr>
-<tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row3181194810592"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p8182648185913"><span class="uicontrol" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_uicontrol44351721535">"CTRL+C"</span></p>
+<tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row3181194810592"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p8182648185913"><span class="uicontrol" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_uicontrol44351721535">"Ctrl+C"</span></p>
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p793245317597">-</p>
 </td>
@@ -271,7 +271,7 @@ The following products are supported:
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p18621740153413">re r</p>
 </td>
-<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p6621240193419">Reads the value of a register. `-a` reads the values of all registers. `$REG_NAME` reads the value of a register with a specified name.</p>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p6621240193419">Reads the value of a register. <code>-a</code> reads the values of all registers. <code>$REG_NAME</code> reads the value of a register with a specified name.</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen114593337362">register read -a
 re r $PC</pre>
@@ -281,18 +281,20 @@ re r $PC</pre>
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p>dis</p>
 </td>
-<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p>View the disassembly. </p>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p>Views the disassembly instructions.</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap">dis
-dis -c 8
-dis -p
-dis -b
-dis -m</pre>
+dis -b -s 0x12c041200270 -e 0x12c041200284
+dis -b -p -c 8
+dis -b -a 0x12c041200270 --force</pre>
 <ul>
-<li>-c/--count N: Specify the instruction count for disassembly.</li>
-<li>-p/--pc: Displays instructions starting at the current PC. </li>
-<li>-b/--bytes: Displays opcode bytes alongside assembly code.</li>
-<li>-m/--mixed: Displays source code and assembly code together.</li>
+<li><code>-c/--count N</code>: Specifies the number of instructions.</li>
+<li><code>-s/--start-address &lt;addr&gt;</code>: Specifies the start address.</li>
+<li><code>-e/--end-address &lt;addr&gt;</code>: Specifies the end address.</li>
+<li><code>-p/--pc</code>: Displays the instructions starting from the current PC.</li>
+<li><code>-b/--bytes</code>: Displays the machine code.</li>
+<li><code>-a/--address &lt;addr&gt;</code>: Displays the disassembly of the function that contains the address.</li>
+<li><code>--force</code>: Forces the disassembly of large functions.</li>
 </ul>
 </td>
 </tr>
@@ -354,7 +356,7 @@ dis -m</pre>
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p132495441546">-</p>
 </td>
-<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><ul id="zh-cn_topic_0000001979357376_ul414333141315"><li>Loads the coredump file. </li><li>The second parameter is optional. If you need to use it, you can pass a file in any of the following formats: an operator file in kernel.o format generated by using the `-g` compilation, or an executable file or dynamic library file of the operator binary generated by using the `-g` compilation. This parameter is used to display the call stack of code lines.</li></ul>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><ul id="zh-cn_topic_0000001979357376_ul414333141315"><li>Loads the coredump file. </li><li>The second parameter is optional. If you need to use it, you can pass a file in any of the following formats: an operator file in kernel.o format generated by using the <code>-g</code> compilation, or an executable file or dynamic library file of the operator binary generated by using the <code>-g</code> compilation. This parameter is used to display the call stack of code lines.</li></ul>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="screen" id="zh-cn_topic_0000001979357376_screen129583121143">msdebug --core corefile xx.o
 msdebug --core corefile</pre>
@@ -380,7 +382,7 @@ msdebug --core corefile</pre>
 change the id of the focused ascend aicore.
 Syntax: ascend aic &lt;id&gt;</pre>
 </div>
-<div class="p" id="zh-cn_topic_0000001979357376_p10464515123611"><strong id="zh-cn_topic_0000001979357376_b172605212363"></strong>The help information about the `ascend info blocks` command is as follows:<pre class="code_wrap" id="zh-cn_topic_0000001979357376_screen17464115103613">(msdebug) <strong id="zh-cn_topic_0000001979357376_b4963114083620">help ascend info blocks</strong>
+<div class="p" id="zh-cn_topic_0000001979357376_p10464515123611"><strong id="zh-cn_topic_0000001979357376_b172605212363"></strong>The help information about the <code>ascend info blocks</code> command is as follows:<pre class="code_wrap" id="zh-cn_topic_0000001979357376_screen17464115103613">(msdebug) <strong id="zh-cn_topic_0000001979357376_b4963114083620">help ascend info blocks</strong>
 show blocks overall info.
 Syntax: ascend info blocks
 Command Options Usage:
@@ -390,12 +392,30 @@ Command Options Usage:
 </div>
 </td>
 </tr>
+<tr id="zh-cn_topic_0000001979357376_row43201348105418"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p10320248205417">help</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p33205488545">-h</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_p771932814512">Displays help information.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="screen" id="zh-cn_topic_0000001979357376_screen919875915415">msdebug -h</pre>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000001979357376_row43201348105419"><td class="cellrowborder" valign="top" width="20.75%" headers="mcps1.2.5.1.1 "><p id="zh-cn_topic_0000001979357376_p10320248205418">version</p>
+</td>
+<td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_p33205488546">-V</p>
+</td>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_p771932814513">Queries related version information.</p>
+</td>
+<td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="screen" id="zh-cn_topic_0000001979357376_screen919875915416">msdebug -V</pre>
+</td>
+</tr>
 </tbody>
 </table>
 
 > [!NOTE]
->
-> - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop_reason` is `CUBE_ERROR`, `CCU_ERROR`, `MTE_ERROR`, `VEC_ERROR`, and `FIXP_ERROR`.
+> 
+> - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop_reason` is `CUBE_ERROR`, `CCU_ERROR`, `MTE_ERROR`, `VEC_ERROR`, or `FIXP_ERROR`.
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
 >    ```bash
@@ -408,7 +428,7 @@ Command Options Usage:
 
 **Importing Debugging Information**
 
-Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool.
+Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool. 
 
 **Starting the Tool**
 
@@ -431,8 +451,8 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]
-        >
-        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see "Kernel Launch Operator Development" \> [Kernel Launch](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/programug/Ascendcopdevg/docs/guide/%E7%BC%96%E7%A8%8B%E6%8C%87%E5%8D%97/%E9%99%84%E5%BD%95/%E5%9F%BA%E4%BA%8E%E6%A0%B7%E4%BE%8B%E5%B7%A5%E7%A8%8B%E5%AE%8C%E6%88%90Kernel%E7%9B%B4%E8%B0%83.md) in *Ascend C Operator Development Guide*.
+        > 
+        > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in Ascend C Operator Development Guide.
         > - If the executable file has other input parameters, pass them as follows:
         >
         >    ```bash
@@ -456,7 +476,7 @@ The msDebug tool can be started in either of the following ways.
 
         > [!NOTE]
         >
-        > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://www.hiascend.com/document/detail/en/Pytorch/2610/userguide/SuppLib/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
+        > For details about the single-operator calling scenario through the PyTorch framework, see the OpPlugin in [TorchNPU Supporting Software Libraries](https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.1.0/en/supported_suites_and_third_party_libraries/supported_suites_and_third_party_libraries.md).
 
 **Exiting Debugging**
 
@@ -480,9 +500,9 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 - Issue isolation: If a performance or function issue occurs, you can specify different device IDs to check whether the issue is caused by a specific device, thereby making it easier to locate the issue.
 
 > [!NOTE]
->
+> 
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
-> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see "High-Level APIs" \> "HCCL" \> > [HCCL Kernel APIs](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/ascendcopapi/docs/api/SIMD-API/%E9%AB%98%E9%98%B6API/HCCL%E9%80%9A%E4%BF%A1%E7%B1%BB/HCCL-Kernel%E4%BE%A7%E6%8E%A5%E5%8F%A3/HCCL%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E.md) in *Ascend C Operator Development API Reference*.
+> - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see [HCCL Kernel APIs](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/ascendcopapi/docs/en/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md) in Ascend C Operator Development API Reference.
 
 ```tex
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
@@ -527,7 +547,7 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
 ### Precautions
 
 - If an operator implementation file with the same name exists on both the host and kernel, you are advised to use an absolute path to set a breakpoint to ensure that the breakpoint is set on the target file.
-- When a breakpoint is set on the source code file, an alarm indicating that the actual location cannot be found may be displayed, as shown in the following. After the operator is executed, the actual location is automatically found and the breakpoint is automatically set.
+- When a breakpoint is set on the source code file, an alarm indicating that the actual location cannot be found may be displayed, as follows. After the operator is executed, the actual location is automatically found and the breakpoint is automatically set.
 
     ```bash
     (msdebug) b /home/xx/op_kernel/matmul_leakyrelu_kernel.cpp:24
@@ -548,7 +568,7 @@ When using msDebug to debug an operator, you can set line breakpoints on the exe
     ...
     ```
 
-- In scenarios involving Ascend 950 products, simd vf functions and their subfunctions must be inlined, causing a large amount of code line information to be lost and making it impossible to resolve breakpoint information. You can add the `__asm__("NOP")` statement in the simd vf function and set a breakpoint on that line.
+- In scenarios involving Ascend 950PR/950DT products, simd vf functions and their subfunctions must be inlined, causing a large amount of code line information to be lost and making it impossible to resolve breakpoint information. You can add the `__asm__("NOP")` statement in the simd vf function and set a breakpoint on that line.
 
     ```cpp
     __simd_vf__ inline void funcA () {
@@ -648,7 +668,7 @@ Current breakpoints:
     1 breakpoints deleted; 0 breakpoint locations disabled.
     ```
 
-2. Resume the running of the program. Due to breakpoint deletion, the program keeps running to the last minute.
+2. Resume the running of the program. Due to breakpoint deletion, the program keeps running until it finishes.
 
     ```bash
     (msdebug) c
@@ -669,7 +689,7 @@ Based on the variable type and usage, a variable can be stored in a register or 
 
 ### Precautions
 
-Currently, the msDebug tool cannot directly print the value of a template parameter by variable name. You need to print the value of the template parameter using the `p *Template_parameter_object*`. The value of the template parameter is displayed after printing. For example, `COMPUTE_LENGTH` is a template parameter, and `this` is the object pointer to which the template parameter belongs. If you want to print the value of the parameter, run the `p this` command where the parameter is used. An example is provided as follows:
+Currently, the msDebug tool cannot directly print the value of a template parameter by variable name. You need to print the value of the template parameter using the `p Template_parameter_object`. The value of the template parameter is displayed after printing. For example, `COMPUTE_LENGTH` is a template parameter, and `this` is the object pointer to which the template parameter belongs. If you want to print the value of the parameter, run the `p this` command where the parameter is used. An example is provided as follows:
 
 ```bash
    22   template<class ArchTag_, class ElementAccumulator_, class ElementOut_, uint32_t COMPUTE_LENGTH>
@@ -735,10 +755,10 @@ The actual values of `GlobalTensor` variables are stored in the GM. Run the foll
 ```
 
 > [!NOTE]
->
+> 
 > - If you want to print other custom addresses, ensure the validity of the custom addresses. Otherwise, errors may occur during operator running.
 > - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
-> - Currently, GM memory can be read and displayed when the breakpoint stops on the Kernel side or the host side.
+> - Currently, GM memory can be read and displayed when the breakpoint stops on the kernel side or the host side.
 
 **Printing LocalTensor**
 
@@ -796,7 +816,8 @@ To understand the code execution details, you can run the `thread step-over` com
 
 ### Precautions
 
-During operator build, the build option of `--cce-ignore-always-inline=true` is used.
+- During operator build, the build option of `--cce-ignore-always-inline=true` is used.
+- The `step in` function does not support Triton operator scenarios.
 
 ### Example
 
@@ -841,16 +862,16 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
     ```cpp
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       12     aic      1     3     0     0     0x12c0c00f03b0         breakpoint 1.2
-    *  44     aiv      1     3     0     0     0x12c0c00f8048         step over               // * indicates the core that is currently running
-       45     aiv      1     3     0     0     0x12c0c00f801c         breakpoint 1.2
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          12  aic      1     3    0     0  0x12c0c00f03b0  breakpoint 1.2       NA   NA
+    *     44  aiv      1     3    0     0  0x12c0c00f8048       step over       NA   NA               // * indicates the core that is currently running
+          45  aiv      1     3    0     0  0x12c0c00f801c  breakpoint 1.2       NA   NA
     ```
 
     > [!NOTE]
-    >
+    > 
     > - If the current core is stopped due to both step-by-step debugging and breakpoints, "breakpoint" is displayed.
-    > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows:
+    > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows: 
     >    - The user program itself has an infinite loop, which needs to be rectified by repairing the program.
     >    - An operator uses synchronization instructions.
 
@@ -903,15 +924,16 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
     ```cpp
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       13     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-    *  46     aiv      1     3     0     0     0x12c0c00f8ebc         step in          // * indicates the core that is currently running
-       47     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          13  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+    *     46  aiv      1     3    0     0  0x12c0c00f8ebc         step in       NA   NA          // * indicates the core that is currently running
+          47  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
     > [!NOTE]
     >
-    > If the current core is stopped due to both function debugging and breakpoints, `breakpoint` is displayed.
+    > - If the current core is stopped due to both function debugging and breakpoints, `breakpoint` is displayed.
+    > - During single-step debugging, you cannot debug directly from `main scalar` to `simd/simt vf`.
 
 4. After debugging the CopyOut function, run the `finish` command to exit the CopyOut function and return to the main program to continue execution.
 
@@ -934,17 +956,17 @@ During operator build, the build option of `--cce-ignore-always-inline=true` is 
 
 ### Function
 
-Use the `disassemble` (abbreviated as `dis`) command to view the current function's disassembly when paused within a device operator, aiding in source-to-instruction analysis. This command also works after loading an exception operator dump file containing device ELF and readable code.
+When a program is suspended inside a device operator, you can run the `disassemble` command (`dis` for short) to view the disassembly instructions of the current function, which helps you analyze the correspondence between the source code and the instructions. In addition, after you load the dump file of an abnormal operator that contains the device ELF and readable code, you can also run this command to view the disassembly instructions.
 
 ### Precautions
 
-CANN 9.2.0 or later is required.
+Ensure that the CANN version is 9.2.0 or later.
 
 ### Example
 
-**Viewing Disassembly**
+**Viewing the Disassembly Code**
 
-After the program stops at a device breakpoint, enter `dis` to view the device disassembly.
+After the program stops at a device breakpoint, enter `dis` to view the device disassembly instructions.
 
 ```text
 (msdebug) dis
@@ -964,50 +986,55 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 ...
 ```
 
-The arrow indicates the current PC. By default, all disassembled instructions of the current kernel are displayed. Use `-c` to set the number of instructions to display.
+The arrow indicates the current PC. By default, all disassembly code of the current function is displayed. You can use `-c` to specify the number of instructions to display.
 
-**Viewing Instructions Around the Current PC**
+**Viewing a Specified Range of Disassembly**
 
-Enter `dis -p` to view device instructions near the current PC.
+- Enter `dis -p` to view the device disassembly instructions starting from the current PC.
 
-```text
-(msdebug) dis -p
-device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
-->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
-    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
-    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
-    0x12004cc005d8 <+120>: SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:2
-```
+    ```text
+    (msdebug) dis -p
+    device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
+    ->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+        0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
+        0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
+        0x12004cc005d8 <+120>: SHFI.R.s32          R5, R4, #31 wait:0b0000000 stall:2
+    ```
 
-Four instructions are displayed by default. Use `-c` to set the number of instructions to display.
+    By default, four disassembly instructions are displayed. You can use `-c` to specify the number of instructions to display.
 
-**Displaying Source Code and Disassembly Together**
+- Enter `dis -s <addr> -e <addr>` to view the disassembly instructions in a specified range.
 
-Enter `dis -m` to view source code and disassembled instructions together.
+    ```text
+    (msdebug) dis -s 0x12c041200274 -e 0x12c041200284
+    device_debugdata_0`vec_add_demo<2048u>:
+        0x12c041200274 <+628>: LD.b64              X2, [X30], #-1864, #0
+        0x12c041200278 <+632>: LD.b64              X3, [X30], #-1856, #0
+    ->  0x12c04120027c <+636>: BAR.ALL             <_Z12vec_add_demoILj2048EEvPfS0_S0_+0x6>
+        0x12c041200280 <+640>: BAR.ALL             <_Z12vec_add_demoILj2048EEvPfS0_S0_+0x6>
+    ```
 
-```text
-(msdebug) dis -m
-...
-** 42       int tiles_x = (width + warpSize - 1) / warpSize; // Number of warp-sized tiles across the image width (32 columns per tile)
+    The start address should be the beginning of a valid instruction in the readable code area of the current device module. The end address must be greater than the start address, and the displayed range does not include the end address.
 
-    0x12004cc005b8 <+88>:  SHFI.R.u32          R5, R5, #27 wait:0b0000000 stall:6
+- Enter `dis -a <addr>` to view the disassembly instructions of the function that contains the address.
 
--> 39       uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    ```text
+    (msdebug) dis -a 0x12c0412005a0
+    device_debugdata_0`void AscendC::DataCopy<float>(AscendC::LocalTensor<float> const&, AscendC::GlobalTensor<float> const&, unsigned int) (.vector):
+        0x12c041200598 <+0>:   ST.b64              X31, [X30], #-1944, #0
+        0x12c04120059c <+4>:   ST.b64              X29, [X30], #-1952, #0
+        0x12c0412005a0 <+8>:   MOV                 X17, #1952
+        0x12c0412005a4 <+12>:  SUB.s64             X29, X30, X17
+        0x12c0412005a8 <+16>:  MOV                 X17, #72
+        0x12c0412005ac <+20>:  SUB.s64             X30, X30, X17
+    ...
+    ```
 
-->  0x12004cc005c0 <+96>:  IMAD.u32            R8, R8, R11, R10 wait:0b0000000 stall:1
+    By default, the disassembly code of the entire function is displayed. You can use `-c` to specify the number of instructions to display.
 
-** 42       int tiles_x = (width + warpSize - 1) / warpSize; // Number of warp-sized tiles across the image width (32 columns per tile)
+**Displaying the Disassembly with Opcodes**
 
-    0x12004cc005c8 <+104>: IADD                R4, R4, R5 wait:0b0000000 stall:3
-    0x12004cc005d0 <+112>: SHFI.R.s32          R6, R4, #5 wait:0b0000000 stall:1
-...
-```
-
-By default, source code and disassembly for the entire kernel are displayed. Use `-c` to set the number of instructions to display.
-
-**Displaying Opcode Bytes and Disassembly Together**
-
-Enter `dis -b` to view opcode bytes and disassembled instructions together.
+Enter the `dis -b` command.
 
 ```text
 (msdebug) dis -b
@@ -1026,7 +1053,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 ...
 ```
 
-By default, opcode bytes and disassembly for the entire kernel are displayed. Use `-c` to set the number of instructions to display.
+By default, the opcode bytes and disassembly code of the current function are displayed. You can use `-c` to specify the number of instructions to display.
 
 ## Interrupting Execution
 
@@ -1045,13 +1072,13 @@ When the operator execution program freezes, manually interrupt the operator exe
 
 ### Example
 
-1. When the operator execution program on the host or device suspends, enter "CTRL+C" to manually interrupt the operator execution program and display the interrupted location.
+1. When the operator execution program on the host or device suspends, enter "Ctrl+C" to manually interrupt the operator execution program and display the interrupted location.
 
     ```cpp
     (msdebug) r
     Process 173221 launched: '${INSTALL_DIR}/projects/mix/matmul_leakyrelu.fatbin' (aarch64)
     [Launch of Kernel matmul_leakyrelu_custom on Device 1]
-    // Enter CTRL+C
+    // Enter Ctrl+C
     Process 173221 stopped
     [Switching to focus on Kernel matmul_leakyrelu_custom, CoreId 35, Type aiv]
     * thread #1, name = 'matmul_leakyrelu', stop reason = signal SIGSTOP
@@ -1101,10 +1128,10 @@ Switch the current core to the specified core. After the core is switched, the p
 
     ```bash
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-       17     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-        2     aiv      1     3     0     0     0x12c0c00f8fbc         breakpoint 1.1
-    *   3     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+          17  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+           2  aiv      1     3    0     0  0x12c0c00f8fbc  breakpoint 1.1       NA   NA
+    *      3  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
 - Assume that the running core is core 3 of the AIV, and the core to be switched is core 17 of the AIC.
@@ -1127,10 +1154,10 @@ Switch the current core to the specified core. After the core is switched, the p
 
     ```bash
     (msdebug) ascend info cores
-      CoreId  Type  Device Stream Task Block         PC               stop reason
-    *  17     aic      1     3     0     0     0x12c0c00f1f88         breakpoint 1.1
-        2     aiv      1     3     0     0     0x12c0c00f8fbc         breakpoint 1.1
-        3     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+      CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+    *    17  aic      1     3    0     0  0x12c0c00f1f88  breakpoint 1.1       NA   NA
+          2  aiv      1     3    0     0  0x12c0c00f8fbc  breakpoint 1.1       NA   NA
+          3  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
     ```
 
 ## Program Status Checking
@@ -1247,12 +1274,12 @@ For details about the command output, see the following table.
 </tr>
 <tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row1212810471141"><td class="cellrowborder" valign="top" width="30.97%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p121282478148">Aic_Num</p>
 </td>
-<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p141281547191410">Number of used Cube Cores.</p>
+<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p141281547191410">Number of used Cube cores.</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row2128147111412"><td class="cellrowborder" valign="top" width="30.97%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p1212874713149">Aiv_Num</p>
 </td>
-<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p1112815471142">Number of used Vector Cores.</p>
+<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p1112815471142">Number of used Vector cores.</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row0128104771414"><td class="cellrowborder" valign="top" width="30.97%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p13128147131417">Aic_Mask</p>
@@ -1274,10 +1301,10 @@ Run the following command to query the information about the core where the oper
 
 ```bash
 (msdebug) ascend info cores
-  CoreId  Type  Device Stream Task Block         PC               stop reason
-   16     aic      1     3     0     0     0x12c0c00f1fc0         breakpoint 1.1
-*   0     aiv      1     3     0     0     0x12c0c00f8fcc         breakpoint 1.1
-    1     aiv      1     3     0     0     0x12c0c00f8d3c         breakpoint 1.1
+  CoreId Type Device Stream Task Block               PC    stop reason Filename Line
+      16  aic      1     3    0     0  0x12c0c00f1fc0  breakpoint 1.1       NA   NA
+*      0  aiv      1     3    0     0  0x12c0c00f8fcc  breakpoint 1.1       NA   NA
+       1  aiv      1     3    0     0  0x12c0c00f8d3c  breakpoint 1.1       NA   NA
 ```
 
 For details about the command output, see the following table.
@@ -1433,12 +1460,12 @@ For details about the key information, see the following table.
 
 | Field | Description |
 | ---- | ---- |
-| ThreadIDx To ThreadIDx | From thread to thread, the active threads |
+| ThreadIDx To ThreadIDx | From thread to thread, the active threads  |
 | ActiveCount | Number of threads |
 | PC | Program counter |
-| ActiveMask | Indicates which threads among the ActiveCount threads are active. A bit value of 1 indicates an active thread |
-| Filename | Indicates the code file where the thread is located |
-| Line | Indicates the line number where the thread is located |
+| ActiveMask | Indicates which threads among the ActiveCount threads are active. A bit value of 1 indicates an active thread. |
+| Filename | Indicates the code file where the thread is located. |
+| Line | Indicates the line number where the thread is located. |
 
 **`ascend thread <thread id>`**
 
@@ -1480,7 +1507,7 @@ Switches the simt thread focused by the debugger.
 
 ### Function
 
-If a hardware issue happens onsite, repeated stress tests are needed to reproduce the issue, which slows down troubleshooting. To solve this problem, the system initiates a dump operation upon detecting a potential hardware issue, and captures the current status information. The msDebug tool parses the dump file of an abnormal operator. You can collect sufficient data for fault analysis even without a stress test. The above functions enhance hardware exception detection and minimize repetitive stress tests.
+If a hardware issue happens onsite, repeated stress tests are needed to reproduce the issue, which slows down troubleshooting. To solve this problem, the system initiates a dump operation upon detecting a potential hardware issue, and captures the current status information. The msDebug tool parses the dump file of an abnormal operator. You can collect sufficient data for fault analysis even without a stress test. These functions enhance hardware exception detection and minimize repetitive stress tests.
 
 ### Precautions
 
@@ -1488,7 +1515,7 @@ If you enable the dump function for abnormal operators, you cannot use other fun
 
 ### Example
 
-1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/910/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581) in *Application Development Guide (C&C++)*.
+1. Enable the function of generating core files for abnormal operators by referring to the configuration file example (dump configuration for abnormal operators) in "acl API Reference (C)" \> "System Configuration" \> [aclInit](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581) in Application Development Guide (C&C++).
 
     > [!NOTE]
     >
@@ -1592,7 +1619,7 @@ If you enable the dump function for abnormal operators, you cannot use other fun
     ...
     ```
 
-5. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), [Memory and Variable Printing](#memory-and-variable-printing), and [Disassembly](#disassembly).
+5. For details about how to locate hardware exceptions, see [Core Switching](#core-switching), [Program Status Checking](#program-status-checking), [Memory and Variable Printing](#memory-and-variable-printing), [Disassembly](#disassembly), and [SIMT Thread Switching](#simt-thread-switching).
 6. After the debugging is complete, run the `q` command and enter `Y` or `y` to end the debugging.
 
     ```bash
