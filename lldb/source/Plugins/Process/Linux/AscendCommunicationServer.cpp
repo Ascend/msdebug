@@ -25,6 +25,7 @@
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 #include "llvm/Support/SHA256.h"
 
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <regex>
@@ -262,6 +263,34 @@ HandleResult KernelHandler::Parse(const std::string& msg) {
   return error;
 }
 
+static int HexDigitValue(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  return -1;
+}
+
+// The stub sends the IPC key as a hex string so that ';' and NUL bytes in the
+// raw key cannot truncate the key-value message.
+static bool DecodeHexKey(StringRef hex, char *out, size_t out_len) {
+  if (hex.size() % 2 != 0 || hex.size() / 2 > out_len) {
+    return false;
+  }
+  std::memset(out, 0, out_len);
+  for (size_t i = 0; i < hex.size(); i += 2) {
+    const int high = HexDigitValue(hex[i]);
+    const int low = HexDigitValue(hex[i + 1]);
+    if (high < 0 || low < 0) {
+      return false;
+    }
+    out[i / 2] = static_cast<char>((high << 4) | low);
+  }
+  return true;
+}
+
 HandleResult IpcMemHandler::Parse(const std::string& msg) {
   Log *log = GetLog(POSIXLog::Process);
   Status error;
@@ -288,10 +317,13 @@ HandleResult IpcMemHandler::Parse(const std::string& msg) {
       value.getAsInteger(10, m_ipc_mem_info.free);
       LLDB_LOGF(log, "m_ipc_mem_info.size=%d", m_ipc_mem_info.free);
     } else if (key.compare("key") == 0) {
-      std::string tempVal(value);
-      tempVal.copy(m_ipc_mem_info.key, IpcMemInfoMsg::KEY_LEN);
-      LLDB_LOGF(log, "tempVal=%s", tempVal.c_str());
-      LLDB_LOGF(log, "m_ipc_mem_info.key=%s", m_ipc_mem_info.key);
+      if (!DecodeHexKey(value, m_ipc_mem_info.key, IpcMemInfoMsg::KEY_LEN)) {
+        error.SetError(INVALID_IPC_MEM_INFO_ERR, lldb::eErrorTypeGeneric);
+        return error;
+      }
+      LLDB_LOGF(log, "m_ipc_mem_info.key_hex_len=%zu", value.size());
+      LLDB_LOGF(log, "m_ipc_mem_info.key_hex=%.*s",
+                static_cast<int>(value.size()), value.data());
     }
     num_colon++;
   }

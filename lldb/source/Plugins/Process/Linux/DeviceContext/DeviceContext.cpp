@@ -177,6 +177,8 @@ DeviceContext::DeviceContext(const ::pid_t pid, const uint32_t device_id, const 
   m_pid = pid;
   m_device_id = device_id;
   m_virtual_device_id = virtual_device_id;
+  m_drv_fd = -1;
+  m_close = false;
 }
 
 Status DeviceContext::Init()
@@ -749,6 +751,7 @@ size_t DeviceContext::WriteGlobalMemory(addr_t addr, size_t size, const void *da
   Log *log = GetLog(LLDBLog::Process);
   if (size == 0 || m_drv_fd == -1) {
     LLDB_LOG(log, "DeviceContext has not be initialized success or size=0, reason {0}", m_init_err);
+    return 0;
   }
   if (!IsValidGlobalAddr(addr, size)) {
     LLDB_LOG(log, "Invalid global addr={0}, size={1}", addr, size);

@@ -1,4 +1,5 @@
 add_lldb_library(lldbDeviceContext
+    AclRuntime.cpp
     DeviceContext.cpp
     Ascend910BDeviceContext.cpp
     Ascend310PDeviceContext.cpp

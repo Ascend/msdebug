@@ -20,6 +20,7 @@
 #ifndef ASCEND950DEVICECONTEXT_H
 #define ASCEND950DEVICECONTEXT_H
 
+#include "AclRuntime.h"
 #include "DeviceContext.h"
 
 namespace lldb_private {
@@ -67,7 +68,6 @@ public:
     : Ascend950DeviceContext(pid, device_id, virtual_device_id)
   {
     m_soc_type = SocType::ASCEND950DT;
-    m_aclrt_handle = nullptr;
   }
   ~Ascend950DTDeviceContext() = default;
 
@@ -79,7 +79,7 @@ public:
 
 private:
   SocType m_soc_type;
-  void *m_aclrt_handle;
+  AclRuntime m_acl_runtime;
 };
 
 

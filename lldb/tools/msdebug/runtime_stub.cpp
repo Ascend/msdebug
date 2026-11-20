@@ -164,11 +164,12 @@ struct IpcMem {
     }
 };
 
-static std::map<int32_t, std::set<IpcMem>> GetIpcMemMap()
-{
-    static std::map<int32_t, std::set<IpcMem>> inst{};
-    return inst;
+static std::map<int32_t, std::set<IpcMem>> &GetIpcMemMap() {
+  static std::map<int32_t, std::set<IpcMem>> inst{};
+  return inst;
 }
+
+static std::mutex g_ipcMemMtx;
 
 static void GetDeviceId(int32_t* device)
 {
@@ -364,33 +365,62 @@ static string GetEscapedBytes(const vector<char> &raw) {
   return escapedBytes;
 }
 
+static string HexEncode(const vector<char> &raw) {
+  static const char kHex[] = "0123456789abcdef";
+  string encoded;
+  encoded.reserve(raw.size() * 2);
+  for (unsigned char byte : raw) {
+    encoded.push_back(kHex[byte >> 4]);
+    encoded.push_back(kHex[byte & 0x0f]);
+  }
+  return encoded;
+}
+
+static void CloseIpcKey(const std::vector<char> &key) {
+  try {
+    aclrtIpcMemCloseImpl(key.data());
+  } catch (MSDEBUG_ERROR_CODE code) {
+    PrintErrorCode(code);
+  } catch (...) {
+    RT_STUB_LOG_ERROR("aclrtIpcMemCloseImpl unexpected exception\n");
+  }
+}
+
 int32_t SendIpcMemInfo(uint64_t addr, uint64_t size, const std::vector<char> &key)
 {
-  RT_STUB_LOG_INFO("SendIpcMemInfo addr=0x%lx size=%lu\n", addr, size);
+  const std::string key_hex = HexEncode(key);
+  RT_STUB_LOG_INFO(
+      "SendIpcMemInfo addr=0x%lx size=%lu key_hex_len=%zu key_hex=%s\n", addr,
+      size, key_hex.size(), key_hex.c_str());
 
-  auto ipcMemMap = GetIpcMemMap();
+  auto &ipcMemMap = GetIpcMemMap();
   int32_t deviceId;
   GetDeviceId(&deviceId);
-  static std::mutex mtx;
+
+  bool duplicate = false;
+  bool close_new_key = false;
   {
-    std::unique_lock<std::mutex> lk(mtx);
-    if (ipcMemMap.count(deviceId) == 0) {
-      IpcMem temp{addr, key};
-      std::set<IpcMem> initSet = {temp};
-      ipcMemMap[deviceId] = initSet;
+    std::lock_guard<std::mutex> lk(g_ipcMemMtx);
+    auto &addrSet = ipcMemMap[deviceId];
+    IpcMem temp{addr, key};
+    auto it = addrSet.find(temp);
+    if (it != addrSet.end()) {
+      duplicate = true;
+      close_new_key = (it->key != key);
     } else {
-      auto &addrSet = ipcMemMap[deviceId];
-      IpcMem temp{addr, key};
-      if (addrSet.find(temp) == addrSet.end()) {
-        addrSet.insert(temp);
-        RT_STUB_LOG_INFO("ipc mem addr 0x%lx on device %d has been added\n",
-          addr, deviceId);
-      } else {
-        RT_STUB_LOG_INFO("ipc mem addr 0x%lx on device %d has already been added before\n",
-          addr, deviceId);
-        return 0;
-      }
+      addrSet.insert(temp);
+      RT_STUB_LOG_INFO("ipc mem addr 0x%lx on device %d has been added\n", addr,
+                       deviceId);
     }
+  }
+  if (duplicate) {
+    RT_STUB_LOG_INFO(
+        "ipc mem addr 0x%lx on device %d has already been added before\n", addr,
+        deviceId);
+    if (close_new_key) {
+      CloseIpcKey(key);
+    }
+    return 0;
   }
 
   std::stringstream ss;
@@ -398,9 +428,26 @@ int32_t SendIpcMemInfo(uint64_t addr, uint64_t size, const std::vector<char> &ke
   std::string buf = "$";
   buf += "ipc_mem_addr:" + ss.str() + ";";
   buf += "size:" + std::to_string(size) + ";";
-  buf += "key:" + GetEscapedBytes(key) + ";";
+  buf += "key:" + key_hex + ";";
   buf += "#";
-  auto ret = SendInfoAndWaitForReply(buf);
+  int32_t ret = 0;
+  try {
+    ret = SendInfoAndWaitForReply(buf);
+  } catch (...) {
+    CloseIpcKey(key);
+    {
+      std::lock_guard<std::mutex> lk(g_ipcMemMtx);
+      ipcMemMap[deviceId].erase(IpcMem{addr, {}});
+    }
+    throw;
+  }
+  if (ret <= 0) {
+    RT_STUB_LOG_WARNING(
+        "SendIpcMemInfo failed ret=%d, close local key and erase map\n", ret);
+    CloseIpcKey(key);
+    std::lock_guard<std::mutex> lk(g_ipcMemMtx);
+    ipcMemMap[deviceId].erase(IpcMem{addr, {}});
+  }
   return ret;
 }
 
@@ -412,7 +459,7 @@ int32_t ExportIpcMemByKey(uint64_t addr, uint64_t size, std::vector<char> &key)
     key.reserve(KEY_LEN);
     int32_t ret = 0;
 
-    char keyArray[KEY_LEN];
+    char keyArray[KEY_LEN] = {0};
 
     ret = aclrtIpcMemGetExportKeyImpl((void *)addr, size, keyArray, KEY_LEN,
         ACL_RT_IPC_MEM_EXPORT_FLAG_DISABLE_PID_VALIDATION);
@@ -447,6 +494,20 @@ void ProcessAddrAsIpcMem(uint64_t addr)
         return;
     }
 
+    int32_t deviceId = 0;
+    GetDeviceId(&deviceId);
+    {
+      std::lock_guard<std::mutex> lk(g_ipcMemMtx);
+      auto deviceIt = GetIpcMemMap().find(deviceId);
+      if (deviceIt != GetIpcMemMap().end()) {
+        IpcMem temp{base_ptr, {}};
+        if (deviceIt->second.find(temp) != deviceIt->second.end()) {
+          RT_STUB_LOG_INFO("ipc addr 0x%lx already exported, skip\n", base_ptr);
+          return;
+        }
+      }
+    }
+
     std::vector<char> keyVec;
     ret = ExportIpcMemByKey(base_ptr, psize, keyVec);
     if (ret == ACL_SUCCESS) {
@@ -462,12 +523,25 @@ int32_t SendIpcMemFreeInfo(uint64_t addr)
   }
   RT_STUB_LOG_INFO("SendIpcMemFreeInfo addr=0x%lx\n", addr);
 
-  auto ipcMemMap = GetIpcMemMap();
+  auto &ipcMemMap = GetIpcMemMap();
   int32_t deviceId;
   GetDeviceId(&deviceId);
-  if (ipcMemMap.count(deviceId) == 0) {
-    RT_STUB_LOG_ERROR("there is no ipc map for device %d\n", deviceId);
-    return -1;
+
+  std::vector<char> key;
+  {
+    std::lock_guard<std::mutex> lk(g_ipcMemMtx);
+    auto deviceIt = ipcMemMap.find(deviceId);
+    if (deviceIt == ipcMemMap.end()) {
+      RT_STUB_LOG_ERROR("there is no ipc map for device %d\n", deviceId);
+      return -1;
+    }
+    IpcMem temp{addr, {}};
+    auto it = deviceIt->second.find(temp);
+    if (it == deviceIt->second.end()) {
+      RT_STUB_LOG_ERROR("addr 0x%lx cannot be found in map\n", addr);
+      return -1;
+    }
+    key = it->key;
   }
 
   std::stringstream ss;
@@ -477,25 +551,29 @@ int32_t SendIpcMemFreeInfo(uint64_t addr)
   buf += "free:1;";
   buf += "#";
 
-  auto ret = SendInfoAndWaitForReply(buf);
+  int32_t ret = 0;
+  try {
+    ret = SendInfoAndWaitForReply(buf);
+  } catch (MSDEBUG_ERROR_CODE code) {
+    PrintErrorCode(code);
+    ret = -1;
+  } catch (...) {
+    RT_STUB_LOG_ERROR("SendIpcMemFreeInfo unexpected exception\n");
+    ret = -1;
+  }
+  if (ret <= 0) {
+    RT_STUB_LOG_WARNING(
+        "SendIpcMemFreeInfo failed ret=%d, close local key and erase map\n",
+        ret);
+  }
 
-  std::vector<char> key;
-  auto &addrSet = ipcMemMap[deviceId];
-  IpcMem temp{addr, {}};
-  auto it = addrSet.find(temp);
-    if (it == addrSet.end()) {
-        RT_STUB_LOG_ERROR("addr 0x%lx cannot be found in map\n", addr);
-        return -1;
-    }
-    key = it->key;
-
-  aclrtIpcMemCloseImpl(key.data());
-
-  static std::mutex mtx;
+  // Local resources must be reclaimed even if the peer was not notified.
+  CloseIpcKey(key);
   {
-    std::unique_lock<std::mutex> lk(mtx);
-    if (it != addrSet.end()) {
-        addrSet.erase(it);
+    std::lock_guard<std::mutex> lk(g_ipcMemMtx);
+    auto deviceIt = ipcMemMap.find(deviceId);
+    if (deviceIt != ipcMemMap.end()) {
+      deviceIt->second.erase(IpcMem{addr, {}});
     }
   }
   return ret;

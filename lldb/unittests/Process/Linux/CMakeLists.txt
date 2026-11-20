@@ -10,6 +10,7 @@ if(MS_DEBUGGER)
       -Wl,--wrap=ioctl
       -Wl,--wrap=open
     )
+  add_subdirectory(DeviceContext)
 else()
   add_lldb_unittest(ProcessLinuxTests
     PerfTests.cpp

@@ -19,10 +19,9 @@
 #ifdef MS_DEBUGGER
 #include "Ascend950DeviceContext.h"
 
-#include <dlfcn.h>
-
-#include "lldb/Utility/LLDBLog.h"
+#include "AclRuntime.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ascend950.h"
+#include "lldb/Utility/LLDBLog.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -499,234 +498,6 @@ private:
 
 static IpcMemoryMapper g_ipc_mapper;
 
-#define ACL_MEMCPY_HOST_TO_HOST 0
-#define ACL_MEMCPY_HOST_TO_DEVICE 1
-#define ACL_MEMCPY_DEVICE_TO_HOST 2
-#define ACL_RT_IPC_MEM_IMPORT_FLAG_DEFAULT 0x0UL
-#define ACL_RT_IPC_MEM_IMPORT_FLAG_ENABLE_PEER_ACCESS 0x1UL
-
-class AclWrapper {
-  using aclInitFuncType = int (*)(const char *);
-  using aclrtGetDeviceFuncType = int (*)(int *);
-  using aclrtSetDeviceFuncType = int (*)(int);
-  using aclrtMemcpyFuncType = int (*)(void *dst, size_t destMax,
-                                      const void *src, size_t count, int kind);
-  using aclrtIpcMemImportByKeyFuncType = int (*)(void **devPtr, const char *key,
-                                                 uint64_t flags);
-  using aclrtIpcMemCloseFuncType = int (*)(const char *key);
-
-public:
-  ~AclWrapper();
-  Status Init();
-  int32_t AclInitWrapper();
-  int32_t AclrtGetDeviceWrapper(int32_t *device_id);
-  int32_t AclrtSetDeviceWrapper(int32_t device_id);
-  int32_t AclrtMemcpyWrapper(void *dst, void *src, size_t size,
-                             int32_t direction);
-  int32_t AclrtIpcMemImportByKeyWrapper(void **sharedAddr,
-                                        std::vector<char> key);
-  int32_t AclrtIpcMemCloseWrapper(std::vector<char> key);
-
-private:
-  void *m_aclrt_handle{nullptr};
-  void *m_aclInitFunc{nullptr};
-  void *m_aclrtGetDeviceFunc{nullptr};
-  void *m_aclrtSetDeviceFunc{nullptr};
-  void *m_aclrtMemcpyFunc{nullptr};
-  void *m_aclrtIpcMemImportByKeyFunc{nullptr};
-  void *m_aclrtIpcMemCloseFunc{nullptr};
-};
-
-static AclWrapper g_aclWrapper;
-
-AclWrapper::~AclWrapper() {
-  if (m_aclrt_handle != nullptr) {
-    dlclose(m_aclrt_handle);
-  }
-}
-
-Status AclWrapper::Init() {
-  Status error;
-  Log *log = GetLog(LLDBLog::Process);
-  int ret = 0;
-
-  if (m_aclrt_handle == nullptr) {
-    m_aclrt_handle = dlopen("libacl_rt.so", RTLD_NOW | RTLD_GLOBAL);
-    if (m_aclrt_handle == nullptr) {
-      error.SetErrorStringWithFormat("dlopen libacl_rt.so failed");
-      return error;
-    }
-  }
-  m_aclInitFunc = dlsym(m_aclrt_handle, "aclInit");
-  if (m_aclInitFunc == nullptr) {
-    error.SetErrorStringWithFormat("dlsym aclInit failed");
-    return error;
-  }
-  m_aclrtGetDeviceFunc = dlsym(m_aclrt_handle, "aclrtGetDevice");
-  if (m_aclrtGetDeviceFunc == nullptr) {
-    error.SetErrorStringWithFormat("dlsym aclrtGetDevice failed");
-    return error;
-  }
-  m_aclrtSetDeviceFunc = dlsym(m_aclrt_handle, "aclrtSetDevice");
-  if (m_aclrtSetDeviceFunc == nullptr) {
-    error.SetErrorStringWithFormat("dlsym aclrtSetDevice failed");
-    return error;
-  }
-  m_aclrtMemcpyFunc = dlsym(m_aclrt_handle, "aclrtMemcpy");
-  if (m_aclrtMemcpyFunc == nullptr) {
-    error.SetErrorStringWithFormat("dlsym aclrtMemcpy failed");
-    return error;
-  }
-  m_aclrtIpcMemImportByKeyFunc =
-      dlsym(m_aclrt_handle, "aclrtIpcMemImportByKey");
-  if (m_aclrtIpcMemImportByKeyFunc == nullptr) {
-    error.SetErrorStringWithFormat("dlsym aclrtIpcMemImportByKey failed");
-    return error;
-  }
-  m_aclrtIpcMemCloseFunc = dlsym(m_aclrt_handle, "aclrtIpcMemClose");
-  if (m_aclrtIpcMemCloseFunc == nullptr) {
-    error.SetErrorStringWithFormat("dlsym aclrtIpcMemClose failed");
-    return error;
-  }
-
-  return error;
-}
-
-int32_t AclWrapper::AclInitWrapper() {
-  Log *log = GetLog(LLDBLog::Process);
-  if (m_aclrt_handle == nullptr) {
-    LLDB_LOG(log, "m_aclrt_handle is null");
-    return -1;
-  }
-  if (m_aclInitFunc == nullptr) {
-    LLDB_LOG(log, "m_aclInitFunc is null");
-    return -1;
-  }
-  int32_t ret = ((aclInitFuncType)m_aclInitFunc)(nullptr);
-  if (ret != 0) {
-    LLDB_LOGF(log, "aclInit failed ret=%d", ret);
-    return ret;
-  }
-  LLDB_LOG(log, "aclInit done");
-  return ret;
-}
-
-int32_t AclWrapper::AclrtGetDeviceWrapper(int32_t *device_id) {
-  Log *log = GetLog(LLDBLog::Process);
-  if (m_aclrt_handle == nullptr) {
-    LLDB_LOG(log, "m_aclrt_handle is null");
-    return -1;
-  }
-  if (m_aclrtGetDeviceFunc == nullptr) {
-    LLDB_LOG(log, "m_aclrtGetDeviceFunc is null");
-    return -1;
-  }
-  int32_t ret = ((aclrtGetDeviceFuncType)m_aclrtGetDeviceFunc)(device_id);
-  if (ret != 0) {
-    LLDB_LOGF(log, "aclrtGetDevice failed ret=%d", ret);
-    return ret;
-  }
-  return ret;
-}
-
-int32_t AclWrapper::AclrtSetDeviceWrapper(int32_t device_id) {
-  Log *log = GetLog(LLDBLog::Process);
-  if (m_aclrt_handle == nullptr) {
-    LLDB_LOG(log, "m_aclrt_handle is null");
-    return -1;
-  }
-  if (m_aclrtSetDeviceFunc == nullptr) {
-    LLDB_LOG(log, "m_aclrtSetDeviceFunc is null");
-    return -1;
-  }
-  int32_t ret = ((aclrtSetDeviceFuncType)m_aclrtSetDeviceFunc)(device_id);
-  if (ret != 0) {
-    LLDB_LOGF(log, "aclrtSetDevice failed ret=%d device_id=%d", ret, device_id);
-    return ret;
-  }
-  return ret;
-}
-
-int32_t AclWrapper::AclrtMemcpyWrapper(void *dst, void *src, size_t size,
-                                       int32_t direction) {
-  Log *log = GetLog(LLDBLog::Process);
-  if (m_aclrt_handle == nullptr) {
-    LLDB_LOG(log, "m_aclrt_handle is null");
-    return -1;
-  }
-  if (m_aclrtMemcpyFunc == nullptr) {
-    LLDB_LOG(log, "m_aclrtMemcpyFunc is null");
-    return -1;
-  }
-
-  int32_t ret =
-      ((aclrtMemcpyFuncType)m_aclrtMemcpyFunc)(dst, size, src, size, direction);
-  if (ret != 0) {
-    LLDB_LOGF(log, "aclrtMemcpy failed ret=%d", ret);
-    return ret;
-  }
-  return 0;
-}
-
-int32_t AclWrapper::AclrtIpcMemImportByKeyWrapper(void **sharedAddr,
-                                                  std::vector<char> key) {
-  Log *log = GetLog(LLDBLog::Process);
-  if (m_aclrt_handle == nullptr) {
-    LLDB_LOG(log, "m_aclrt_handle is null");
-    return -1;
-  }
-  if (m_aclrtIpcMemImportByKeyFunc == nullptr) {
-    LLDB_LOG(log, "m_aclrtIpcMemImportByKeyFunc is null");
-    return -1;
-  }
-
-  auto ret = ((aclrtIpcMemImportByKeyFuncType)m_aclrtIpcMemImportByKeyFunc)(
-      sharedAddr, key.data(), ACL_RT_IPC_MEM_IMPORT_FLAG_ENABLE_PEER_ACCESS);
-  if (ret != 0) {
-    LLDB_LOG(log, "aclrtIpcMemImportByKey failed ret={0}", ret);
-    return -1;
-  }
-
-  LLDB_LOG(log, "aclrtIpcMemImportByKey done ret={0}", ret);
-  return 0;
-}
-
-int32_t AclWrapper::AclrtIpcMemCloseWrapper(std::vector<char> key) {
-  Log *log = GetLog(LLDBLog::Process);
-  if (m_aclrt_handle == nullptr) {
-    LLDB_LOG(log, "m_aclrt_handle is null");
-    return -1;
-  }
-  if (m_aclrtIpcMemCloseFunc == nullptr) {
-    LLDB_LOG(log, "m_aclrtIpcMemCloseFunc is null");
-    return -1;
-  }
-
-  auto ret = ((aclrtIpcMemCloseFuncType)m_aclrtIpcMemCloseFunc)(key.data());
-  if (ret != 0) {
-    LLDB_LOG(log, "aclrtIpcMemClose failed ret={0}", ret);
-    return -1;
-  }
-
-  LLDB_LOG(log, "aclrtIpcMemClose done ret={0}", ret);
-  return 0;
-}
-
-int32_t CheckDevice(int32_t target_device_id) {
-  Log *log = GetLog(LLDBLog::Process);
-  int32_t ret;
-  int32_t device_id = -1;
-  ret = g_aclWrapper.AclrtGetDeviceWrapper(&device_id);
-  if (ret != 0 || (device_id != target_device_id)) {
-    LLDB_LOGF(
-        log, "aclrtGetDevice failed ret=%d device_id=%d try setDevice %d again",
-        ret, device_id, target_device_id);
-    ret = g_aclWrapper.AclrtSetDeviceWrapper(target_device_id);
-    LLDB_LOGF(log, "aclrtSetDevice ret=%d device_id=%d", ret, target_device_id);
-  }
-  return ret;
-}
-
 Status Ascend950DTDeviceContext::Init() {
   Log *log = GetLog(LLDBLog::Process);
   Status error = DeviceContext::Init();
@@ -734,27 +505,23 @@ Status Ascend950DTDeviceContext::Init() {
     LLDB_LOG(log, "DeviceContext Init failed: {0}", error);
     return error;
   }
-  error = g_aclWrapper.Init();
+  error = m_acl_runtime.Initialize();
   if (error.Fail()) {
-    LLDB_LOG(log, "AclWrapper Init failed: {0}", error);
+    LLDB_LOG(log, "AclRuntime Initialize failed: {0}", error);
     return error;
   }
-
-  int32_t ret;
-  ret = g_aclWrapper.AclInitWrapper();
-  if (ret != 0) {
-    error.SetErrorStringWithFormat("aclInit failed ret=%d", ret);
+  error = m_acl_runtime.AclInit();
+  if (error.Fail()) {
+    LLDB_LOG(log, "aclInit failed: {0}", error);
     return error;
   }
-  LLDB_LOG(log, "aclInit done");
-  ret = g_aclWrapper.AclrtSetDeviceWrapper(m_virtual_device_id);
-  if (ret != 0) {
-    error.SetErrorStringWithFormat("aclrtSetDevice failed ret=%d virtual_device_id=%d",
-                                   ret, m_virtual_device_id);
+  error = m_acl_runtime.SetDevice(m_virtual_device_id);
+  if (error.Fail()) {
+    LLDB_LOG(log, "aclrtSetDevice failed: {0}", error);
     return error;
   }
-  LLDB_LOG(log, "aclrtSetDevice done virtual_device_id=%d", m_virtual_device_id);
-
+  LLDB_LOG(log, "aclrtSetDevice done virtual_device_id={0}",
+           m_virtual_device_id);
   return error;
 }
 
@@ -786,15 +553,15 @@ size_t Ascend950DTDeviceContext::ReadGlobalMemory(addr_t addr, size_t size,
     return 0;
   }
 
-  int ret = CheckDevice(m_virtual_device_id);
-  if (ret != 0) {
-    LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
+  Status acl_error = m_acl_runtime.EnsureDevice(m_virtual_device_id);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "EnsureDevice failed: %s", acl_error.AsCString());
     return 0;
   }
-  ret = g_aclWrapper.AclrtMemcpyWrapper(data, (void *)sharedAddr, size,
-                                        ACL_MEMCPY_DEVICE_TO_HOST);
-  if (ret != 0) {
-    LLDB_LOGF(log, "ReadGlobalMemory failed ret=%d", ret);
+  acl_error = m_acl_runtime.Memcpy(data, size, (const void *)sharedAddr, size,
+                                   AclRuntime::Direction::DeviceToHost);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "ReadGlobalMemory failed: %s", acl_error.AsCString());
     return 0;
   }
   return size;
@@ -808,6 +575,7 @@ size_t Ascend950DTDeviceContext::WriteGlobalMemory(addr_t addr, size_t size,
         log,
         "DeviceContext has not be initialized success or size=0, reason {0}",
         m_init_err);
+    return 0;
   }
   if (!IsValidGlobalAddr(addr, size)) {
     LLDB_LOG(log, "Invalid global addr={0}, size={1}", addr, size);
@@ -827,15 +595,15 @@ size_t Ascend950DTDeviceContext::WriteGlobalMemory(addr_t addr, size_t size,
     return 0;
   }
 
-  int ret = CheckDevice(m_virtual_device_id);
-  if (ret != 0) {
-    LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
+  Status acl_error = m_acl_runtime.EnsureDevice(m_virtual_device_id);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "EnsureDevice failed: %s", acl_error.AsCString());
     return 0;
   }
-  ret = g_aclWrapper.AclrtMemcpyWrapper((void *)sharedAddr, (void *)data, size,
-                                        ACL_MEMCPY_HOST_TO_DEVICE);
-  if (ret != 0) {
-    LLDB_LOGF(log, "ReadGlobalMemory failed ret=%d", ret);
+  acl_error = m_acl_runtime.Memcpy((void *)sharedAddr, size, data, size,
+                                   AclRuntime::Direction::HostToDevice);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "WriteGlobalMemory failed: %s", acl_error.AsCString());
     return 0;
   }
   return size;
@@ -844,19 +612,35 @@ size_t Ascend950DTDeviceContext::WriteGlobalMemory(addr_t addr, size_t size,
 void Ascend950DTDeviceContext::AddIpcMemInfo(lldb::addr_t addr, size_t size,
                                              std::vector<char> key) {
   Log *log = GetLog(LLDBLog::Process);
-  int ret = CheckDevice(m_virtual_device_id);
-  if (ret != 0) {
-    LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
+  Status acl_error = m_acl_runtime.EnsureDevice(m_virtual_device_id);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "EnsureDevice failed: %s", acl_error.AsCString());
     return;
   }
+  std::vector<char> existing_key;
+  if (g_ipc_mapper.QuaryKey(addr, existing_key)) {
+    LLDB_LOGF(log, "ipc addr 0x%lx already mapped, skip import",
+              (uint64_t)addr);
+    return;
+  }
+
   void *sharedAddr = nullptr;
-  ret = g_aclWrapper.AclrtIpcMemImportByKeyWrapper(&sharedAddr, key);
-  if ((ret != 0) || (sharedAddr == nullptr)) {
+  acl_error = m_acl_runtime.IpcMemImportByKey(&sharedAddr, key);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "IpcMemImportByKey failed: %s", acl_error.AsCString());
+    return;
+  }
+  if (sharedAddr == nullptr) {
+    LLDB_LOG(log, "IpcMemImportByKey returned null sharedAddr");
     return;
   }
 
   if (!g_ipc_mapper.AddMapping(addr, (uint64_t)sharedAddr, size, key)) {
-    LLDB_LOG(log, "AddMapping failed");
+    LLDB_LOG(log, "AddMapping failed, rollback ipc import");
+    Status close_error = m_acl_runtime.IpcMemClose(key);
+    if (close_error.Fail()) {
+      LLDB_LOG(log, "rollback ipc import failed: {0}", close_error);
+    }
     return;
   }
   LLDB_LOGF(log, "AddIpcMemInfo done addr=0x%lx sharedAddr=0x%lx size=%lu",
@@ -865,9 +649,9 @@ void Ascend950DTDeviceContext::AddIpcMemInfo(lldb::addr_t addr, size_t size,
 
 void Ascend950DTDeviceContext::RemoveIpcMemInfo(lldb::addr_t addr) {
   Log *log = GetLog(LLDBLog::Process);
-  int ret = CheckDevice(m_virtual_device_id);
-  if (ret != 0) {
-    LLDB_LOGF(log, "CheckDevice failed ret=%d", ret);
+  Status acl_error = m_acl_runtime.EnsureDevice(m_virtual_device_id);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "EnsureDevice failed: %s", acl_error.AsCString());
     return;
   }
 
@@ -879,9 +663,9 @@ void Ascend950DTDeviceContext::RemoveIpcMemInfo(lldb::addr_t addr) {
   }
 
   // close ipc mem
-  ret = g_aclWrapper.AclrtIpcMemCloseWrapper(key);
-  if (ret != 0) {
-    LLDB_LOGF(log, "ipc mem close failed");
+  acl_error = m_acl_runtime.IpcMemClose(key);
+  if (acl_error.Fail()) {
+    LLDB_LOGF(log, "ipc mem close failed: %s", acl_error.AsCString());
     return;
   }
 
