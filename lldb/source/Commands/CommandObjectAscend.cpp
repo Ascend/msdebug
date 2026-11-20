@@ -747,7 +747,7 @@ void PrintDeviceInfo(const SummaryInfo& summary_info, Stream &strm) {
   uint64_t id = 0;
   for (const auto &pair : summary_info.global_mems) {
     GlobalDataType global_data_type = pair.first;
-    vector<GlobalMemory> global_mem_vec = pair.second;
+    const auto &global_mem_vec = pair.second;
     for (size_t i = 0; i < global_mem_vec.size(); ++i) {
       std::stringstream ss;
       static constexpr uint32_t WIDTH_SHORT = 4;

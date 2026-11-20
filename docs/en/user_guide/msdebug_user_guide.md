@@ -75,7 +75,7 @@ The following products are supported:
 - Ascend 950PR/950DT products
 
 > [!NOTE]
-> 
+>
 >- For details about Ascend product models, see [Ascend Product Models](https://www.hiascend.com/document/detail/en/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html).
 >- For details about the supported functions, see the documentation of the corresponding function module.
 
@@ -414,7 +414,7 @@ Command Options Usage:
 </table>
 
 > [!NOTE]
-> 
+>
 > - Currently, the `bt` command applies only to the coredump feature scenario. The call stack information is accurate only when `stop_reason` is `CUBE_ERROR`, `CCU_ERROR`, `MTE_ERROR`, `VEC_ERROR`, or `FIXP_ERROR`.
 > - If the function name displayed in the `bt` command is too long, you can set it by referring to [formatting](https://lldb.llvm.org/use/formatting.html).
 >
@@ -428,7 +428,7 @@ Command Options Usage:
 
 **Importing Debugging Information**
 
-Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool. 
+Before debugging an operator, enable the debugging `-g -O0` option and recompile the operator to include debugging information in the operator binary. For details, see [Compiling Operators Based on the Sample Project](../best_practices/msdebug_basic_cases.md#debugging-a-vector-operator-on-the-board). The operator debugging information is automatically imported to the msDebug tool.
 
 **Starting the Tool**
 
@@ -451,7 +451,7 @@ The msDebug tool can be started in either of the following ways.
         ```
 
         > [!NOTE]
-        > 
+        >
         > - Perform one-click compilation and running based on the kernel framework of the Ascend C operator to generate the executable file `application` on the NPU. For details, see [Completing Kernel Launch Based on the Sample Project](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/en/guide/programming_guide/appendix/kernel_direct_call_from_sample.md) in Ascend C Operator Development Guide.
         > - If the executable file has other input parameters, pass them as follows:
         >
@@ -500,7 +500,7 @@ When debugging a single-process multi-thread MC2 operator, you can run the `asce
 - Issue isolation: If a performance or function issue occurs, you can specify different device IDs to check whether the issue is caused by a specific device, thereby making it easier to locate the issue.
 
 > [!NOTE]
-> 
+>
 > - If no device ID is specified, only the device ID set for the first time during program running is debugged.
 > - The HCCL APIs do not support step-by-step debugging. For details about the APIs, see [HCCL Kernel APIs](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/API/ascendcopapi/docs/en/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md) in Ascend C Operator Development API Reference.
 
@@ -755,7 +755,7 @@ The actual values of `GlobalTensor` variables are stored in the GM. Run the foll
 ```
 
 > [!NOTE]
-> 
+>
 > - If you want to print other custom addresses, ensure the validity of the custom addresses. Otherwise, errors may occur during operator running.
 > - If you want to print the memory starting from a custom address, you can add an offset based on the `address_` field as the start address. The unit of the offset is byte. After the offset GM memory address is obtained, enter it into the memory printing command.
 > - Currently, GM memory can be read and displayed when the breakpoint stops on the kernel side or the host side.
@@ -869,9 +869,9 @@ To understand the code execution details, you can run the `thread step-over` com
     ```
 
     > [!NOTE]
-    > 
+    >
     > - If the current core is stopped due to both step-by-step debugging and breakpoints, "breakpoint" is displayed.
-    > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows: 
+    > - If the running program freezes, you can press "Ctrl+C" to interrupt the program. The possible causes of freezing are as follows:
     >    - The user program itself has an infinite loop, which needs to be rectified by repairing the program.
     >    - An operator uses synchronization instructions.
 
@@ -1512,6 +1512,8 @@ If a hardware issue happens onsite, repeated stress tests are needed to reproduc
 ### Precautions
 
 If you enable the dump function for abnormal operators, you cannot use other functions of msDebug after the configuration.
+
+The total abnormal-operator core file size must not exceed 300 GiB. A single global memory entry must not exceed 120 GiB, and a single local memory entry must not exceed 10 GiB. The GM and local memory limits apply per entry, not to the sum of entries of the same memory type. `1 GiB = 1024 * 1024 * 1024 bytes`. Exceeding a respective limit triggers a size check. Ensure sufficient host memory when loading a large core file.
 
 ### Example
 

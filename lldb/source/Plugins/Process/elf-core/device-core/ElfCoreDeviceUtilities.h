@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <sstream>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using CoreIDType = uint16_t;
@@ -159,8 +160,10 @@ struct SummaryInfo {
   uint32_t dev_id;
   DevdrvChipType chip_type = DevdrvChipType::CHIP_BEGIN;
   std::unordered_map<GlobalDataType, std::vector<GlobalMemory>> global_mems;
-  // map key is section_id
-  std::unordered_map<uint64_t, GlobalMemory> global_section_to_memory;
+  // Maps section_id to (GlobalDataType, index) in global_mems. The index
+  // remains valid when the owning vector reallocates.
+  std::unordered_map<uint64_t, std::pair<GlobalDataType, size_t>>
+      global_section_to_memory;
   // map key is core_id, mem_type
   std::unordered_map<CoreIDType, std::unordered_map<lldb_private::MemType, std::vector<LocalMemory>>> local_mems;
   // map key is core_id, addr

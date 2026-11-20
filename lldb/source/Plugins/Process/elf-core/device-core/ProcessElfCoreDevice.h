@@ -74,6 +74,8 @@ public:
 
   Status GetKernelInfo(KernelInfo &info) override;
 private:
+  friend class ProcessElfCoreDeviceMemoryTest;
+
   Status ParseDevTable(const lldb::SectionSP& section, ConstString section_name);
 
   // try to change target module by m_kernel_name

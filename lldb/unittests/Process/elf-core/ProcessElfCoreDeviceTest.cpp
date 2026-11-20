@@ -5,10 +5,13 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/Process/elf-core/device-core/ElfCoreDeviceUtilities.h"
 #include "Plugins/Process/elf-core/device-core/ProcessElfCoreDevice.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
@@ -375,5 +378,132 @@ TEST_F(ProcessElfCoreDeviceInstanceTest,
   EXPECT_EQ(pos.y, 5u);
   EXPECT_EQ(pos.z, 6u);
 }
+
+namespace lldb_private {
+class ProcessElfCoreDeviceMemoryTest
+    : public ::ProcessElfCoreDeviceInstanceTest {
+public:
+  void SetUp() override {
+    ::ProcessElfCoreDeviceInstanceTest::SetUp();
+    ObjectFileELF::Initialize();
+    auto file = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_CORE
+  Machine: EM_X86_64
+Sections:
+  - Name: .ascend.global
+    Type: SHT_PROGBITS
+    Content: 01020304
+...
+)");
+    if (!file) {
+      ADD_FAILURE() << llvm::toString(file.takeError());
+      return;
+    }
+    m_file = std::make_unique<TestFile>(std::move(*file));
+    m_module = std::make_shared<Module>(m_file->moduleSpec());
+    ASSERT_NE(nullptr, m_module->GetSectionList());
+    m_section = m_module->GetSectionList()->FindSectionByName(
+        ConstString(".ascend.global"));
+    ASSERT_NE(nullptr, m_section);
+    Device()->m_section_list.AddSection(m_section);
+  }
+
+  void TearDown() override {
+    Device()->m_section_list.Clear();
+    m_section.reset();
+    m_module.reset();
+    m_file.reset();
+    ObjectFileELF::Terminate();
+    ::ProcessElfCoreDeviceInstanceTest::TearDown();
+  }
+
+  ProcessElfCoreDevice *Device() {
+    return static_cast<ProcessElfCoreDevice *>(m_process_sp.get());
+  }
+
+  Status Insert(uint64_t size, uint64_t addr = 0x1000, uint32_t section = 1) {
+    GlobalMemInfo info{};
+    info.addr = addr;
+    info.size = size;
+    info.section_index = section;
+    info.type = GlobalDataType::INPUT_TENSOR;
+    if (section > 1)
+      Device()->m_section_list.AddSection(m_section);
+    return Device()->GetGlobalMemData(info, true);
+  }
+
+  size_t Read(addr_t addr, size_t size, void *buf, Status &error) {
+    return Device()->ReadGlobalMemory(DeviceAddressClass::GM, addr, size, buf,
+                                      error);
+  }
+
+private:
+  std::unique_ptr<TestFile> m_file;
+  ModuleSP m_module;
+  SectionSP m_section;
+};
+
+TEST_F(ProcessElfCoreDeviceMemoryTest,
+       RejectsSizeLargerThanSectionWithoutCaching) {
+  Status error = Insert(5);
+  EXPECT_TRUE(error.Fail());
+  EXPECT_TRUE(Device()->GetSummaryInfo().global_mems.empty());
+  EXPECT_TRUE(Device()->GetSummaryInfo().global_section_to_memory.empty());
+}
+
+TEST_F(ProcessElfCoreDeviceMemoryTest, RejectsOversizedInfoBeforeAllocating) {
+  Status error = Insert((120ULL << 30) + 1);
+  EXPECT_TRUE(error.Fail());
+  EXPECT_TRUE(Device()->GetSummaryInfo().global_mems.empty());
+  EXPECT_TRUE(Device()->GetSummaryInfo().global_section_to_memory.empty());
+}
+
+TEST_F(ProcessElfCoreDeviceMemoryTest, ReadsPayloadAndRequestedAddressRange) {
+  Status error = Insert(4);
+  ASSERT_TRUE(error.Success());
+  const auto &info = Device()->GetSummaryInfo();
+  const auto &memory = info.global_mems.at(GlobalDataType::INPUT_TENSOR).at(0);
+  EXPECT_EQ(memory.data, (std::vector<uint8_t>{1, 2, 3, 4}));
+  EXPECT_EQ(info.global_section_to_memory.at(1),
+            (std::make_pair(GlobalDataType::INPUT_TENSOR, size_t{0})));
+  uint8_t bytes[2]{};
+  error.Clear();
+  EXPECT_EQ(Read(0x1001, 2, bytes, error), 2u);
+  EXPECT_TRUE(error.Success());
+  EXPECT_EQ(bytes[0], 2);
+  EXPECT_EQ(bytes[1], 3);
+}
+
+TEST_F(ProcessElfCoreDeviceMemoryTest, PreservesZeroLengthEntryWithoutPayload) {
+  Status error = Insert(0);
+  ASSERT_TRUE(error.Success());
+  const auto &info = Device()->GetSummaryInfo();
+  ASSERT_EQ(info.global_mems.at(GlobalDataType::INPUT_TENSOR).size(), 1u);
+  EXPECT_TRUE(
+      info.global_mems.at(GlobalDataType::INPUT_TENSOR)[0].data.empty());
+  EXPECT_EQ(info.global_section_to_memory.at(1),
+            (std::make_pair(GlobalDataType::INPUT_TENSOR, size_t{0})));
+}
+
+TEST_F(ProcessElfCoreDeviceMemoryTest,
+       SectionIndexesSurvivePayloadVectorGrowth) {
+  ASSERT_TRUE(Insert(4, 0x1000, 1).Success());
+  for (uint32_t index = 2; index <= 32; ++index)
+    ASSERT_TRUE(Insert(4, 0x1000 + (index - 1) * 4, index).Success());
+  const auto &info = Device()->GetSummaryInfo();
+  ASSERT_EQ(info.global_mems.at(GlobalDataType::INPUT_TENSOR).size(), 32u);
+  for (uint32_t index = 1; index <= 32; ++index) {
+    const auto &reference = info.global_section_to_memory.at(index);
+    const auto &memory =
+        info.global_mems.at(reference.first).at(reference.second);
+    EXPECT_EQ(memory.global_mem_info.addr, 0x1000 + (index - 1) * 4);
+    EXPECT_EQ(memory.data, (std::vector<uint8_t>{1, 2, 3, 4}));
+  }
+}
+} // namespace lldb_private
 
 #endif
