@@ -39,7 +39,7 @@ msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧
 
 按照<a href="https://gitcode.com/Ascend/msot/blob/master/docs/zh/quick_start/op_tool_quick_start.md#23开发构建算子工程msopgen" target="_blank">《算子开发工具链快速入门》</a>中 2.3 节操作，完成算子工程准备。
 
-### 2.3 【调试】断点调试算子代码（msDebug）
+### 2.3【调试】断点调试算子代码（msDebug）
 
 若算子功能异常，可借助 msDebug 工具进行断点调试，高效定位问题。先按步骤操作体验效果，原理部分可稍后阅读。
 
@@ -47,24 +47,24 @@ msDebug 是一款面向昇腾设备的算子调试工具，用于调试在NPU侧
 
 > [!CAUTION]
 > 
-> **注意：msDebug 需要 root 权限**
+> **注意：msDebug需要root权限**
 > 
-> msDebug 需要内核调试开关 /proc/debug_switch 开启才能正常工作，但出于安全考虑默认关闭，且需要 root 权限才能打开；
+> msDebug 需要内核调试开关 /proc/debug_switch 开启才能正常工作，但出于安全考虑默认关闭，且需要 root 权限才能打开。
 > 这在很多环境（如共享开发机、容器）中可能无法满足，这时请联系系统管理员开启，或在拥有特权的容器中体验此部分。
 
-确认内核调试开关 debug_switch 是否已打开：
+确认内核调试开关debug_switch是否已打开：
 
 ```shell
 cat /proc/debug_switch
 ```
 
-若输出值不为 1，请使用 root 权限执行以下命令：
+若输出值不为 1，请使用root权限执行以下命令：
 
 ```shell
 echo 1 > /proc/debug_switch
 ```
 
-如果不能成功设置为 1，则 msDebug 功能不可用，只能跳过本节 msDebug 的体验。
+如果不能成功设置为1，则msDebug功能不可用，只能跳过本节msDebug的体验。
 
 #### 2.3.2 修改编译选项并重新部署
 
@@ -95,7 +95,7 @@ msdebug execute_add_op
 
 ##### 2.3.3.2 设置断点
 
-待 (msdebug) 提示符出现后，设置断点于 add_custom.cpp 第 34 行：
+待 (msdebug) 提示符出现后，设置断点于add_custom.cpp第34行：
 
 ```text
 b add_custom.cpp:34
@@ -105,7 +105,7 @@ b add_custom.cpp:34
 > 
 > **若在直接申请的容器环境中操作，需特别留意 `/proc/debug_switch = 1` 可能为虚假状态**
 > 
-> 若您在云服务商提供的容器环境中操作，即使在容器内成功将 /proc/debug_switch 设置并查询为 1，该状态也可能是虚假的。出于安全考虑，底层宿主机通常会通过写时复制（CoW）、影子文件或覆盖挂载（overlay mount）等机制对 /proc 目录进行隔离，导致设置未实际生效。
+> 若您在云服务商提供的容器环境中操作，即使在容器内成功将`/proc/debug_switch`设置并查询为1，该状态也可能是虚假的。出于安全考虑，底层宿主机通常会通过写时复制（CoW）、影子文件或覆盖挂载（overlay mount）等机制对 /proc 目录进行隔离，导致设置未实际生效。
 > 
 > 在此情况下，执行上一节所述的断点设置将触发警告；而按照后续章节运行 `run` 命令时，则会报出如下错误：
 >
@@ -113,11 +113,11 @@ b add_custom.cpp:34
 > error: 'A' packet returned an error: 8
 > ```
 >
-> 若无法在宿主机上以 root 权限正确设置 `/proc/debug_switch`，或不具备切换至其他合适环境的条件，则只能跳过本节关于 `msDebug` 的实操体验。
+> 若无法在宿主机上以root权限正确设置 `/proc/debug_switch`，或不具备切换至其他合适环境的条件，则只能跳过本节关于 `msDebug` 的实操体验。
 
 ##### 2.3.3.3 运行算子
 
-输入 run 启动程序，等待命中断点：
+输入run启动程序，等待命中断点：
 
 ```text
 run
@@ -196,7 +196,7 @@ ascend info devices
 *    3      0       8      0x0     0xf0000000000f
 ```
 
-##### 2.3.3.7 查询算子所运行的aicore相关信息
+##### 2.3.3.7 查询算子所运行的AI Core相关信息
 
 ```text
 ascend info cores
@@ -245,7 +245,7 @@ ascend info stream
 *   3      47    aiv
 ```
 
-##### 2.3.3.10 查询算子所运行的block相关信息
+##### 2.3.3.10 查询算子所运行的Block相关信息
 
 ```shell
 ascend info blocks

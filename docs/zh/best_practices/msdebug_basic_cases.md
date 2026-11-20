@@ -1,5 +1,7 @@
 # **典型案例**
 
+本文档介绍使用msDebug工具上板调试算子的典型案例，涵盖Vector算子、AscendCL单算子、PyTorch接口调用算子和模板库算子的完整调试流程，适用于需要上板调试Ascend C算子的开发人员。
+
 ## 上板调试Vector算子
 
 **概述**
@@ -8,7 +10,7 @@
 
 **前期准备**
 
-- 单击[链接](https://gitcode.com/Ascend/mstt/tree/7.0.RC3/sample)获取样例工程，为进行算子调试做准备。
+- 单击获取[Vector算子样例工程](https://gitcode.com/Ascend/mstt/tree/7.0.RC3/sample)，为进行算子调试做准备。
 - 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
@@ -146,7 +148,7 @@
             0x1240c0015000: {0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127}
             ```
 
-    - 进行核切换，切换至另一个aiv核，并打印需要的信息。
+    - 进行核切换，切换至另一个AIV核，并打印需要的信息。
 
         ```cpp
         (msdebug) ascend aiv 24  // ascend info cores中选择block 7对应的coreId,此处为24
@@ -202,11 +204,11 @@
     Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] y
     ```
 
-## 调用Ascend CL单算子
+## 调用AscendCL单算子
 
 **前期准备**
 
-单击[链接](https://gitcode.com/cann/cann-learning-hub/tree/master/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04)获取算子样例工程，为进行算子调试做准备。
+单击获取[AscendCL单算子样例工程](https://gitcode.com/cann/cann-learning-hub/tree/master/tutorials/ascendc_operator_development/03_intermediate_vector_operator_development/src/custom_op_04)，为进行算子调试做准备。
 
 > [!NOTE]
 >
@@ -311,7 +313,7 @@
 
 **前期准备**
 
-- 单击[链接](https://gitcode.com/cann/cann-learning-hub/tree/6dfac1dad4b8eb9a3cd08322c76f98039480ea31/tutorials/ascendc_operator_development_light/02_AscendC_basic/src/02.06/kernel_pytorch_call)获取样例工程，为进行算子调试做准备。
+- 单击获取[PyTorch接口调用算子样例工程](https://gitcode.com/cann/cann-learning-hub/tree/6dfac1dad4b8eb9a3cd08322c76f98039480ea31/tutorials/ascendc_operator_development_light/02_AscendC_basic/src/02.06/kernel_pytorch_call)，为进行算子调试做准备。
 
     > [!NOTE]
     >
@@ -348,11 +350,11 @@
     >
     > Kernel实现位于上级目录 `../common/add_custom.asc`。
 
-2. 在CMakeLists.txt中添加调试编译选项，使能kernel编译器和host编译器的调试功能。
+2. 在CMakeLists.txt中添加调试编译选项，使能kernel编译器和Host编译器的调试功能。
 
     > [!NOTE]
     >
-    > 不添加调试编译选项时，编译产物不含调试信息，msdebug无法命中源码断点。
+    > 不添加调试编译选项时，编译产物不含调试信息，msDebug无法命中源码断点。
 
     ```cmake
     # kernel侧（ASC编译器）添加 -O0 -g --cce-ignore-always-inline=true
@@ -449,7 +451,7 @@
 
 **前期准备**<a id="前期准备"></a>
 
-- 单击[链接](https://gitcode.com/cann/catlass)获取样例工程，为进行算子调试做准备。
+- 单击获取[模板库算子样例工程](https://gitcode.com/cann/catlass)，为进行算子调试做准备。
 - 完成相关环境变量配置，请参见[MindStudio Debugger工具用户指南](../user_guide/msdebug_user_guide.md)。
 
 **操作步骤**
@@ -544,7 +546,7 @@
             (msdebug)
             ```
 
-    - 进行核切换，切换至另一个aic核，并打印需要的信息。
+    - 进行核切换，切换至另一个AIC核，并打印需要的信息。
 
         ```cpp
         (msdebug) ascend aic 24  // ascend info cores中选择block 3对应的coreId,此处为24

@@ -14,7 +14,7 @@ MindStudio Debugger（算子调试工具，msDebug）是一款面向昇腾设备
 
 - 工程化算子开发：单算子API调用。
 
-    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \>  [单算子API调用](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/zh/guide/programming_guide/advanced_programming/aclnn_operator_development/invocation/single_operator_api_call.md)”章节。具体操作请参见[调用Ascend CL单算子](../best_practices/msdebug_basic_cases.md#调用ascend-cl单算子)。
+    单算子API调用的场景，详细信息可参考《Ascend C算子开发指南》中“工程化算子开发 \> [单算子API调用](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/programug/Ascendcopdevg/docs/zh/guide/programming_guide/advanced_programming/aclnn_operator_development/invocation/single_operator_api_call.md)”章节。具体操作请参见[调用AscendCL单算子](../best_practices/msdebug_basic_cases.md#调用ascendcl单算子)。
 
 - AI框架算子适配：PyTorch框架。
 
@@ -22,9 +22,9 @@ MindStudio Debugger（算子调试工具，msDebug）是一款面向昇腾设备
 
 **补充说明**
 
-msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展程序说明](#扩展程序说明)。
+msDebug工具还提供了以下扩展程序，具体请参考[**表 1** 扩展程序说明](#扩展程序说明)。
 
-**表 1**  扩展程序说明<a id="扩展程序说明"></a>
+**表 1** 扩展程序说明<a id="扩展程序说明"></a>
 
 <table><thead align="left"><tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row113563566121"><th class="cellrowborder" valign="top" width="50%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p456182519111">程序名称</p>
 </th>
@@ -89,7 +89,7 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
 
 ## 命令参考
 
-**表 2**  命令参考说明
+**表 2** 命令参考说明
 
 <table><thead align="left"><tr id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_row416221055015"><th class="cellrowborder" valign="top" width="20.75%" id="mcps1.2.5.1.1"><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p5638288509">命令</p>
 </th>
@@ -169,7 +169,7 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p6532172723215">-</p>
 </td>
-<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p564142820502">查询算子所运行的aicore相关信息。</p>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p564142820502">查询算子所运行的AI Core相关信息。</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen1251785402">ascend info cores</pre>
 </td>
@@ -205,7 +205,7 @@ msDebug工具还提供了以下扩展程序，具体请参考[**表 1**  扩展�
 </td>
 <td class="cellrowborder" valign="top" width="11.4%" headers="mcps1.2.5.1.2 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p435865434578">-</p>
 </td>
-<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p735955412488">切换调试所聚焦的simt线程信息，支持上板调试simt_vf下使用。</p>
+<td class="cellrowborder" valign="top" width="28.84%" headers="mcps1.2.5.1.3 "><p id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_p735955412488">切换调试器所聚焦的simt线程信息，支持上板调试simt_vf下使用。</p>
 </td>
 <td class="cellrowborder" valign="top" width="39.01%" headers="mcps1.2.5.1.4 "><pre class="code_wrap" id="zh-cn_topic_0000001979357376_zh-cn_topic_0000001831604757_screen5372121319416">ascend thread &lt;(thread_id_x, thread_id_y, thread_id_z)&gt;</pre>
 </td>
@@ -416,7 +416,7 @@ Command Options Usage:
 > [!NOTE]
 >
 > - bt命令当前只适用于coredump特性场景，调用栈信息仅在stop_reason为以下error时：CUBE_ERROR、CCU_ERROR、MTE_ERROR、VEC_ERROR、FIXP_ERROR，保证准确性。
-> - 对于bt的展示，如果函数名过长，可以参考[链接](https://lldb.llvm.org/use/formatting.html)进行设置：
+> - 对于bt的展示，如果函数名过长，可以参考[文档](https://lldb.llvm.org/use/formatting.html)进行设置：
 >
 >    ```bash
 >    setting set frame-format "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}{{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.basename}:${line.number}{:${line.column}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\n"
@@ -436,7 +436,7 @@ msDebug工具支持以下两种启动方式：
 
 > [!NOTE]
 >
-> 若工具弹出**Cannot read termcap database; using dumb terminal settings.**  的提示信息，可以通过配置`export TERMINFO=xx`消除提示，xx为本地TERMINFO路径：
+> 若工具弹出**Cannot read termcap database; using dumb terminal settings.** 的提示信息，可以通过配置`export TERMINFO=xx`消除提示，xx为本地TERMINFO路径：
 >
 > ```bash
 > export TERMINFO=xx    # xx信息可通过infocmp -D命令查询，可以选择符合当前终端配置的路径作为TERMINFO值
@@ -447,7 +447,7 @@ msDebug工具支持以下两种启动方式：
     2. 输入如下命令，使用msDebug工具加载可执行文件。
 
         ```bash
-        $ msdebug ./application
+        msdebug ./application
         ```
 
         > [!NOTE]
@@ -464,7 +464,7 @@ msDebug工具支持以下两种启动方式：
     2. 输入如下命令，使用msDebug工具加载Python脚本。
 
         ```bash
-        $ msdebug python3 test_ops_custom.py
+        msdebug python3 test_ops_custom.py
         msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
         The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
         This enables developers to debug Ascend kernels without being affected by potential changes brought by simulation and emulation environments.
@@ -502,9 +502,9 @@ msDebug工具支持以下两种启动方式：
 > [!NOTE]
 >
 > - 如果不指定，则仅对用户程序运行时首次设置的Device ID进行调试。
-> - Hccl接口不支持单步调试功能，具体接口明细请参见《Ascend C算子开发接口》中的“[Hccl Kernel侧接口](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/API/ascendcopapi/docs/zh/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md)”章节。
+> - HCCL接口不支持单步调试功能，具体接口明细请参见《Ascend C算子开发接口》中的“[HCCL Kernel侧接口](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/API/ascendcopapi/docs/zh/api/SIMD-API/adv_api/HCCL_communication/HCCL_Kernel/HCCL_usage.md)”章节。
 
-```tex
+```output
 py38) [root@localhost MC2-master]# msdebug /home/xxx/MC2-master/bin/alltoall_custom_aarch64
 msdebug(MindStudio Debugger) is part of MindStudio Operator-dev Tools.
 The tool provides developers with a mechanism for debugging Ascend kernels running on actual hardware.
@@ -574,7 +574,7 @@ Process 2625643 stopped
     __simd_vf__ inline void funcA () {
         for(uint16_t i = 0; i < repeatTimes; ++i) {
             AscendC::Reg::LoadAlign<>(xxxx);
-            __asm__("NOP"); // 增加这一行后，断点可以设置这行
+            __asm__("NOP"); // 增加这一行后，断点可以设置在这行
         }
     }
     ```
@@ -592,7 +592,7 @@ Process 2625643 stopped
 
     关键信息说明如下表：
 
-    **表 3**  信息说明
+    **表 3** 信息说明
 
     <table><thead align="left"><tr id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_row2416102584614"><th class="cellrowborder" valign="top" width="36.63%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000002015877393_zh-cn_topic_0000001831604765_p641642504618">字段</p>
     </th>
@@ -726,7 +726,7 @@ Current breakpoints:
 
 GlobalTensor一般用来存放Global Memory（外部存储）的全局数据。
 
-输入以下命令，进行GlobalTensor变量打印。以cGlobal为例，zGm所在内存地址请参考`address_`字段，此处为“0x000012c045400000”。
+输入以下命令，进行GlobalTensor变量打印。以cGlobal为例，Global所在内存地址请参考`address_`字段，此处为“0x000012c045400000”。
 
 ```bash
 (msdebug) p cGlobal
@@ -792,7 +792,7 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 > [!NOTE]
 >
 > - 本用例中，Tensor变量的实际内容保存在UB上，但LocalTensor不一定都保存在UB中，也可能在L1/L0A/L0B上，需要用户根据代码自行判断，然后在打印命令的`-m`选项中选择正确的内存类型。
-> - 若需要以自定义地址为起始进行内存打印，可基于address_字段作为起始地址增加偏移，偏移量单位为字节数，得到偏移后的GM内存地址后，传入内存打印命令即可。
+> - 若需要以自定义地址为起始进行内存打印，可基于address_字段作为起始地址增加偏移，偏移量单位为字节数，得到偏移后的UB内存地址后，传入内存打印命令即可。
 
 **打印所有局部变量**
 
@@ -960,13 +960,13 @@ LocalTensor一般用于存放AI Core中Local Memory（内部存储）的数据�
 
 ### 注意事项
 
-需要保证cann版本>=9.2.0
+需要保证CANN版本>=9.2.0。
 
 ### 使用示例
 
 **查看反汇编代码**
 
-程序停在设备断点后，输入`dis`查看设备反汇编指令
+程序停在设备断点后，输入`dis`查看设备反汇编指令。
 
 ```text
 (msdebug) dis
@@ -990,7 +990,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 
 **查看指定范围的反汇编区域**
 
-- 输入`dis -p`，从当前 PC 开始查看设备反汇编指令。
+- 输入`dis -p`，从当前PC开始查看设备反汇编指令。
 
     ```text
     (msdebug) dis -p
@@ -1034,7 +1034,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 
 **显示操作字节码的反汇编**
 
-输入 `dis -b` 命令
+输入 `dis -b` 命令。
 
 ```text
 (msdebug) dis -b
@@ -1259,7 +1259,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 
 关键信息说明如下表：
 
-**表 4**  信息说明
+**表 4** 信息说明
 
 <table><thead align="left"><tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row8128154771415"><th class="cellrowborder" valign="top" width="30.97%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p31281547101416">字段</p>
 </th>
@@ -1284,12 +1284,12 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 </tr>
 <tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row0128104771414"><td class="cellrowborder" valign="top" width="30.97%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p13128147131417">Aic_Mask</p>
 </td>
-<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p912844717141">实际使用的Cube的mask码，用64 bit位表示，如果第n位bit为1，表示使用了Cube n。</p>
+<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p912844717141">实际使用的Cube的mask码，用64 bit表示，如果第n位为1，表示使用了Cube n。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row143818398182"><td class="cellrowborder" valign="top" width="30.97%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p1038273961817">Aiv_Mask</p>
 </td>
-<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p193821939111815">实际使用的Vector的mask码，用64 bit位表示，如果第n位bit为1，表示使用了Vector n。</p>
+<td class="cellrowborder" valign="top" width="69.03%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p193821939111815">实际使用的Vector的mask码，用64 bit表示，如果第n位为1，表示使用了Vector n。</p>
 </td>
 </tr>
 </tbody>
@@ -1309,7 +1309,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 
 关键信息说明如下表：
 
-**表 5**  信息说明
+**表 5** 信息说明
 
 <table><thead align="left"><tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row2096593410286"><th class="cellrowborder" valign="top" width="30.8%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p92283663716">字段</p>
 </th>
@@ -1354,7 +1354,7 @@ device_debugdata_0`_Z17sobel_edge_detectP9EdgePixelPjPKhii_simt_entry:
 </tr>
 <tr id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_row14765174518331"><td class="cellrowborder" valign="top" width="30.8%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p15765145103310">Stop Reason</p>
 </td>
-<td class="cellrowborder" valign="top" width="69.19999999999999%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p1765345183310">表示程序执行停止原因，有breakpoint、step in、 step over和ctrl+c等。</p>
+<td class="cellrowborder" valign="top" width="69.19999999999999%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001979517160_zh-cn_topic_0000001757581488_p1765345183310">表示程序执行停止原因，有breakpoint、step in、step over和ctrl+c等。</p>
 </td>
 </tr>
 </tbody>
@@ -1442,7 +1442,7 @@ Current stop state of all blocks:
 
 **ascend info threads**
 
-输入以下命令查询线程信息，\*所在行代表当前聚焦的设备。
+输入以下命令查询线程信息，\*所在行代表当前聚焦的线程。
 
 ```bash
 (msdebug) ascend info threads
@@ -1456,11 +1456,11 @@ Current stop state of all blocks:
 
 关键信息说明如下表：
 
-**表 6**  信息说明
+**表 6** 信息说明
 
 |字段|释义|
 |----|----|
-| ThreadIDx To ThreadIDx | 从thread到thread，处于活跃的线程|
+| ThreadIdx To ThreadIdx | 从thread到thread，处于活跃的线程|
 | ActiveCount | 线程数 |
 | PC | 程序计数器 |
 | ActiveMask | 表示ActiveCount线程里哪些是活跃的线程，bit=1的表示活跃的线程 |
@@ -1487,7 +1487,7 @@ Current stop state of all blocks:
 
 **ascend thread &lt;(thread_id_x, thread_id_y, thread_id_z)&gt;**
 
-切换调试所聚焦的simt线程信息。
+切换调试器所聚焦的simt线程信息。
 
 ```bash
 (msdebug) ascend thread (0,8,0)
@@ -1517,7 +1517,7 @@ Current stop state of all blocks:
 
 ### 使用示例
 
-1. 参见《应用开发指南 (C&C++)》的"acl API参考（C）\> 系统配置 \>  [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)"章节的配置文件示例（异常算子Dump配置），开启生成异常算子core文件的功能。
+1. 参见《应用开发指南 (C&C++)》的"acl API参考（C）\> 系统配置 \> [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)"章节的配置文件示例（异常算子Dump配置），开启生成异常算子core文件的功能。
 
     > [!NOTE]
     >
@@ -1530,7 +1530,7 @@ Current stop state of all blocks:
     >     export ASCEND_DUMP_PATH="output"
     >     ```
     >
-    > 2. 在acl.json配置文件中，将dump_scene参数设置为 aic_err_detail_dump，并配置dump_path参数设置导出异常算子core文件的路径。
+    > 2. 在acl.json配置文件中，将dump_scene参数设置为aic_err_detail_dump，并配置dump_path参数设置导出异常算子core文件的路径。
 
 2. 算子运行出现aic_error异常时（如内存越界访问），触发生成异常算子core文件，文件名以.core结尾。
 3. 使用msDebug工具执行以下命令，加载异常算子core文件。
