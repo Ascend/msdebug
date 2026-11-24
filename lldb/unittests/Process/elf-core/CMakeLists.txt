@@ -11,6 +11,7 @@ add_lldb_unittest(ProcessElfCoreDeviceTests
     lldbUtilityHelpers
     lldbInterpreter
     lldbPluginPlatformLinux
+    lldbPluginObjectFileELF
     LLVMTestingSupport
 )
 endif()

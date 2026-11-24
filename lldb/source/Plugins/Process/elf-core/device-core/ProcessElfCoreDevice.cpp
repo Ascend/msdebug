@@ -39,7 +39,8 @@ using namespace device_core;
 
 LLDB_PLUGIN_DEFINE(ProcessElfCoreDevice)
 constexpr uint64_t MAX_LOCAL_MEM_SIZE = 10ULL * 1024 * 1024 * 1024; // 10G local memory
-constexpr uint64_t MAX_GM_SIZE = 60ULL * 1024 * 1024 * 1024; // 60G gm memory
+constexpr uint64_t MAX_GM_SIZE =
+    120ULL * 1024 * 1024 * 1024; // 120 GiB gm memory
 static const ConstString DEVTBL_NAME{".ascend.devtbl"};
 static const ConstString GLOBAL_AUXINFO_NAME{".ascend.auxinfo.global"};
 static const ConstString LOCAL_AUXINFO_NAME{".ascend.auxinfo.local."};
@@ -574,9 +575,14 @@ Status ProcessElfCoreDevice::ParseGlobalAuxInfo(const SectionSP& section, ConstS
     error = GetGlobalMemData(global_mem_info, valid);
     if (error.Fail()) {
       LLDB_LOG(log, "Get global memory data failed: {0}", error);
+      auto &memories = m_summary_info.global_mems[global_mem_info.type];
+      const size_t memory_index = memories.size();
+      memories.emplace_back(GlobalMemory{global_mem_info, false});
+      m_summary_info.global_section_to_memory[global_mem_info.section_index] = {
+          global_mem_info.type, memory_index};
     }
   }
-  return error;
+  return Status();
 }
 
 Status ProcessElfCoreDevice::GetGlobalMemData(const GlobalMemInfo& global_mem_info,
@@ -590,20 +596,35 @@ Status ProcessElfCoreDevice::GetGlobalMemData(const GlobalMemInfo& global_mem_in
     return error;
   }
   DataExtractor mem_data;
-  if (mem_section->GetSectionData(mem_data) == 0 && global_mem_info.size > 0) {
-    error.SetErrorStringWithFormat("Get %s from section failed", GlobalDataTypeToStr[global_mem_info.type].c_str());
-    return error;
-  }
-
+  mem_section->GetSectionData(mem_data);
   if (global_mem_info.size > MAX_GM_SIZE) {
     error.SetErrorStringWithFormatv("global memory info size too larget {0}bytes > {1}bytes",
                                      global_mem_info.size, MAX_GM_SIZE);
     return error;
   }
+  if (global_mem_info.size > mem_data.GetByteSize()) {
+    error.SetErrorStringWithFormatv("global memory info size={0}bytes, is "
+                                    "larger than section size={1}bytes",
+                                    global_mem_info.size,
+                                    mem_data.GetByteSize());
+    return error;
+  }
   global_memory.data.resize(global_mem_info.size);
-  mem_data.ExtractBytes(0, global_mem_info.size, eByteOrderLittle, global_memory.data.data());
-  m_summary_info.global_mems[global_mem_info.type].emplace_back(global_memory);
-  m_summary_info.global_section_to_memory[global_mem_info.section_index] = global_memory;
+  if (global_mem_info.size > 0) {
+    if (mem_data.ExtractBytes(0, global_mem_info.size, eByteOrderLittle,
+                              global_memory.data.data()) !=
+        global_mem_info.size) {
+      error.SetErrorStringWithFormat(
+          "Get %s from section failed",
+          GlobalDataTypeToStr[global_mem_info.type].c_str());
+      return error;
+    }
+  }
+  auto &memories = m_summary_info.global_mems[global_mem_info.type];
+  const size_t memory_index = memories.size();
+  memories.emplace_back(std::move(global_memory));
+  m_summary_info.global_section_to_memory[global_mem_info.section_index] = {
+      global_mem_info.type, memory_index};
   return error;
 }
 
@@ -745,7 +766,11 @@ Status ProcessElfCoreDevice::ParseOneLocalAuxInfo(const SectionSP& section, uint
       if (m_summary_info.global_section_to_memory.find(
               local_mem_info.global_section_index) !=
           m_summary_info.global_section_to_memory.end()) {
-        GlobalMemory global_mem = m_summary_info.global_section_to_memory[local_mem_info.global_section_index];
+        const auto &global_ref = m_summary_info.global_section_to_memory.at(
+            local_mem_info.global_section_index);
+        const GlobalMemory &global_mem =
+            m_summary_info.global_mems.at(global_ref.first)
+                .at(global_ref.second);
         local_memory.addr = global_mem.global_mem_info.addr;
         local_memory.valid = global_mem.valid;
       } else {
@@ -859,30 +884,32 @@ size_t ProcessElfCoreDevice::DoReadMemory(addr_t addr, void *buf, size_t size,
 }
 
 size_t ProcessElfCoreDevice::ReadGlobalMemory(DeviceAddressClass address_class,
-                                              addr_t addr, size_t size, void *buf, Status &error) {
-  vector<GlobalMemory> global_mems;
+                                              addr_t addr, size_t size,
+                                              void *buf, Status &error) {
   for (GlobalDataType type : AddressClassGlobalDataTypeMap[address_class]) {
-    if (m_summary_info.global_mems.find(type) != m_summary_info.global_mems.end()) {
-      global_mems.insert(global_mems.end(), m_summary_info.global_mems[type].begin(),
-      m_summary_info.global_mems[type].end());
-    }
-  }
-  for (const auto &global_mem : global_mems) {
-    if (addr >= global_mem.global_mem_info.addr &&
-        global_mem.global_mem_info.addr <=
-            std::numeric_limits<uint64_t>::max() -
-                global_mem.global_mem_info.size &&
-        addr <
-            global_mem.global_mem_info.addr + global_mem.global_mem_info.size) {
-      size = min(size, global_mem.global_mem_info.addr + global_mem.global_mem_info.size - addr);
-      if (!global_mem.valid) {
-        error.SetErrorString("this memory data is invalid, please check command: ascend info summary");
-        return 0;
+    auto memories = m_summary_info.global_mems.find(type);
+    if (memories == m_summary_info.global_mems.end())
+      continue;
+    for (const auto &global_mem : memories->second) {
+      if (addr >= global_mem.global_mem_info.addr &&
+          global_mem.global_mem_info.addr <=
+              std::numeric_limits<uint64_t>::max() -
+                  global_mem.global_mem_info.size &&
+          addr < global_mem.global_mem_info.addr +
+                     global_mem.global_mem_info.size) {
+        size = min(size, global_mem.global_mem_info.addr +
+                             global_mem.global_mem_info.size - addr);
+        if (!global_mem.valid) {
+          error.SetErrorString("this memory data is invalid, please check "
+                               "command: ascend info summary");
+          return 0;
+        }
+        for (size_t i = 0; i < size; ++i) {
+          *((uint8_t *)buf + i) =
+              global_mem.data[i + (addr - global_mem.global_mem_info.addr)];
+        }
+        return size;
       }
-      for (size_t i = 0; i < size; ++i) {
-        *((uint8_t *)buf + i) = global_mem.data[i + (addr - global_mem.global_mem_info.addr)];
-      }
-      return size;
     }
   }
   error.SetErrorString("addr is not in range, please check command: ascend info summary");

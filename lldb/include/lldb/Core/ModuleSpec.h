@@ -413,7 +413,7 @@ public:
     Status error;
     FileSpec &file = GetFileSpec();
     auto size = FileSystem::Instance().GetByteSize(file);
-    constexpr uint64_t MAX_FILE_SIZE = 100ULL * 1024 * 1024 * 1024;
+    constexpr uint64_t MAX_FILE_SIZE = 300ULL * 1024 * 1024 * 1024;
     if (size == 0) {
       error.SetErrorStringWithFormatv("\"{0}\" is an empty file, which is not supported.", file.GetPath());
     } else if (size > MAX_FILE_SIZE) {

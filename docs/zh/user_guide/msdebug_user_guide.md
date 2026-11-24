@@ -1513,6 +1513,8 @@ Current stop state of all blocks:
 
 若开启异常算子dump功能，配置后将不能使用msDebug的其他功能。
 
+异常算子core文件总大小不得超过300 GiB；单条global memory不得超过120 GiB，单条local memory不得超过10 GiB。GM和local memory的大小限制针对单个条目，不是同类内存的合计；`1 GiB = 1024 * 1024 * 1024 bytes`。超过相应阈值会触发大小校验。加载较大的core文件时，请确保主机内存充足。
+
 ### 使用示例
 
 1. 参见《应用开发指南 (C&C++)》的"acl API参考（C）\> 系统配置 \>  [aclInit](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/latest/API/runtimeapi/aclcppdevg_03_0022.html#ZH-CN_TOPIC_0000002594788866__section1939018362581)"章节的配置文件示例（异常算子Dump配置），开启生成异常算子core文件的功能。
