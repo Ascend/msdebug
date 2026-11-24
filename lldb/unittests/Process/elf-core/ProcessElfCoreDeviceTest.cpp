@@ -19,6 +19,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/MessageDefines.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 
 using namespace lldb_private;
 using namespace lldb_private::device_core;
@@ -436,6 +438,40 @@ Sections:
     return Device()->GetGlobalMemData(info, true);
   }
 
+  Status ParseGlobals(llvm::ArrayRef<GlobalMemInfo> infos) {
+    Device()->m_summary_info.global_mems.clear();
+    Device()->m_summary_info.global_section_to_memory.clear();
+    if (Device()->m_section_list.GetSize() < 2)
+      Device()->m_section_list.AddSection(m_section);
+    llvm::StringRef bytes(reinterpret_cast<const char *>(infos.data()),
+                          infos.size() * sizeof(GlobalMemInfo));
+    llvm::unittest::TempFile core("msdebug-global-aux", "core", bytes, true);
+    Device()->m_core_file = FileSpec(core.path());
+    auto file = TestFile::fromYaml(
+        "--- !ELF\nFileHeader:\n  Class: ELFCLASS64\n  Data: ELFDATA2LSB\n"
+        "  Type: ET_CORE\n  Machine: EM_X86_64\nSections:\n"
+        "  - Name: .ascend.auxinfo.global\n    Type: SHT_PROGBITS\n"
+        "    Content: " +
+        llvm::toHex(bytes) + "\n...\n");
+    if (!file) {
+      Status error;
+      error.SetErrorString(llvm::toString(file.takeError()));
+      return error;
+    }
+    TestFile aux_file(std::move(*file));
+    auto aux_module = std::make_shared<Module>(aux_file.moduleSpec());
+    auto *object_file = aux_module->GetObjectFile();
+    if (!object_file) {
+      Status error;
+      error.SetErrorString("failed to create auxinfo test ELF object");
+      return error;
+    }
+    auto section = object_file->GetSectionList()->FindSectionByName(
+        ConstString(".ascend.auxinfo.global"));
+    return Device()->ParseGlobalAuxInfo(section,
+                                        ConstString(".ascend.auxinfo.global"));
+  }
+
   size_t Read(addr_t addr, size_t size, void *buf, Status &error) {
     return Device()->ReadGlobalMemory(DeviceAddressClass::GM, addr, size, buf,
                                       error);
@@ -487,6 +523,71 @@ TEST_F(ProcessElfCoreDeviceMemoryTest, PreservesZeroLengthEntryWithoutPayload) {
       info.global_mems.at(GlobalDataType::INPUT_TENSOR)[0].data.empty());
   EXPECT_EQ(info.global_section_to_memory.at(1),
             (std::make_pair(GlobalDataType::INPUT_TENSOR, size_t{0})));
+}
+
+TEST_F(ProcessElfCoreDeviceMemoryTest,
+       ParseGlobalAuxInfoKeepsBadEntryAndContinues) {
+  GlobalMemInfo bad{};
+  bad.addr = 0x1000;
+  bad.size = 5;
+  bad.section_index = 1;
+  bad.type = GlobalDataType::INPUT_TENSOR;
+  GlobalMemInfo good{};
+  good.addr = 0x2000;
+  good.size = 4;
+  good.section_index = 2;
+  good.type = GlobalDataType::INPUT_TENSOR;
+  for (bool bad_first : {true, false}) {
+    GlobalMemInfo infos[] = {bad_first ? bad : good, bad_first ? good : bad};
+    ASSERT_TRUE(ParseGlobals(infos).Success());
+    const auto &summary = Device()->GetSummaryInfo();
+    const auto &memories = summary.global_mems.at(GlobalDataType::INPUT_TENSOR);
+    ASSERT_EQ(memories.size(), 2u);
+    size_t bad_index = bad_first ? 0 : 1;
+    size_t good_index = 1 - bad_index;
+    EXPECT_FALSE(memories[bad_index].valid);
+    EXPECT_TRUE(memories[bad_index].data.empty());
+    EXPECT_EQ(summary.global_section_to_memory.at(1),
+              (std::make_pair(GlobalDataType::INPUT_TENSOR, bad_index)));
+    EXPECT_EQ(summary.global_section_to_memory.at(2),
+              (std::make_pair(GlobalDataType::INPUT_TENSOR, good_index)));
+    EXPECT_EQ(memories[good_index].data, (std::vector<uint8_t>{1, 2, 3, 4}));
+    uint8_t bytes[4] = {9, 9, 9, 9};
+    Status error;
+    EXPECT_EQ(Read(0x1000, 4, bytes, error), 0u);
+    EXPECT_TRUE(error.Fail());
+    EXPECT_EQ(bytes[0], 9);
+    error.Clear();
+    EXPECT_EQ(Read(0x2000, 4, bytes, error), 4u);
+    EXPECT_TRUE(error.Success());
+    EXPECT_EQ(std::vector<uint8_t>(bytes, bytes + 4),
+              (std::vector<uint8_t>{1, 2, 3, 4}));
+  }
+}
+
+TEST_F(ProcessElfCoreDeviceMemoryTest, ParseGlobalAuxInfoAllBadStillSucceeds) {
+  GlobalMemInfo bad{};
+  bad.addr = 0x1000;
+  bad.size = 5;
+  bad.section_index = 1;
+  bad.type = GlobalDataType::INPUT_TENSOR;
+  ASSERT_TRUE(ParseGlobals({bad}).Success());
+  const auto &summary = Device()->GetSummaryInfo();
+  ASSERT_FALSE(summary.global_mems.empty());
+  const auto &memory = summary.global_mems.at(GlobalDataType::INPUT_TENSOR)[0];
+  EXPECT_FALSE(memory.valid);
+  EXPECT_TRUE(memory.data.empty());
+  uint8_t byte = 9;
+  Status error;
+  EXPECT_EQ(Read(0x1000, 1, &byte, error), 0u);
+  EXPECT_TRUE(error.Fail());
+  EXPECT_EQ(byte, 9);
+}
+
+TEST_F(ProcessElfCoreDeviceMemoryTest, ParseGlobalAuxInfoUnknownTypeFails) {
+  GlobalMemInfo invalid{};
+  invalid.type = static_cast<GlobalDataType>(999);
+  EXPECT_TRUE(ParseGlobals({invalid}).Fail());
 }
 
 TEST_F(ProcessElfCoreDeviceMemoryTest,

@@ -575,9 +575,14 @@ Status ProcessElfCoreDevice::ParseGlobalAuxInfo(const SectionSP& section, ConstS
     error = GetGlobalMemData(global_mem_info, valid);
     if (error.Fail()) {
       LLDB_LOG(log, "Get global memory data failed: {0}", error);
+      auto &memories = m_summary_info.global_mems[global_mem_info.type];
+      const size_t memory_index = memories.size();
+      memories.emplace_back(GlobalMemory{global_mem_info, false});
+      m_summary_info.global_section_to_memory[global_mem_info.section_index] = {
+          global_mem_info.type, memory_index};
     }
   }
-  return error;
+  return Status();
 }
 
 Status ProcessElfCoreDevice::GetGlobalMemData(const GlobalMemInfo& global_mem_info,
