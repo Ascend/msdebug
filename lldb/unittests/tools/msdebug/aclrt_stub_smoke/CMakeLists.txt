@@ -9,6 +9,7 @@ add_lldb_unittest(AclrtStubSmokeTests
   AclrtStubSmokeTest.cpp
   ${LLDB_SOURCE_DIR}/tools/msdebug/aclrt_stub.cpp
   ${LLDB_SOURCE_DIR}/tools/msdebug/runtime_stub.cpp
+  ${LLDB_SOURCE_DIR}/tools/msdebug/StubSymbolResolver.cpp
   ${LLDB_SOURCE_DIR}/tools/msdebug/get_tiling_key.cpp
   ${LLDB_SOURCE_DIR}/tools/msdebug/AscendCommunicationClient.cpp
   ${LLDB_SOURCE_DIR}/tools/msdebug/HijackedLayerManager.cpp

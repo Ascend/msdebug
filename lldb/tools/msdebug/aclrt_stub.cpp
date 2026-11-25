@@ -19,14 +19,13 @@
 #ifdef MS_DEBUGGER
 
 #include "HijackedLayerManager.h"
+#include "StubSymbolResolver.h"
 #include "acl.h"
-#include "elf_symbol_check.h"
 #include "runtime_stub.h"
 
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <dlfcn.h>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -56,9 +55,7 @@ namespace {
 
 typedef pid_t (*drvDeviceGetBareTgidFunc)(void);
 
-void *GetStubFuncPtr(const std::string funcName, bool throw_error=true);
-void *g_handle = nullptr;
-void *g_drvHandle = nullptr;
+void *GetStubFuncPtr(const std::string funcName, bool throw_error = true);
 
 static std::map<const void *, std::string> &GetStubFuncPtrNameMap()
 {
@@ -70,146 +67,6 @@ static std::map<const aclrtBinary, rtDevBinary_t> &GetDevBinaryMap()
 {
     static std::map<const aclrtBinary, rtDevBinary_t> inst{};
     return inst;
-}
-
-std::map<std::string, StubFuncInfo>& GetAclrtStubFuncInfoMap()
-{
-    static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
-    if (stubFuncInfoMap.size() == 0) {
-      stubFuncInfoMap = {
-          {"aclrtGetDeviceImpl",
-           {"aclrtGetDeviceImpl", ACLRT_GET_DEVICE_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtSetDeviceImpl",
-           {"aclrtSetDeviceImpl", ACLRT_SET_DEVICE_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtCreateContextImpl",
-           {"aclrtCreateContextImpl", ACLRT_CREATE_CONTEXT_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtBinaryGetFunctionImpl",
-           {"aclrtBinaryGetFunctionImpl",
-            ACLRT_BINARY_GET_FUNCTION_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtBinaryGetFunctionByEntryImpl",
-           {"aclrtBinaryGetFunctionByEntryImpl",
-            ACLRT_BINARY_GET_FUNCTION_BY_ENTRY_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtLaunchKernelImpl",
-           {"aclrtLaunchKernelImpl", ACLRT_LAUNCH_KERNEL_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtLaunchKernelWithConfigImpl",
-           {"aclrtLaunchKernelWithConfigImpl",
-            ACLRT_LAUNCH_KERNEL_WITH_CONFIG_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtLaunchKernelWithHostArgsImpl",
-           {"aclrtLaunchKernelWithHostArgsImpl",
-            ACLRT_LAUNCH_KERNEL_WITH_HOST_ARGS_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtLaunchKernelV2Impl",
-           {"aclrtLaunchKernelV2Impl",
-            ACLRT_LAUNCH_KERNEL_V2_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtLaunchSIMTKernelWithArgsArrayImpl",
-           {"aclrtLaunchSIMTKernelWithArgsArrayImpl",
-            ACLRT_LAUNCH_SIMT_KERNEL_WITH_ARGS_ARRAY_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtLaunchKernelWithArgsArrayImpl",
-           {"aclrtLaunchKernelWithArgsArrayImpl",
-            ACLRT_LAUNCH_KERNEL_WITH_ARGS_ARRAY_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtLaunchSIMTKernelWithHostArgsImpl",
-           {"aclrtLaunchSIMTKernelWithHostArgsImpl",
-            ACLRT_LAUNCH_SIMT_KERNEL_WITH_HOST_ARGS_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtGetFunctionAddrImpl",
-           {"aclrtGetFunctionAddrImpl",
-            ACLRT_GET_FUNCTION_ADDR_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtGetSocNameImpl",
-           {"aclrtGetSocNameImpl", ACLRT_GET_SOC_NAME_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtBinaryLoadFromFileImpl",
-           {"aclrtBinaryLoadFromFileImpl",
-            ACLRT_BINARY_LOAD_FROM_FILE_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtCreateBinaryImpl",
-           {"aclrtCreateBinaryImpl", ACLRT_CREATE_BINARY_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtBinaryLoadImpl",
-           {"aclrtBinaryLoadImpl", ACLRT_BINARY_LOAD_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtBinaryLoadFromDataImpl",
-           {"aclrtBinaryLoadFromDataImpl",
-            ACLRT_BINARY_LOAD_FROM_DATA_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtStreamGetIdImpl",
-           {"aclrtStreamGetIdImpl", ACLRT_STREAM_GET_ID_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtSynchronizeStreamImpl",
-           {"aclrtSynchronizeStreamImpl", ACLRT_SYNC_STREAM_IMPL_NOT_FOUND_ERR,
-            nullptr}},
-          {"aclrtMemGetAddressRangeImpl",
-           {"aclrtMemGetAddressRangeImpl",
-            ACLRT_MEM_GET_ADDRESS_RANGE_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtGetLogicDevIdByUserDevIdImpl",
-           {"aclrtGetLogicDevIdByUserDevIdImpl",
-            ACLRT_GET_LOGIC_DEVID_BY_USER_DEVID_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtFunctionGetBinaryImpl",
-           {"aclrtFunctionGetBinaryImpl",
-            ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtGetFunctionNameImpl",
-           {"aclrtGetFunctionNameImpl",
-             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtGetFuncBySymbolImpl",
-           {"aclrtGetFuncBySymbolImpl",
-             ACLRT_GET_FUNC_BY_SYMBOL_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtSynchronizeDeviceWithTimeoutImpl",
-           {"aclrtSynchronizeDeviceWithTimeoutImpl",
-            ACLRT_SYNCHRONIZE_DEVICE_WITH_TIMEOUT_NOT_FOUND_ERR, nullptr}},
-          {"aclrtSynchronizeStreamWithTimeoutImpl",
-           {"aclrtSynchronizeStreamWithTimeoutImpl",
-            ACLRT_SYNC_STREAM_WITH_TIMEOUT_IMPL_NOT_FOUND_ERR, nullptr}},
-          {"aclrtIpcMemGetExportKeyImpl",
-           {"aclrtIpcMemGetExportKeyImpl",
-            ACLRT_IPC_MEM_GET_EXPORT_KEY_FAILED_ERR, nullptr}},
-          {"aclrtIpcMemCloseImpl",
-           {"aclrtIpcMemCloseImpl", ACLRT_IPC_MEM_CLOSE_FAILED_ERR, nullptr}},
-          {"aclrtMallocImpl",
-           {"aclrtMallocImpl", ACLRT_MALLOC_FAILED_ERR, nullptr}},
-          {"aclrtMallocAlign32Impl",
-           {"aclrtMallocAlign32Impl", ACLRT_MALLOC_ALIGN_32_FAILED_ERR,
-            nullptr}},
-          {"aclrtMallocCachedImpl",
-           {"aclrtMallocCachedImpl", ACLRT_MALLOC_CACHED_FAILED_ERR, nullptr}},
-          {"aclrtMallocWithCfgImpl",
-           {"aclrtMallocWithCfgImpl", ACLRT_MALLOC_WITH_CFG_FAILED_ERR,
-            nullptr}},
-          {"aclrtFreeImpl", {"aclrtFreeImpl", ACLRT_FREE_FAILED_ERR, nullptr}},
-          {"aclrtFreeWithDevSyncImpl",
-           {"aclrtFreeWithDevSyncImpl", ACLRT_FREE_WITH_DEV_SYNC_FAILED_ERR,
-            nullptr}},
-      };
-    }
-    return stubFuncInfoMap;
-}
-
-std::map<std::string, StubFuncInfo>& GetDrvStubFuncInfoMap()
-{
-    static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
-    if (stubFuncInfoMap.size() == 0) {
-        stubFuncInfoMap = {
-            {"drvDeviceGetBareTgid",
-                {"drvDeviceGetBareTgid", DRV_DEV_GET_BARE_TGID_NOT_FOUND_ERR, nullptr}},
-            {"halMemAdvise",
-                {"halMemAdvise", HAL_MEM_ADVISE_NOT_FOUND_ERR, nullptr}},
-        };
-    }
-    return stubFuncInfoMap;
-}
-
-std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
-{
-    static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
-    static std::mutex stubMapInitMtx;
-    std::lock_guard<std::mutex> lk(stubMapInitMtx);
-    if (stubFuncInfoMap.size() == 0) {
-        auto stubMap = GetAclrtStubFuncInfoMap();
-        stubFuncInfoMap.insert(stubMap.begin(), stubMap.end());
-        stubMap = GetDrvStubFuncInfoMap();
-        stubFuncInfoMap.insert(stubMap.begin(), stubMap.end());
-    }
-    return stubFuncInfoMap;
 }
 
 aclError aclrtGetDeviceImpl(int32_t *deviceId)
@@ -261,93 +118,6 @@ aclError aclrtGetLogicDevIdByUserDevIdImpl(const int32_t userDevid,
   return ret;
 }
 
-void OpenAclrtLib() {
-  if (g_handle == nullptr) {
-    char *toolkitPath = getenv("ASCEND_TOOLKIT_HOME");
-    if (toolkitPath == nullptr) {
-      ThrowErrorCode(ASCEND_TOOLKIT_HOME_NOT_FOUND_ERR);
-    }
-    std::string soName = GetAclRuntimeLibName(toolkitPath);
-    RT_STUB_LOG_INFO("will open so name %s\n", soName.c_str());
-    std::string runtimeLibPath(toolkitPath);
-    runtimeLibPath += "/lib64/lib" + soName + ".so";
-    g_handle = dlopen(runtimeLibPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
-    if (g_handle == nullptr) {
-      std::string oldAclImplPath(toolkitPath);
-      oldAclImplPath += "/lib64/libascendcl_impl.so";
-      RT_STUB_LOG_INFO("dlopen %s failed, change to open %s\n",
-                       runtimeLibPath.c_str(), oldAclImplPath.c_str());
-      g_handle = dlopen(oldAclImplPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
-      if (g_handle == nullptr) {
-        ThrowErrorCode(LIB_ACL_RUNTIME_IMPL_NOT_FOUND_ERR);
-      }
-    }
-    RT_STUB_LOG_INFO("dlopen aclrt impl done\n");
-  }
-
-  for (auto &it : GetAclrtStubFuncInfoMap()) {
-    it.second.funcPtr = dlsym(g_handle, it.second.name.c_str());
-    if (it.second.funcPtr == nullptr) {
-      RT_STUB_LOG_WARNING(
-          "dlsym %s failed, may cause error if user's program required.",
-          it.second.name.c_str());
-      continue;
-    }
-    GetStubFuncInfoMap()[it.first] = it.second;
-  }
-  if (GetStubFuncInfoMap().empty()) {
-    ThrowErrorCode(DLSYM_ALL_STUBFUNC_ERROR);
-  }
-}
-
-void OpenDrvLib()
-{
-    if (g_drvHandle == nullptr) {
-        g_drvHandle = dlopen("libascend_hal.so", RTLD_NOW | RTLD_GLOBAL);
-        if (g_drvHandle == nullptr) {
-            ThrowErrorCode(LIB_ASCEND_HAL_NOT_FOUND_ERR);
-        }
-        RT_STUB_LOG_INFO("dlopen hal done\n");
-    }
-
-    for (auto &it : GetDrvStubFuncInfoMap()) {
-        it.second.funcPtr = dlsym(g_drvHandle, it.second.name.c_str());
-        if (it.second.funcPtr == nullptr) {
-            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
-                                it.second.name.c_str());
-            continue;
-        }
-        GetStubFuncInfoMap()[it.first] = it.second;
-    }
-}
-
-void StubInit()
-{
-    static std::mutex initMtx;
-    static bool isInited = false;
-    std::unique_lock<std::mutex> lk(initMtx);
-    if (isInited) {
-        return;
-    }
-
-    try {
-        RtStubLogger::Instance().Init();
-    } catch (...) {
-        RT_STUB_LOG_ERROR("Invalid value of $DEBUGGER_RT_STUB_LOG");
-        ThrowErrorCode(ENV_VALUE_TYPE_ERR);
-    }
-
-    RT_STUB_LOG_INFO("LogInit done\n");
-
-    OpenAclrtLib();
-    OpenDrvLib();
-
-    EnvCheck();
-
-    isInited = true;
-    RT_STUB_LOG_INFO("AclrtStubInit done\n");
-}
-
 std::string GetKernelNameFromStubFunc(const void *stubFunc)
 {
     const auto &stubFuncNameMap = GetStubFuncPtrNameMap();
@@ -375,25 +145,7 @@ std::string GetKernelNameFromStubFunc(const void *stubFunc)
 
 void *GetStubFuncPtr(const std::string funcName, bool throw_error)
 {
-    RT_STUB_LOG_INFO("GetStubFuncPtr funcName=%s\n", funcName.c_str());
-    auto it = GetStubFuncInfoMap().find(funcName);
-    if (it == GetStubFuncInfoMap().end()) {
-        if (throw_error) {
-            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
-        }
-        return nullptr;
-    }
-    if (it->second.funcPtr == nullptr) {
-        StubInit();
-    }
-    if (it->second.funcPtr == nullptr) {
-        if (throw_error) {
-            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
-        }
-        return nullptr;
-    }
-    // if StubInit() returns, all stub functions are supposed to be loaded
-    return it->second.funcPtr;
+  return StubSymbolResolver::Instance().Resolve(funcName, throw_error);
 }
 
 const char *aclrtGetSocNameImpl()

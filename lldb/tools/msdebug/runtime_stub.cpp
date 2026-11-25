@@ -22,12 +22,12 @@
 
 #include "AscendCommunicationClient.h"
 #include "HijackedLayerManager.h"
+#include "StubSymbolResolver.h"
 #include "acl.h"
 #include "lldb/Utility/AscendVerification.h"
 
 #include <cstdio>
 #include <cstdlib>
-#include <dlfcn.h>
 #include <fstream>
 #include <map>
 #include <mutex>
@@ -68,12 +68,8 @@ typedef pid_t (*drvDeviceGetBareTgidFunc)(void);
 constexpr uint8_t SOC_VERSION_LEN = 32;
 constexpr uint32_t BUFFER_SIZE = 2048; // lldb-server侧buffer大小
 constexpr uint32_t KERNEL_NAME_SIZE = 2047; // lldb-client侧为2048
-static void *GetStubFuncPtr(const std::string funcName, bool throw_error=true);
-static bool g_isInited = false;
-static std::mutex g_initMtx;
-static std::mutex g_initStubFunc;
-static void *g_handle = nullptr;
-static void *g_drvHandle = nullptr;
+static void *GetStubFuncPtr(const std::string funcName,
+                            bool throw_error = true);
 static void GetDeviceId(int32_t* device);
 
 // 声明在aclrt_stub.cpp中定义的共享函数，供本文件使用
@@ -91,68 +87,6 @@ static std::map<const void *, std::string>& GetStubFuncToNameMap()
     static std::map<const void *, std::string> inst{};
     return inst;
 }
-
-static std::map<std::string, StubFuncInfo>& GetStubFuncInfoMap()
-{
-    static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
-    std::lock_guard<std::mutex> lk(g_initStubFunc);
-    if (stubFuncInfoMap.size() == 0) {
-        stubFuncInfoMap = {
-            {"rtSetDevice",
-                {"rtSetDevice", RT_SET_DEVICE_SYM_NOT_FOUND_ERR, nullptr}},
-            {"rtSetDeviceEx",
-                {"rtSetDeviceEx", RT_SET_DEVICE_EX_SYM_NOT_FOUND_ERR, nullptr}},
-            {"rtCtxCreateEx",
-                {"rtCtxCreateEx", RT_CTX_CREATE_EX_SYM_NOT_FOUND_ERR, nullptr}},
-            {"rtFunctionRegister",
-                {"rtFunctionRegister", RT_FUNC_REG_NOT_FOUND_ERR, nullptr}},
-            {"rtKernelLaunch",
-                {"rtKernelLaunch", RT_KERNEL_LAUNCH_NOT_FOUND_ERR, nullptr}},
-            {"rtKernelLaunchWithFlagV2",
-                {"rtKernelLaunchWithFlagV2", RT_KERNEL_LAUNCH_WITH_FLAG_V2_NOT_FOUND_ERR, nullptr}},
-            {"rtKernelLaunchWithHandleV2",
-                {"rtKernelLaunchWithHandleV2", RT_KERNEL_LAUNCH_WITH_HANDLE_V2_NOT_FOUND_ERR, nullptr}},
-            {"rtKernelGetAddrAndPrefCnt",
-                {"rtKernelGetAddrAndPrefCnt", RT_KERNEL_GET_ADDR_AND_PREF_CNT_NOT_FOUND_ERR, nullptr}},
-            {"rtGetSocVersion",
-                {"rtGetSocVersion", RT_GET_SOC_VERSION_NOT_FOUND_ERR, nullptr}},
-            {"rtDevBinaryRegister",
-                {"rtDevBinaryRegister", RT_DEV_BIN_REG_NOT_FOUND_ERR, nullptr}},
-            {"rtRegisterAllKernel",
-                {"rtRegisterAllKernel", RT_REG_ALL_KERNEL_NOT_FOUND_ERR, nullptr}},
-            {"rtGetStreamId",
-                {"rtGetStreamId", RT_GET_TASK_ID_AND_STREAM_ID_NOT_FOUND_ERR, nullptr}},
-            {"rtStreamSynchronizeWithTimeout",
-                {"rtStreamSynchronizeWithTimeout", RT_STREAM_SYNC_WITH_TIMEOUT_NOT_FOUND_ERR, nullptr}},
-            {"rtStreamSynchronize",
-                {"rtStreamSynchronize", RT_STREAM_SYNC_NOT_FOUND_ERR, nullptr}},
-            {"rtRegisterFuncSymbol",
-                {"rtRegisterFuncSymbol", RT_REGISTER_FUNC_SYMBOL_NOT_FOUND_ERR, nullptr}},
-            {"rtGetVisibleDeviceIdByLogicDeviceId",
-                {"rtGetVisibleDeviceIdByLogicDeviceId", RT_GET_VISIBLE_DEVID_BY_LOGIC_DEVID_NOT_FOUND_ERR, nullptr}},
-            {"rtMemGetAddressRange",
-                {"rtMemGetAddressRange", RT_MEM_GET_ADDRESS_RANGE_NOT_FOUND_ERR, nullptr}},
-            {"rtGetDevice",
-                  {"rtGetDevice", RT_GET_DEVICE_NOT_FOUND_ERR, nullptr}},
-        };
-    }
-    return stubFuncInfoMap;
-}
-
-static std::map<std::string, StubFuncInfo>& GetDrvStubFuncInfoMap()
-{
-    static std::map<std::string, StubFuncInfo> stubFuncInfoMap;
-    if (stubFuncInfoMap.size() == 0) {
-        stubFuncInfoMap = {
-            {"drvDeviceGetBareTgid",
-                {"drvDeviceGetBareTgid", DRV_DEV_GET_BARE_TGID_NOT_FOUND_ERR, nullptr}},
-            {"halMemAdvise",
-                {"halMemAdvise", HAL_MEM_ADVISE_NOT_FOUND_ERR, nullptr}},
-        };
-    }
-    return stubFuncInfoMap;
-}
-
 
 struct IpcMem {
     uint64_t addr;
@@ -609,53 +543,6 @@ int32_t SendKernelInfo(const std::string &kernelName, const std::string &kernelH
   return ret;
 }
 
-static void OpenRtLib()
-{
-    if (g_handle == nullptr) {
-        char *toolkitPath = getenv("ASCEND_TOOLKIT_HOME");
-        if (toolkitPath == nullptr) {
-            ThrowErrorCode(ASCEND_TOOLKIT_HOME_NOT_FOUND_ERR);
-        }
-        std::string runtimeLibPath(toolkitPath);
-        runtimeLibPath += "/lib64/libruntime.so";
-        g_handle = dlopen(runtimeLibPath.c_str(), RTLD_NOW | RTLD_GLOBAL);
-        if (g_handle == nullptr) {
-            ThrowErrorCode(LIB_RUNTIME_NOT_FOUND_ERR);
-        }
-        RT_STUB_LOG_INFO("dlopen done\n");
-    }
-
-    for (auto &it : GetStubFuncInfoMap()) {
-        it.second.funcPtr = dlsym(g_handle, it.second.name.c_str());
-        if (it.second.funcPtr == nullptr) {
-            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
-                                it.second.name.c_str());
-            continue;
-        }
-    }
-}
-
-static void OpenDrvLib()
-{
-    if (g_drvHandle == nullptr) {
-        g_drvHandle = dlopen("libascend_hal.so", RTLD_NOW | RTLD_GLOBAL);
-        if (g_drvHandle == nullptr) {
-            ThrowErrorCode(LIB_ASCEND_HAL_NOT_FOUND_ERR);
-        }
-        RT_STUB_LOG_INFO("dlopen hal done\n");
-    }
-
-    for (auto &it : GetDrvStubFuncInfoMap()) {
-        it.second.funcPtr = dlsym(g_drvHandle, it.second.name.c_str());
-        if (it.second.funcPtr == nullptr) {
-            RT_STUB_LOG_WARNING("dlsym %s failed, may cause error if user's program required.",
-                                it.second.name.c_str());
-            continue;
-        }
-        GetStubFuncInfoMap()[it.first] = it.second;
-    }
-}
-
 void EnvCheck()
 {
     if (access("/dev/drv_debug", F_OK) != 0) {
@@ -680,32 +567,6 @@ void EnvCheck()
     } else {
       RT_STUB_LOG_WARNING("/proc/debug_switch does not exist.\n");
     }
-}
-
-static void StubInit()
-{
-    std::unique_lock<std::mutex> lk(g_initMtx);
-    if (g_isInited) {
-        return;
-    }
-
-    try {
-        RtStubLogger::Instance().Init();
-    } catch (...) {
-        RT_STUB_LOG_ERROR("Invalid value of $DEBUGGER_RT_STUB_LOG\n");
-        ThrowErrorCode(ENV_VALUE_TYPE_ERR);
-    }
-
-    RT_STUB_LOG_INFO("LogInit done\n");
-
-    OpenRtLib();
-    // need be open after OpenRtLib
-    OpenDrvLib();
-
-    EnvCheck();
-
-    g_isInited = true;
-    RT_STUB_LOG_INFO("StubInit done\n");
 }
 
 static string GetFullKernelName(const char *name, const vector<string> &fullNames)
@@ -782,25 +643,7 @@ std::string GetKernelNameByTilingKey(const void *hdl, uint64_t tilingKey)
 
 static void *GetStubFuncPtr(const std::string funcName, bool throw_error)
 {
-    RT_STUB_LOG_INFO("GetStubFuncPtr funcName=%s\n", funcName.c_str());
-    auto it = GetStubFuncInfoMap().find(funcName);
-    if (it == GetStubFuncInfoMap().end()) {
-        if (throw_error) {
-            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
-        }
-        return nullptr;
-    }
-    if (it->second.funcPtr == nullptr) {
-        StubInit();
-    }
-    if (it->second.funcPtr == nullptr) {
-        if (throw_error) {
-            ThrowErrorCode(ACCESS_INVALID_RT_FUNC_NAME_ERR);
-        }
-        return nullptr;
-    }
-    // if StubInit() returns, all stub functions are supposed to be loaded
-    return it->second.funcPtr;
+  return StubSymbolResolver::Instance().Resolve(funcName, throw_error);
 }
 
 uint64_t GetFixedPcStartAddr(const KernelInfo &kernelInfo,

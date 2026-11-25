@@ -20,15 +20,19 @@
 // 验证在 fake runtime/hal 库支撑下能完整走完 劫持→resolve→pre→origin→post 链路，
 // 正常返回 ACL_SUCCESS，不崩溃、不卡死。
 
+#include "StubSymbolResolver.h"
 #include "acl.h"
+#include "rt_stub_log.h"
 
 #include <dlfcn.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -182,6 +186,52 @@ TEST_F(AclrtStubSmokeTest, SimtWithHostArgsRunsWithNullFunc) {
   EXPECT_EQ(ACL_SUCCESS,
             aclrtLaunchSIMTKernelWithHostArgsImpl(nullptr, grid, block, 0, nullptr,
                                                   nullptr, nullptr, 0, nullptr, 0));
+}
+
+TEST_F(AclrtStubSmokeTest, ResolverUnknownSymbolDoesNotThrowWhenOptional) {
+  EXPECT_EQ(StubSymbolResolver::Instance().Resolve("not_a_real_symbol", false),
+            nullptr);
+}
+
+TEST_F(AclrtStubSmokeTest, ResolverUnknownSymbolThrowsWhenRequired) {
+  EXPECT_THROW(
+      StubSymbolResolver::Instance().Resolve("not_a_real_symbol", true),
+      MSDEBUG_ERROR_CODE);
+}
+
+TEST_F(AclrtStubSmokeTest, ResolverRequiredSymbolMissingThrows) {
+  try {
+    StubSymbolResolver::Instance().Resolve("rtSetDevice", true);
+    FAIL() << "expected ThrowErrorCode for missing rtSetDevice";
+  } catch (MSDEBUG_ERROR_CODE code) {
+    EXPECT_EQ(code, RT_SET_DEVICE_SYM_NOT_FOUND_ERR);
+  }
+}
+
+TEST_F(AclrtStubSmokeTest, ResolverOptionalMissingIsCached) {
+  auto &resolver = StubSymbolResolver::Instance();
+  EXPECT_EQ(resolver.Resolve("aclrtMallocImpl", false), nullptr);
+  EXPECT_TRUE(resolver.IsKnownMissing("aclrtMallocImpl"));
+  // The second lookup must hit the negative cache and still return null.
+  EXPECT_EQ(resolver.Resolve("aclrtMallocImpl", false), nullptr);
+}
+
+TEST_F(AclrtStubSmokeTest, ResolverOptionalMissingConcurrent) {
+  auto &resolver = StubSymbolResolver::Instance();
+  std::atomic<int> null_count{0};
+  std::vector<std::thread> threads;
+  for (int i = 0; i < 8; ++i) {
+    threads.emplace_back([&resolver, &null_count]() {
+      if (resolver.Resolve("aclrtMallocImpl", false) == nullptr) {
+        ++null_count;
+      }
+    });
+  }
+  for (auto &thread : threads) {
+    thread.join();
+  }
+  EXPECT_EQ(null_count.load(), 8);
+  EXPECT_TRUE(resolver.IsKnownMissing("aclrtMallocImpl"));
 }
 
 } // namespace

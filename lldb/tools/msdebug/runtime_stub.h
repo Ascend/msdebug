@@ -30,12 +30,6 @@
 
 #define VISIBILITY_EXPORT __attribute__((visibility("default")))
 
-struct StubFuncInfo {
-    std::string name;
-    MSDEBUG_ERROR_CODE errorCode;
-    void *funcPtr;
-};
-
 // 保存kernel launch前修改的内存属性信息，供LaunchKernelPost恢复使用
 // 定义在共享头文件中，供aclrt_stub.cpp和runtime_stub.cpp共同使用
 struct MemAdviseRestoreInfo {

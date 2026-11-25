@@ -2,6 +2,7 @@ if (MS_DEBUGGER)
   find_package(LLVM)
   add_library(runtime_stub SHARED
       runtime_stub.cpp
+      StubSymbolResolver.cpp
       get_tiling_key.cpp
       AscendCommunicationClient.cpp
       aclrt_stub.cpp
@@ -17,7 +18,7 @@ if (MS_DEBUGGER)
       COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_INSTALL_PREFIX}/lib"
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
           "$<TARGET_FILE:runtime_stub>"
-          "${CMAKE_INSTALL_PREFIX}/lib/libruntime_stub.so" 
+          "${CMAKE_INSTALL_PREFIX}/lib/libruntime_stub.so"
       COMMENT "Installing runtime_stub.so to ${CMAKE_INSTALL_PREFIX}/lib/"
       DEPENDS runtime_stub
   )
